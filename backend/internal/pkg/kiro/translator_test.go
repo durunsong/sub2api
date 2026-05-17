@@ -1072,6 +1072,28 @@ func TestStreamEventStreamAsAnthropicParsesTaggedThinkingWhenEnabled(t *testing.
 	require.NotContains(t, output, `\u003c/thinking\u003e`)
 }
 
+func TestStreamEventStreamAsAnthropicParsesTaggedThinkingWithLeadingApostrophe(t *testing.T) {
+	stream := bytes.NewBuffer(nil)
+	for _, chunk := range []string{"<thinking>'re working with.", "</thinking>\n\n", "final"} {
+		_, _ = stream.Write(buildEventStreamFrame(t, "assistantResponseEvent", map[string]any{
+			"assistantResponseEvent": map[string]any{"content": chunk},
+		}))
+	}
+
+	var out bytes.Buffer
+	result, err := StreamEventStreamAsAnthropicWithContext(context.Background(), stream, &out, "claude-opus-4-7", 9, KiroRequestContext{ThinkingEnabled: true})
+	require.NoError(t, err)
+	require.Equal(t, "end_turn", result.StopReason)
+
+	output := out.String()
+	require.Contains(t, output, `"type":"thinking_delta"`)
+	require.Contains(t, output, `"thinking":"'re "`)
+	require.Contains(t, output, `"thinking":"working with."`)
+	require.Contains(t, output, `"text":"final"`)
+	require.NotContains(t, output, `"text":"\u003cthinking\u003e're working with.\u003c/thinking\u003e`)
+	require.NotContains(t, output, `"text":"'re working with."`)
+}
+
 func TestStreamEventStreamAsAnthropicBuffersSplitThinkingTags(t *testing.T) {
 	stream := bytes.NewBuffer(nil)
 	for _, chunk := range []string{"\n\n<think", "ing>\nrea", "son</thinking>", "\n\nfinal"} {
@@ -1140,6 +1162,23 @@ func TestBuildAssistantMessageStructUsesSpacePlaceholderForToolOnly(t *testing.T
 	require.Len(t, result.ToolUses, 1)
 	require.Equal(t, "read_file", result.ToolUses[0].Name)
 	require.Equal(t, "/tmp/test.txt", result.ToolUses[0].Input["path"])
+}
+
+func TestBuildAssistantMessageStructPreservesThinkingStartingWithApostrophe(t *testing.T) {
+	msg := gjson.Parse(`{
+		"role":"assistant",
+		"content":[
+			{"type":"thinking","thinking":"I should look at the project structure to get a sense of what we're working with."},
+			{"type":"text","text":"<thinking>'re working with.</thinking>\n\n"},
+			{"type":"tool_use","id":"toolu_01ABC","name":"Bash","input":{"command":"ls"}}
+		]
+	}`)
+
+	result := buildAssistantMessageStruct(msg, nil)
+	require.Contains(t, result.Content, "<thinking>I should look at the project structure to get a sense of what we're working with.")
+	require.Contains(t, result.Content, "'re working with.</thinking>")
+	require.NotContains(t, result.Content, "\n\n<thinking>'re working with.</thinking>")
+	require.Len(t, result.ToolUses, 1)
 }
 
 func TestBuildKiroPayloadAddsPlaceholderToolForHistoryToolUse(t *testing.T) {

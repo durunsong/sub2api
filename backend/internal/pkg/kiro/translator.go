@@ -1683,7 +1683,7 @@ func buildAssistantMessageStruct(msg gjson.Result, requestCtx *KiroRequestContex
 		for _, part := range content.Array() {
 			switch part.Get("type").String() {
 			case "text":
-				_, _ = contentBuilder.WriteString(part.Get("text").String())
+				appendAssistantTextPart(part.Get("text").String(), &contentBuilder, &thinkingBuilder)
 			case "thinking":
 				text := part.Get("thinking").String()
 				if text == "" {
@@ -1710,7 +1710,7 @@ func buildAssistantMessageStruct(msg gjson.Result, requestCtx *KiroRequestContex
 			}
 		}
 	} else {
-		_, _ = contentBuilder.WriteString(content.String())
+		appendAssistantTextPart(content.String(), &contentBuilder, &thinkingBuilder)
 	}
 
 	finalContent := contentBuilder.String()
@@ -1727,6 +1727,40 @@ func buildAssistantMessageStruct(msg gjson.Result, requestCtx *KiroRequestContex
 	return KiroAssistantResponseMessage{
 		Content:  finalContent,
 		ToolUses: toolUses,
+	}
+}
+
+func appendAssistantTextPart(text string, contentBuilder, thinkingBuilder *strings.Builder) {
+	if text == "" {
+		return
+	}
+	if findRealThinkingStartTag(text, 0) == -1 {
+		_, _ = contentBuilder.WriteString(text)
+		return
+	}
+	pos := 0
+	for pos < len(text) {
+		start := findRealThinkingStartTag(text, pos)
+		if start == -1 {
+			_, _ = contentBuilder.WriteString(text[pos:])
+			return
+		}
+		if start > pos {
+			_, _ = contentBuilder.WriteString(text[pos:start])
+		}
+		end := findRealThinkingEndTag(text, start+len(thinkingStartTag))
+		if end == -1 {
+			_, _ = contentBuilder.WriteString(text[start:])
+			return
+		}
+		thinking := strings.TrimPrefix(text[start+len(thinkingStartTag):end], "\n")
+		if thinking != "" {
+			_, _ = thinkingBuilder.WriteString(thinking)
+		}
+		pos = end + len(thinkingEndTag)
+		if strings.HasPrefix(text[pos:], "\n\n") {
+			pos += len("\n\n")
+		}
 	}
 }
 
@@ -2122,6 +2156,7 @@ func findRealThinkingTag(content, tag string, from int, allowEndBoundary bool) i
 	if from < 0 {
 		from = 0
 	}
+	isStartTag := tag == thinkingStartTag
 	searchFrom := from
 	for searchFrom < len(content) {
 		rel := strings.Index(content[searchFrom:], tag)
@@ -2130,7 +2165,7 @@ func findRealThinkingTag(content, tag string, from int, allowEndBoundary bool) i
 		}
 		pos := searchFrom + rel
 		after := pos + len(tag)
-		if !isThinkingTagQuoted(content, pos, after) &&
+		if !isThinkingTagQuoted(content, pos, after, isStartTag) &&
 			!isInsideMarkdownFence(content, pos) &&
 			!isLineBlockQuote(content, pos) &&
 			(!allowEndBoundary || after <= len(content)) {
@@ -2141,11 +2176,11 @@ func findRealThinkingTag(content, tag string, from int, allowEndBoundary bool) i
 	return -1
 }
 
-func isThinkingTagQuoted(content string, start, after int) bool {
-	if start > 0 && isThinkingQuoteChar(content[start-1]) {
+func isThinkingTagQuoted(content string, start, after int, isStartTag bool) bool {
+	if isStartTag && start > 0 && isThinkingQuoteChar(content[start-1]) {
 		return true
 	}
-	return after < len(content) && isThinkingQuoteChar(content[after])
+	return !isStartTag && after < len(content) && isThinkingQuoteChar(content[after])
 }
 
 func isThinkingQuoteChar(ch byte) bool {
