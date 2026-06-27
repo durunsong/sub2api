@@ -181,6 +181,17 @@ function buildAntigravityAccount(projectId = 'configured-project') {
       }
     },
     extra: {},
+    proxy_id: null,
+    concurrency: 1,
+    priority: 1,
+    rate_multiplier: 1,
+    status: 'active',
+    group_ids: [],
+    expires_at: null,
+    auto_pause_on_expired: false
+  } as any
+}
+
 function buildKiroOAuthAccount() {
   return {
     id: 3,
