@@ -3708,6 +3708,7 @@ export default {
       grok: {
         baseUrlHint: 'Grok OAuth 账号会转发到官方 xAI API Base URL。',
         apiKeyHint: 'Grok 订阅支持使用 OAuth refresh token；API Key 账号不在本次范围内。'
+      },
       kiro: {
         baseUrlHint: '请输入 Kiro 兼容上游的 Base URL',
         apiKeyHint: '用于该 Kiro 上游的 API Key',

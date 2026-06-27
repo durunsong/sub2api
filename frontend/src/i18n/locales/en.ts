@@ -3527,6 +3527,7 @@ export default {
       grok: {
         baseUrlHint: 'Grok OAuth accounts forward to the official xAI API base URL.',
         apiKeyHint: 'Grok subscription support uses OAuth refresh tokens; API keys are out of scope for this account type.'
+      },
       kiro: {
         baseUrlHint: 'Enter the Base URL of the Kiro-compatible upstream',
         apiKeyHint: 'API Key for that Kiro upstream',

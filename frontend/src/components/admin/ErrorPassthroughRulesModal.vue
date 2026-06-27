@@ -490,7 +490,7 @@ const platformOptions = [
   { value: 'openai', label: 'OpenAI' },
   { value: 'gemini', label: 'Gemini' },
   { value: 'antigravity', label: 'Antigravity' },
-  { value: 'grok', label: 'Grok' }
+  { value: 'grok', label: 'Grok' },
   { value: 'kiro', label: 'Kiro' }
 ]
 

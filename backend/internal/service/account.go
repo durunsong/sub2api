@@ -210,6 +210,8 @@ func (a *Account) IsGrokOAuth() bool {
 
 func (a *Account) IsOpenAICompatible() bool {
 	return a != nil && (a.Platform == PlatformOpenAI || a.Platform == PlatformGrok)
+}
+
 func (a *Account) IsKiro() bool {
 	return a.Platform == PlatformKiro
 }

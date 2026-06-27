@@ -5,8 +5,7 @@
  * instead of defining their own color mappings.
  */
 
-export type Platform = 'anthropic' | 'openai' | 'antigravity' | 'gemini' | 'grok'
-export type Platform = 'anthropic' | 'openai' | 'antigravity' | 'gemini' | 'kiro'
+export type Platform = 'anthropic' | 'openai' | 'antigravity' | 'gemini' | 'grok' | 'kiro'
 
 // ── Badge (bg + text + border, for inline badges with border) ───────
 const BADGE: Record<Platform, string> = {
@@ -130,8 +129,7 @@ const GRADIENT_SUBTEXT_DEFAULT = 'text-primary-200'
 // ── Public API ──────────────────────────────────────────────────────
 
 function isPlatform(p: string): p is Platform {
-  return p === 'anthropic' || p === 'openai' || p === 'antigravity' || p === 'gemini' || p === 'grok'
-  return p === 'anthropic' || p === 'openai' || p === 'antigravity' || p === 'gemini' || p === 'kiro'
+  return p === 'anthropic' || p === 'openai' || p === 'antigravity' || p === 'gemini' || p === 'grok' || p === 'kiro'
 }
 
 export function platformBadgeClass(p: string): string {

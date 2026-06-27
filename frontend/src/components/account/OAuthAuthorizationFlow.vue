@@ -858,14 +858,10 @@ watch(inputMethod, (newVal) => {
   emit('update:inputMethod', newVal)
 })
 
-// Auto-extract code from callback URL (OpenAI/Gemini/Antigravity/Grok)
+// Auto-extract code from callback URL (OpenAI/Gemini/Antigravity/Grok/Kiro)
 // e.g., http://localhost:8085/callback?code=xxx...&state=...
 watch(authCodeInput, (newVal) => {
-  if (props.platform !== 'openai' && props.platform !== 'gemini' && props.platform !== 'antigravity' && props.platform !== 'grok') return
-// Auto-extract code from callback URL (OpenAI/Gemini/Antigravity/Kiro)
-// e.g., http://localhost:8085/callback?code=xxx...&state=...
-watch(authCodeInput, (newVal) => {
-  if (props.platform !== 'openai' && props.platform !== 'gemini' && props.platform !== 'antigravity' && props.platform !== 'kiro') return
+  if (props.platform !== 'openai' && props.platform !== 'gemini' && props.platform !== 'antigravity' && props.platform !== 'grok' && props.platform !== 'kiro') return
 
   const trimmed = newVal.trim()
   // Check if it looks like a URL with code parameter
@@ -875,12 +871,11 @@ watch(authCodeInput, (newVal) => {
       const url = trimmed.includes('?') ? new URL(trimmed) : new URL(`http://localhost/callback?${trimmed.replace(/^\?/, '')}`)
       const code = url.searchParams.get('code')
       const stateParam = url.searchParams.get('state')
-      if ((props.platform === 'openai' || props.platform === 'gemini' || props.platform === 'antigravity' || props.platform === 'grok') && stateParam) {
       if (props.platform === 'kiro') {
         oauthCallbackPath.value = url.pathname || ''
         oauthLoginOption.value = url.searchParams.get('login_option') || ''
       }
-      if ((props.platform === 'openai' || props.platform === 'gemini' || props.platform === 'antigravity' || props.platform === 'kiro') && stateParam) {
+      if ((props.platform === 'openai' || props.platform === 'gemini' || props.platform === 'antigravity' || props.platform === 'grok' || props.platform === 'kiro') && stateParam) {
         oauthState.value = stateParam
       }
       if (code && code !== trimmed) {
@@ -891,14 +886,13 @@ watch(authCodeInput, (newVal) => {
       // If URL parsing fails, try regex extraction
       const match = trimmed.match(/[?&]code=([^&]+)/)
       const stateMatch = trimmed.match(/[?&]state=([^&]+)/)
-      if ((props.platform === 'openai' || props.platform === 'gemini' || props.platform === 'antigravity' || props.platform === 'grok') && stateMatch && stateMatch[1]) {
       if (props.platform === 'kiro') {
         const pathMatch = trimmed.match(/^https?:\/\/[^/]+(\/[^?]*)/)
         oauthCallbackPath.value = pathMatch?.[1] || oauthCallbackPath.value
         const loginOptionMatch = trimmed.match(/[?&]login_option=([^&]+)/)
         oauthLoginOption.value = loginOptionMatch?.[1] || oauthLoginOption.value
       }
-      if ((props.platform === 'openai' || props.platform === 'gemini' || props.platform === 'antigravity' || props.platform === 'kiro') && stateMatch && stateMatch[1]) {
+      if ((props.platform === 'openai' || props.platform === 'gemini' || props.platform === 'antigravity' || props.platform === 'grok' || props.platform === 'kiro') && stateMatch && stateMatch[1]) {
         oauthState.value = stateMatch[1]
       }
       if (match && match[1] && match[1] !== trimmed) {

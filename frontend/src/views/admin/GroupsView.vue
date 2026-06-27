@@ -1337,10 +1337,10 @@
           </div>
         </div>
 
-        <!-- 账号过滤控制 (OpenAI/Antigravity/Anthropic/Gemini/Kiro) -->
+        <!-- 账号过滤控制 (OpenAI/Antigravity/Anthropic/Gemini/Grok/Kiro) -->
         <div
           v-if="
-            ['openai', 'antigravity', 'anthropic', 'gemini', 'kiro'].includes(
+            ['openai', 'antigravity', 'anthropic', 'gemini', 'grok', 'kiro'].includes(
               createForm.platform,
             )
           "
@@ -2676,10 +2676,10 @@
           </div>
         </div>
 
-        <!-- 账号过滤控制 (OpenAI/Antigravity/Anthropic/Gemini) -->
+        <!-- 账号过滤控制 (OpenAI/Antigravity/Anthropic/Gemini/Grok/Kiro) -->
         <div
           v-if="
-            ['openai', 'antigravity', 'anthropic', 'gemini'].includes(
+            ['openai', 'antigravity', 'anthropic', 'gemini', 'grok', 'kiro'].includes(
               editForm.platform,
             )
           "
@@ -4421,7 +4421,7 @@ watch(
     if (newVal !== "openai") {
       resetMessagesDispatchFormState(createForm);
     }
-    if (!["openai", "antigravity", "anthropic", "gemini", "kiro"].includes(newVal)) {
+    if (!["openai", "antigravity", "anthropic", "gemini", "grok", "kiro"].includes(newVal)) {
       createForm.require_oauth_only = false;
       createForm.require_privacy_set = false;
     }
@@ -4439,7 +4439,7 @@ watch(
     if (newVal !== "openai") {
       resetMessagesDispatchFormState(editForm);
     }
-    if (!["openai", "antigravity", "anthropic", "gemini", "kiro"].includes(newVal)) {
+    if (!["openai", "antigravity", "anthropic", "gemini", "grok", "kiro"].includes(newVal)) {
       editForm.require_oauth_only = false;
       editForm.require_privacy_set = false;
     }

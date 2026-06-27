@@ -835,6 +835,7 @@
           :placeholder="t('admin.accounts.antigravityProjectIdPlaceholder')"
         />
         <p class="input-hint">{{ t('admin.accounts.antigravityProjectIdHint') }}</p>
+      </div>
       <!-- Kiro account type selection -->
       <div v-if="form.platform === 'kiro'">
         <label class="input-label">{{ t('admin.accounts.accountType') }}</label>
@@ -4359,6 +4360,7 @@ const canExchangeCode = computed(() => {
   }
   if (form.platform === 'grok') {
     return authCode.trim() && grokOAuth.sessionId.value && !grokOAuth.loading.value
+  }
   if (form.platform === 'kiro') {
     return authCode.trim() && kiroOAuth.sessionId.value && !kiroOAuth.loading.value
   }
@@ -4440,10 +4442,9 @@ watch(
           ? 'https://generativelanguage.googleapis.com'
           : newPlatform === 'grok'
             ? 'https://api.x.ai/v1'
-            : 'https://api.anthropic.com'
-          : newPlatform === 'kiro'
-            ? ''
-          : 'https://api.anthropic.com'
+            : newPlatform === 'kiro'
+              ? ''
+              : 'https://api.anthropic.com'
     // Clear model-related settings
     allowedModels.value = []
     modelMappings.value = []
@@ -5560,6 +5561,7 @@ const createAccountAndFinish = async (
     } else {
       delete credentials.model_mapping
     }
+  }
   if (platform === 'kiro' && type === 'oauth') {
     const kiroExtra: Record<string, unknown> = { ...(finalExtra || {}) }
     const unitPrice = Number(kiroCreditUnitPriceUsd.value ?? 0)
