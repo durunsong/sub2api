@@ -15,25 +15,29 @@
   <!-- Default Home Page -->
   <div
     v-else
-    class="relative flex min-h-screen flex-col overflow-hidden bg-gradient-to-br from-gray-50 via-primary-50/30 to-gray-100 dark:from-dark-950 dark:via-dark-900 dark:to-dark-950"
+    ref="pageRef"
+    @mousemove="onPointerMove"
+    class="page-root relative flex min-h-screen flex-col overflow-hidden bg-gradient-to-br from-gray-50 via-indigo-50/40 to-gray-100 dark:from-dark-950 dark:via-dark-900 dark:to-dark-950"
   >
     <!-- Background Decorations -->
     <div class="pointer-events-none absolute inset-0 overflow-hidden">
       <div
-        class="absolute -right-40 -top-40 h-96 w-96 rounded-full bg-primary-400/20 blur-3xl"
+        class="blob blob-1 absolute -right-40 -top-40 h-96 w-96 rounded-full bg-indigo-400/20 blur-3xl"
       ></div>
       <div
-        class="absolute -bottom-40 -left-40 h-96 w-96 rounded-full bg-primary-500/15 blur-3xl"
+        class="blob blob-2 absolute -bottom-40 -left-40 h-96 w-96 rounded-full bg-violet-500/15 blur-3xl"
       ></div>
       <div
-        class="absolute left-1/3 top-1/4 h-72 w-72 rounded-full bg-primary-300/10 blur-3xl"
+        class="blob blob-3 absolute left-1/3 top-1/4 h-72 w-72 rounded-full bg-indigo-300/10 blur-3xl"
       ></div>
       <div
-        class="absolute bottom-1/4 right-1/4 h-64 w-64 rounded-full bg-primary-400/10 blur-3xl"
+        class="blob blob-4 absolute bottom-1/4 right-1/4 h-64 w-64 rounded-full bg-violet-400/10 blur-3xl"
       ></div>
       <div
-        class="absolute inset-0 bg-[linear-gradient(rgba(20,184,166,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(20,184,166,0.03)_1px,transparent_1px)] bg-[size:64px_64px]"
+        class="grid-overlay absolute inset-0 bg-[linear-gradient(rgba(99,102,241,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(99,102,241,0.04)_1px,transparent_1px)] bg-[size:64px_64px]"
       ></div>
+      <!-- Cursor-following spotlight -->
+      <div class="cursor-glow" :class="{ 'cursor-glow-active': pointerActive }"></div>
     </div>
 
     <!-- Header -->
@@ -41,7 +45,7 @@
       <nav class="mx-auto flex max-w-6xl items-center justify-between">
         <!-- Logo -->
         <div class="flex items-center">
-          <div class="h-10 w-10 overflow-hidden rounded-xl shadow-md">
+          <div class="logo-box h-10 w-10 overflow-hidden rounded-xl shadow-md">
             <img :src="siteLogo || '/logo.png'" alt="Logo" class="h-full w-full object-contain" />
           </div>
         </div>
@@ -57,7 +61,7 @@
             :href="docUrl"
             target="_blank"
             rel="noopener noreferrer"
-            class="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-dark-400 dark:hover:bg-dark-800 dark:hover:text-white"
+            class="hover-pop rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-dark-400 dark:hover:bg-dark-800 dark:hover:text-white"
             :title="t('home.viewDocs')"
           >
             <Icon name="book" size="md" />
@@ -66,7 +70,7 @@
           <!-- Theme Toggle -->
           <button
             @click="toggleTheme"
-            class="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-dark-400 dark:hover:bg-dark-800 dark:hover:text-white"
+            class="hover-pop rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-dark-400 dark:hover:bg-dark-800 dark:hover:text-white"
             :title="isDark ? t('home.switchToLight') : t('home.switchToDark')"
           >
             <Icon v-if="isDark" name="sun" size="md" />
@@ -77,10 +81,10 @@
           <router-link
             v-if="isAuthenticated"
             :to="dashboardPath"
-            class="inline-flex items-center gap-1.5 rounded-full bg-gray-900 py-1 pl-1 pr-2.5 transition-colors hover:bg-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700"
+            class="hover-pop inline-flex items-center gap-1.5 rounded-full bg-gray-900 py-1 pl-1 pr-2.5 transition-colors hover:bg-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700"
           >
             <span
-              class="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-primary-400 to-primary-600 text-[10px] font-semibold text-white"
+              class="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-violet-600 text-[10px] font-semibold text-white"
             >
               {{ userInitial }}
             </span>
@@ -102,7 +106,7 @@
           <router-link
             v-else
             to="/login"
-            class="inline-flex items-center rounded-full bg-gray-900 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700"
+            class="hover-pop inline-flex items-center rounded-full bg-gray-900 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700"
           >
             {{ t('home.login') }}
           </router-link>
@@ -118,28 +122,32 @@
           <!-- Left: Text Content -->
           <div class="flex-1 text-center lg:text-left">
             <h1
+              v-reveal="{ delay: 0 }"
               class="mb-4 text-4xl font-bold text-gray-900 dark:text-white md:text-5xl lg:text-6xl"
             >
               {{ siteName }}
             </h1>
-            <p class="mb-8 text-lg text-gray-600 dark:text-dark-300 md:text-xl">
+            <p
+              v-reveal="{ delay: 120 }"
+              class="mb-8 text-lg text-gray-600 dark:text-dark-300 md:text-xl"
+            >
               {{ siteSubtitle }}
             </p>
 
             <!-- CTA Button -->
-            <div>
+            <div v-reveal="{ delay: 240 }">
               <router-link
                 :to="isAuthenticated ? dashboardPath : '/login'"
-                class="btn btn-primary px-8 py-3 text-base shadow-lg shadow-primary-500/30"
+                class="btn cta-indigo cta-shine px-8 py-3 text-base text-white shadow-lg shadow-indigo-500/30"
               >
                 {{ isAuthenticated ? t('home.goToDashboard') : t('home.getStarted') }}
-                <Icon name="arrowRight" size="md" class="ml-2" :stroke-width="2" />
+                <Icon name="arrowRight" size="md" class="cta-arrow ml-2" :stroke-width="2" />
               </router-link>
             </div>
           </div>
 
           <!-- Right: Terminal Animation -->
-          <div class="flex flex-1 justify-center lg:justify-end">
+          <div v-reveal="{ delay: 200 }" class="flex flex-1 justify-center lg:justify-end">
             <div class="terminal-container">
               <div class="terminal-window">
                 <!-- Window header -->
@@ -179,25 +187,28 @@
         <!-- Feature Tags - Centered -->
         <div class="mb-12 flex flex-wrap items-center justify-center gap-4 md:gap-6">
           <div
-            class="inline-flex items-center gap-2.5 rounded-full border border-gray-200/50 bg-white/80 px-5 py-2.5 shadow-sm backdrop-blur-sm dark:border-dark-700/50 dark:bg-dark-800/80"
+            v-reveal="{ delay: 0 }"
+            class="feature-tag inline-flex items-center gap-2.5 rounded-full border border-gray-200/50 bg-white/80 px-5 py-2.5 shadow-sm backdrop-blur-sm dark:border-dark-700/50 dark:bg-dark-800/80"
           >
-            <Icon name="swap" size="sm" class="text-primary-500" />
+            <Icon name="swap" size="sm" class="text-indigo-500" />
             <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{
               t('home.tags.subscriptionToApi')
             }}</span>
           </div>
           <div
-            class="inline-flex items-center gap-2.5 rounded-full border border-gray-200/50 bg-white/80 px-5 py-2.5 shadow-sm backdrop-blur-sm dark:border-dark-700/50 dark:bg-dark-800/80"
+            v-reveal="{ delay: 100 }"
+            class="feature-tag inline-flex items-center gap-2.5 rounded-full border border-gray-200/50 bg-white/80 px-5 py-2.5 shadow-sm backdrop-blur-sm dark:border-dark-700/50 dark:bg-dark-800/80"
           >
-            <Icon name="shield" size="sm" class="text-primary-500" />
+            <Icon name="shield" size="sm" class="text-violet-500" />
             <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{
               t('home.tags.stickySession')
             }}</span>
           </div>
           <div
-            class="inline-flex items-center gap-2.5 rounded-full border border-gray-200/50 bg-white/80 px-5 py-2.5 shadow-sm backdrop-blur-sm dark:border-dark-700/50 dark:bg-dark-800/80"
+            v-reveal="{ delay: 200 }"
+            class="feature-tag inline-flex items-center gap-2.5 rounded-full border border-gray-200/50 bg-white/80 px-5 py-2.5 shadow-sm backdrop-blur-sm dark:border-dark-700/50 dark:bg-dark-800/80"
           >
-            <Icon name="chart" size="sm" class="text-primary-500" />
+            <Icon name="chart" size="sm" class="text-indigo-500" />
             <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{
               t('home.tags.realtimeBilling')
             }}</span>
@@ -208,10 +219,11 @@
         <div class="mb-12 grid gap-6 md:grid-cols-3">
           <!-- Feature 1: Unified Gateway -->
           <div
-            class="group rounded-2xl border border-gray-200/50 bg-white/60 p-6 backdrop-blur-sm transition-all duration-300 hover:shadow-xl hover:shadow-primary-500/10 dark:border-dark-700/50 dark:bg-dark-800/60"
+            v-reveal="{ delay: 0 }"
+            class="feature-card group rounded-2xl border border-gray-200/50 bg-white/60 p-6 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-indigo-500/10 dark:border-dark-700/50 dark:bg-dark-800/60"
           >
             <div
-              class="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/30 transition-transform group-hover:scale-110"
+              class="feature-icon mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-lg shadow-indigo-500/30 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6"
             >
               <Icon name="server" size="lg" class="text-white" />
             </div>
@@ -225,10 +237,11 @@
 
           <!-- Feature 2: Account Pool -->
           <div
-            class="group rounded-2xl border border-gray-200/50 bg-white/60 p-6 backdrop-blur-sm transition-all duration-300 hover:shadow-xl hover:shadow-primary-500/10 dark:border-dark-700/50 dark:bg-dark-800/60"
+            v-reveal="{ delay: 120 }"
+            class="feature-card group rounded-2xl border border-gray-200/50 bg-white/60 p-6 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-violet-500/10 dark:border-dark-700/50 dark:bg-dark-800/60"
           >
             <div
-              class="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 shadow-lg shadow-primary-500/30 transition-transform group-hover:scale-110"
+              class="feature-icon mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 shadow-lg shadow-violet-500/30 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6"
             >
               <svg
                 class="h-6 w-6 text-white"
@@ -254,10 +267,11 @@
 
           <!-- Feature 3: Billing & Quota -->
           <div
-            class="group rounded-2xl border border-gray-200/50 bg-white/60 p-6 backdrop-blur-sm transition-all duration-300 hover:shadow-xl hover:shadow-primary-500/10 dark:border-dark-700/50 dark:bg-dark-800/60"
+            v-reveal="{ delay: 240 }"
+            class="feature-card group rounded-2xl border border-gray-200/50 bg-white/60 p-6 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-purple-500/10 dark:border-dark-700/50 dark:bg-dark-800/60"
           >
             <div
-              class="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg shadow-purple-500/30 transition-transform group-hover:scale-110"
+              class="feature-icon mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg shadow-purple-500/30 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6"
             >
               <svg
                 class="h-6 w-6 text-white"
@@ -283,7 +297,7 @@
         </div>
 
         <!-- Supported Providers -->
-        <div class="mb-8 text-center">
+        <div v-reveal="{ delay: 0 }" class="mb-8 text-center">
           <h2 class="mb-3 text-2xl font-bold text-gray-900 dark:text-white">
             {{ t('home.providers.title') }}
           </h2>
@@ -295,7 +309,8 @@
         <div class="mb-16 flex flex-wrap items-center justify-center gap-4">
           <!-- Claude - Supported -->
           <div
-            class="flex items-center gap-2 rounded-xl border border-primary-200 bg-white/60 px-5 py-3 ring-1 ring-primary-500/20 backdrop-blur-sm dark:border-primary-800 dark:bg-dark-800/60"
+            v-reveal="{ delay: 0 }"
+            class="provider-chip flex items-center gap-2 rounded-xl border border-indigo-200 bg-white/60 px-5 py-3 ring-1 ring-indigo-500/20 backdrop-blur-sm dark:border-indigo-800 dark:bg-dark-800/60"
           >
             <div
               class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-orange-400 to-orange-500"
@@ -304,13 +319,14 @@
             </div>
             <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{ t('home.providers.claude') }}</span>
             <span
-              class="rounded bg-primary-100 px-1.5 py-0.5 text-[10px] font-medium text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
+              class="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400"
               >{{ t('home.providers.supported') }}</span
             >
           </div>
           <!-- GPT - Supported -->
           <div
-            class="flex items-center gap-2 rounded-xl border border-primary-200 bg-white/60 px-5 py-3 ring-1 ring-primary-500/20 backdrop-blur-sm dark:border-primary-800 dark:bg-dark-800/60"
+            v-reveal="{ delay: 80 }"
+            class="provider-chip flex items-center gap-2 rounded-xl border border-indigo-200 bg-white/60 px-5 py-3 ring-1 ring-indigo-500/20 backdrop-blur-sm dark:border-indigo-800 dark:bg-dark-800/60"
           >
             <div
               class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-green-500 to-green-600"
@@ -319,13 +335,14 @@
             </div>
             <span class="text-sm font-medium text-gray-700 dark:text-dark-200">GPT</span>
             <span
-              class="rounded bg-primary-100 px-1.5 py-0.5 text-[10px] font-medium text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
+              class="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400"
               >{{ t('home.providers.supported') }}</span
             >
           </div>
           <!-- Gemini - Supported -->
           <div
-            class="flex items-center gap-2 rounded-xl border border-primary-200 bg-white/60 px-5 py-3 ring-1 ring-primary-500/20 backdrop-blur-sm dark:border-primary-800 dark:bg-dark-800/60"
+            v-reveal="{ delay: 160 }"
+            class="provider-chip flex items-center gap-2 rounded-xl border border-indigo-200 bg-white/60 px-5 py-3 ring-1 ring-indigo-500/20 backdrop-blur-sm dark:border-indigo-800 dark:bg-dark-800/60"
           >
             <div
               class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-600"
@@ -334,13 +351,14 @@
             </div>
             <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{ t('home.providers.gemini') }}</span>
             <span
-              class="rounded bg-primary-100 px-1.5 py-0.5 text-[10px] font-medium text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
+              class="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400"
               >{{ t('home.providers.supported') }}</span
             >
           </div>
           <!-- Antigravity - Supported -->
           <div
-            class="flex items-center gap-2 rounded-xl border border-primary-200 bg-white/60 px-5 py-3 ring-1 ring-primary-500/20 backdrop-blur-sm dark:border-primary-800 dark:bg-dark-800/60"
+            v-reveal="{ delay: 240 }"
+            class="provider-chip flex items-center gap-2 rounded-xl border border-indigo-200 bg-white/60 px-5 py-3 ring-1 ring-indigo-500/20 backdrop-blur-sm dark:border-indigo-800 dark:bg-dark-800/60"
           >
             <div
               class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-rose-500 to-pink-600"
@@ -349,13 +367,14 @@
             </div>
             <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{ t('home.providers.antigravity') }}</span>
             <span
-              class="rounded bg-primary-100 px-1.5 py-0.5 text-[10px] font-medium text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
+              class="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400"
               >{{ t('home.providers.supported') }}</span
             >
           </div>
           <!-- Kiro - Supported -->
           <div
-            class="flex items-center gap-2 rounded-xl border border-primary-200 bg-white/60 px-5 py-3 ring-1 ring-primary-500/20 backdrop-blur-sm dark:border-primary-800 dark:bg-dark-800/60"
+            v-reveal="{ delay: 320 }"
+            class="provider-chip flex items-center gap-2 rounded-xl border border-indigo-200 bg-white/60 px-5 py-3 ring-1 ring-indigo-500/20 backdrop-blur-sm dark:border-indigo-800 dark:bg-dark-800/60"
           >
             <div
               class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600"
@@ -364,13 +383,14 @@
             </div>
             <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{ t('home.providers.kiro') }}</span>
             <span
-              class="rounded bg-primary-100 px-1.5 py-0.5 text-[10px] font-medium text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
+              class="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400"
               >{{ t('home.providers.supported') }}</span
             >
           </div>
           <!-- More - Coming Soon -->
           <div
-            class="flex items-center gap-2 rounded-xl border border-gray-200/50 bg-white/40 px-5 py-3 opacity-60 backdrop-blur-sm dark:border-dark-700/50 dark:bg-dark-800/40"
+            v-reveal="{ delay: 400, opacity: 0.6 }"
+            class="provider-chip flex items-center gap-2 rounded-xl border border-gray-200/50 bg-white/40 px-5 py-3 backdrop-blur-sm dark:border-dark-700/50 dark:bg-dark-800/40"
           >
             <div
               class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-gray-500 to-gray-600"
@@ -405,14 +425,6 @@
           >
             {{ t('home.docs') }}
           </a>
-          <a
-            :href="githubUrl"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-dark-400 dark:hover:text-white"
-          >
-            GitHub
-          </a>
         </div>
       </div>
     </footer>
@@ -431,6 +443,43 @@ const { t } = useI18n()
 const authStore = useAuthStore()
 const appStore = useAppStore()
 
+// Scroll-reveal directive: fades & slides elements into view, with optional
+// stagger delay and a custom final opacity. Respects reduced-motion preferences.
+const prefersReducedMotion =
+  typeof window !== 'undefined' &&
+  window.matchMedia &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+const vReveal = {
+  mounted(el: HTMLElement, binding: { value?: { delay?: number; opacity?: number } }) {
+    const delay = binding.value?.delay ?? 0
+    const finalOpacity = binding.value?.opacity ?? 1
+    el.style.setProperty('--reveal-final-opacity', String(finalOpacity))
+
+    if (prefersReducedMotion) {
+      el.style.opacity = String(finalOpacity)
+      return
+    }
+
+    el.classList.add('reveal')
+    el.style.transitionDelay = `${delay}ms`
+
+    const reveal = () => el.classList.add('reveal-visible')
+    const observer = new IntersectionObserver(
+      (entries, obs) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            reveal()
+            obs.unobserve(entry.target)
+          }
+        })
+      },
+      { threshold: 0.15 }
+    )
+    observer.observe(el)
+  },
+}
+
 // Site settings - directly from appStore (already initialized from injected config)
 const siteName = computed(() => appStore.cachedPublicSettings?.site_name || appStore.siteName || 'Sub2API')
 const siteLogo = computed(() => appStore.cachedPublicSettings?.site_logo || appStore.siteLogo || '')
@@ -444,11 +493,29 @@ const isHomeContentUrl = computed(() => {
   return content.startsWith('http://') || content.startsWith('https://')
 })
 
+// Cursor-following spotlight: track pointer position as CSS vars on the root,
+// throttled via requestAnimationFrame for smoothness.
+const pageRef = ref<HTMLElement | null>(null)
+const pointerActive = ref(false)
+let rafId = 0
+function onPointerMove(e: MouseEvent) {
+  if (prefersReducedMotion) return
+  const el = pageRef.value
+  if (!el) return
+  const rect = el.getBoundingClientRect()
+  const x = e.clientX - rect.left
+  const y = e.clientY - rect.top
+  if (!pointerActive.value) pointerActive.value = true
+  if (rafId) return
+  rafId = requestAnimationFrame(() => {
+    el.style.setProperty('--mx', `${x}px`)
+    el.style.setProperty('--my', `${y}px`)
+    rafId = 0
+  })
+}
+
 // Theme
 const isDark = ref(document.documentElement.classList.contains('dark'))
-
-// GitHub URL
-const githubUrl = 'https://github.com/Wei-Shaw/sub2api'
 
 // Auth state
 const isAuthenticated = computed(() => authStore.isAuthenticated)
@@ -611,7 +678,7 @@ onMounted(() => {
   color: #a78bfa;
 }
 .code-url {
-  color: #14b8a6;
+  color: #818cf8;
 }
 .code-comment {
   color: #64748b;
@@ -652,8 +719,241 @@ onMounted(() => {
 :deep(.dark) .terminal-window {
   box-shadow:
     0 25px 50px -12px rgba(0, 0, 0, 0.6),
-    0 0 0 1px rgba(20, 184, 166, 0.2),
-    0 0 40px rgba(20, 184, 166, 0.1),
+    0 0 0 1px rgba(99, 102, 241, 0.25),
+    0 0 40px rgba(99, 102, 241, 0.12),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* ===== Scroll Reveal ===== */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+.reveal-visible {
+  opacity: var(--reveal-final-opacity, 1);
+  transform: translateY(0);
+}
+
+/* ===== Floating Background Blobs ===== */
+.blob {
+  will-change: transform;
+}
+.blob-1 {
+  animation: float-1 16s ease-in-out infinite;
+}
+.blob-2 {
+  animation: float-2 20s ease-in-out infinite;
+}
+.blob-3 {
+  animation: float-3 18s ease-in-out infinite;
+}
+.blob-4 {
+  animation: float-4 22s ease-in-out infinite;
+}
+
+@keyframes float-1 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-40px, 30px) scale(1.1);
+  }
+}
+@keyframes float-2 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(50px, -30px) scale(1.12);
+  }
+}
+@keyframes float-3 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(30px, 40px) scale(0.92);
+  }
+}
+@keyframes float-4 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-30px, -40px) scale(1.08);
+  }
+}
+
+/* ===== Grid Drift ===== */
+.grid-overlay {
+  animation: grid-pan 40s linear infinite;
+}
+@keyframes grid-pan {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 64px 64px;
+  }
+}
+
+/* ===== Feature Tags ===== */
+.feature-tag {
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
+}
+.feature-tag:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px -10px rgba(99, 102, 241, 0.35);
+}
+
+/* ===== Feature Icon subtle float on card hover ===== */
+.feature-icon {
+  transition:
+    transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.35s ease;
+}
+
+/* ===== Provider Chips ===== */
+.provider-chip {
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
+}
+.provider-chip:hover {
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 0 12px 28px -12px rgba(99, 102, 241, 0.4);
+}
+
+/* ===== CTA Button (Indigo) ===== */
+.cta-indigo {
+  background-image: linear-gradient(to right, #6366f1, #7c3aed);
+  box-shadow: 0 10px 30px -8px rgba(99, 102, 241, 0.45);
+  transition:
+    background-image 0.25s ease,
+    box-shadow 0.25s ease,
+    transform 0.2s ease;
+}
+.cta-indigo:hover {
+  background-image: linear-gradient(to right, #4f46e5, #6d28d9);
+  box-shadow: 0 14px 36px -8px rgba(124, 58, 237, 0.55);
+}
+
+/* ===== CTA Button Shine ===== */
+.cta-shine {
+  position: relative;
+  overflow: hidden;
+}
+.cta-shine::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -150%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    120deg,
+    transparent,
+    rgba(255, 255, 255, 0.45),
+    transparent
+  );
+  transform: skewX(-20deg);
+  animation: cta-sweep 3.5s ease-in-out infinite;
+}
+@keyframes cta-sweep {
+  0%,
+  60% {
+    left: -150%;
+  }
+  100% {
+    left: 150%;
+  }
+}
+.cta-arrow {
+  transition: transform 0.3s ease;
+}
+.cta-shine:hover .cta-arrow {
+  transform: translateX(4px);
+}
+
+/* ===== Cursor-following Spotlight ===== */
+.cursor-glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  background: radial-gradient(
+    280px circle at var(--mx, 50%) var(--my, 50%),
+    rgba(99, 102, 241, 0.18),
+    rgba(124, 58, 237, 0.07) 40%,
+    transparent 70%
+  );
+}
+.cursor-glow-active {
+  opacity: 1;
+}
+:deep(.dark) .cursor-glow {
+  background: radial-gradient(
+    300px circle at var(--mx, 50%) var(--my, 50%),
+    rgba(129, 140, 248, 0.2),
+    rgba(167, 139, 250, 0.08) 40%,
+    transparent 70%
+  );
+}
+
+/* ===== Header Hover Pop ===== */
+.hover-pop {
+  transition:
+    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+    background-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.hover-pop:hover {
+  transform: translateY(-2px) scale(1.06);
+}
+.hover-pop:active {
+  transform: translateY(0) scale(0.96);
+}
+
+.logo-box {
+  transition:
+    transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.35s ease;
+}
+.logo-box:hover {
+  transform: rotate(-6deg) scale(1.12);
+  box-shadow: 0 10px 24px -8px rgba(99, 102, 241, 0.5);
+}
+
+/* ===== Reduced Motion ===== */
+@media (prefers-reduced-motion: reduce) {
+  .blob,
+  .grid-overlay,
+  .cta-shine::after,
+  .code-line,
+  .cursor {
+    animation: none !important;
+  }
+  .cursor-glow {
+    display: none;
+  }
+  .reveal {
+    opacity: var(--reveal-final-opacity, 1);
+    transform: none;
+    transition: none;
+  }
 }
 </style>
