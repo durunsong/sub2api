@@ -122,7 +122,8 @@ let lastVerifyAt = 0
 const VERIFY_RETRY_INTERVAL_MS = 15000
 const VERIFY_RETRY_MAX_ATTEMPTS = 6
 
-const isAlipay = computed(() => props.paymentType.includes('alipay'))
+// XorPay returns an Alipay QR, so treat it as Alipay for branding/scan hints.
+const isAlipay = computed(() => props.paymentType.includes('alipay') || props.paymentType === 'xorpay')
 const isWxpay = computed(() => props.paymentType.includes('wxpay'))
 
 const dialogTitle = computed(() => {

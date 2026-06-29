@@ -67,6 +67,12 @@ func (h *PaymentWebhookHandler) AirwallexWebhook(c *gin.Context) {
 	h.handleNotify(c, payment.TypeAirwallex)
 }
 
+// XorPayNotify handles XorPay payment notifications.
+// POST /api/v1/payment/webhook/xorpay
+func (h *PaymentWebhookHandler) XorPayNotify(c *gin.Context) {
+	h.handleNotify(c, payment.TypeXorPay)
+}
+
 // handleNotify is the shared logic for all provider webhook handlers.
 func (h *PaymentWebhookHandler) handleNotify(c *gin.Context, providerKey string) {
 	var rawBody string
@@ -152,6 +158,12 @@ func extractOutTradeNo(rawBody, providerKey string) string {
 		values, err := url.ParseQuery(rawBody)
 		if err == nil {
 			return values.Get("out_trade_no")
+		}
+	case payment.TypeXorPay:
+		// XorPay POSTs the original order_id (our out_trade_no) form-encoded.
+		values, err := url.ParseQuery(rawBody)
+		if err == nil {
+			return values.Get("order_id")
 		}
 	case payment.TypeAirwallex:
 		var payload struct {
