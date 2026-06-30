@@ -185,11 +185,6 @@ func pcGroupByPaymentType(instances []*dbent.PaymentProviderInstance) map[string
 			add(payment.TypeStripe, inst)
 			continue
 		}
-		// XorPay creates Alipay QR orders, so users should see it as Alipay.
-		if inst.ProviderKey == payment.TypeXorPay {
-			add(payment.TypeAlipay, inst)
-			continue
-		}
 		for _, t := range splitTypes(inst.SupportedTypes) {
 			add(t, inst)
 		}

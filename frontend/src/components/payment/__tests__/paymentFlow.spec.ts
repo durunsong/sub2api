@@ -36,7 +36,6 @@ describe('getVisibleMethods', () => {
   it('normalizes provider aliases and keeps stripe as a top-level method', () => {
     const visible = getVisibleMethods({
       alipay_direct: methodLimit({ single_min: 5 }),
-      xorpay: methodLimit({ single_min: 6 }),
       wxpay: methodLimit({ single_max: 100 }),
       stripe: methodLimit({ fee_rate: 3 }),
       airwallex: methodLimit({ single_min: 10 }),
@@ -53,27 +52,12 @@ describe('getVisibleMethods', () => {
   it('prefers canonical visible methods over aliases when both exist', () => {
     const visible = getVisibleMethods({
       alipay: methodLimit({ single_min: 2 }),
-      xorpay: methodLimit({ single_min: 7 }),
       alipay_direct: methodLimit({ single_min: 9 }),
       wxpay_direct: methodLimit({ fee_rate: 1.2 }),
     })
 
     expect(visible.alipay.single_min).toBe(2)
     expect(visible.wxpay.fee_rate).toBe(1.2)
-  })
-})
-
-describe('buildCreateOrderPayload', () => {
-  it('submits XorPay as the Alipay visible method', () => {
-    const payload = buildCreateOrderPayload({
-      amount: 20,
-      paymentType: 'xorpay',
-      orderType: 'balance',
-      isMobile: false,
-      isWechatBrowser: false,
-    })
-
-    expect(payload.payment_type).toBe('alipay')
   })
 })
 

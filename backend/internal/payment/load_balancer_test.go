@@ -80,12 +80,6 @@ func TestInstanceSupportsType(t *testing.T) {
 			expected:       true,
 		},
 		{
-			name:           "xorpay supports canonical alipay visible method",
-			supportedTypes: "xorpay",
-			target:         "alipay",
-			expected:       true,
-		},
-		{
 			name:           "empty supported types means all supported",
 			supportedTypes: "",
 			target:         "alipay",

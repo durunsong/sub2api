@@ -207,7 +207,6 @@ func TestGetBasePaymentType(t *testing.T) {
 		expected string
 	}{
 		{payment.TypeEasyPay, payment.TypeEasyPay},
-		{payment.TypeXorPay, payment.TypeXorPay},
 		{payment.TypeStripe, payment.TypeStripe},
 		{payment.TypeCard, payment.TypeStripe},
 		{payment.TypeLink, payment.TypeStripe},

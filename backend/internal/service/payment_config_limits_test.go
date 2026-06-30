@@ -55,17 +55,6 @@ func makeInstance(id int64, providerKey, supportedTypes, limits string) *dbent.P
 	}
 }
 
-func TestPcGroupByPaymentTypeMapsXorPayToAlipay(t *testing.T) {
-	t.Parallel()
-
-	xorpay := makeInstance(11, payment.TypeXorPay, payment.TypeXorPay, "")
-	groups := pcGroupByPaymentType([]*dbent.PaymentProviderInstance{xorpay})
-
-	require.Contains(t, groups, payment.TypeAlipay)
-	require.Len(t, groups[payment.TypeAlipay], 1)
-	require.NotContains(t, groups, payment.TypeXorPay)
-}
-
 func TestPcAggregateMethodLimits(t *testing.T) {
 	t.Parallel()
 
