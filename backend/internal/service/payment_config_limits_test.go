@@ -55,7 +55,6 @@ func makeInstance(id int64, providerKey, supportedTypes, limits string) *dbent.P
 	}
 }
 
-
 func TestPcGroupByPaymentTypeMapsXorPayToAlipay(t *testing.T) {
 	t.Parallel()
 
