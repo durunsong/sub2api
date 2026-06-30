@@ -10097,6 +10097,8 @@ function getProviderVisibleMethods(
     }
   } else if (provider.provider_key === "easypay") {
     supportedTypes.forEach(addMethod);
+  } else if (provider.provider_key === "xorpay") {
+    methods.add("alipay");
   }
 
   return Array.from(methods);

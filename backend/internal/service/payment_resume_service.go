@@ -31,6 +31,7 @@ const (
 
 	VisibleMethodSourceOfficialAlipay = "official_alipay"
 	VisibleMethodSourceEasyPayAlipay  = "easypay_alipay"
+	VisibleMethodSourceXorPayAlipay   = "xorpay_alipay"
 	VisibleMethodSourceOfficialWechat = "official_wxpay"
 	VisibleMethodSourceEasyPayWechat  = "easypay_wxpay"
 
@@ -114,7 +115,11 @@ func (s *PaymentResumeService) ensureSigningKey() error {
 }
 
 func NormalizeVisibleMethod(method string) string {
-	return payment.GetBasePaymentType(strings.TrimSpace(method))
+	trimmed := strings.TrimSpace(method)
+	if trimmed == payment.TypeXorPay {
+		return payment.TypeAlipay
+	}
+	return payment.GetBasePaymentType(trimmed)
 }
 
 func NormalizeVisibleMethods(methods []string) []string {
@@ -156,6 +161,8 @@ func NormalizeVisibleMethodSource(method, source string) string {
 			return VisibleMethodSourceOfficialAlipay
 		case VisibleMethodSourceEasyPayAlipay, payment.TypeEasyPay:
 			return VisibleMethodSourceEasyPayAlipay
+		case VisibleMethodSourceXorPayAlipay, payment.TypeXorPay:
+			return VisibleMethodSourceXorPayAlipay
 		}
 	case payment.TypeWxpay:
 		switch strings.TrimSpace(strings.ToLower(source)) {
@@ -174,6 +181,8 @@ func VisibleMethodProviderKeyForSource(method, source string) (string, bool) {
 		return payment.TypeAlipay, NormalizeVisibleMethod(method) == payment.TypeAlipay
 	case VisibleMethodSourceEasyPayAlipay:
 		return payment.TypeEasyPay, NormalizeVisibleMethod(method) == payment.TypeAlipay
+	case VisibleMethodSourceXorPayAlipay:
+		return payment.TypeXorPay, NormalizeVisibleMethod(method) == payment.TypeAlipay
 	case VisibleMethodSourceOfficialWechat:
 		return payment.TypeWxpay, NormalizeVisibleMethod(method) == payment.TypeWxpay
 	case VisibleMethodSourceEasyPayWechat:

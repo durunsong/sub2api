@@ -392,7 +392,7 @@ func InstanceSupportsType(supportedTypes string, target PaymentType) bool {
 
 func normalizeVisibleMethodSupportType(paymentType PaymentType) PaymentType {
 	switch strings.TrimSpace(paymentType) {
-	case TypeAlipay, TypeAlipayDirect:
+	case TypeAlipay, TypeAlipayDirect, TypeXorPay:
 		return TypeAlipay
 	case TypeWxpay, TypeWxpayDirect:
 		return TypeWxpay
