@@ -106,9 +106,14 @@
         <p class="mt-1 text-2xl font-bold tabular-nums text-gray-900 dark:text-white">{{ countdownDisplay }}</p>
         <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ t('payment.qr.waitingPayment') }}</p>
       </div>
-      <button class="btn btn-secondary w-full" :disabled="cancelling" @click="handleCancel">
-        {{ cancelling ? t('common.processing') : t('payment.qr.cancelOrder') }}
-      </button>
+      <div class="grid grid-cols-2 gap-3">
+        <button class="btn btn-secondary w-full" :disabled="cancelling" @click="handleBack">
+          {{ t('common.back') }}
+        </button>
+        <button class="btn w-full border border-red-300 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/20" :disabled="cancelling" @click="handleCancel">
+          {{ cancelling ? t('common.processing') : t('payment.qr.cancelOrder') }}
+        </button>
+      </div>
     </template>
 
     <!-- Waiting for Popup/Redirect Mode -->
@@ -126,9 +131,14 @@
         <p class="mt-1 text-2xl font-bold tabular-nums text-gray-900 dark:text-white">{{ countdownDisplay }}</p>
         <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ t('payment.qr.waitingPayment') }}</p>
       </div>
-      <button class="btn btn-secondary w-full" :disabled="cancelling" @click="handleCancel">
-        {{ cancelling ? t('common.processing') : t('payment.qr.cancelOrder') }}
-      </button>
+      <div class="grid grid-cols-2 gap-3">
+        <button class="btn btn-secondary w-full" :disabled="cancelling" @click="handleBack">
+          {{ t('common.back') }}
+        </button>
+        <button class="btn w-full border border-red-300 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/20" :disabled="cancelling" @click="handleCancel">
+          {{ cancelling ? t('common.processing') : t('payment.qr.cancelOrder') }}
+        </button>
+      </div>
     </template>
   </div>
 </template>
@@ -335,6 +345,8 @@ async function handleCancel() {
     cancelling.value = false
   }
 }
+
+function handleBack() { cleanup(); emit('done') }
 
 function handleDone() { cleanup(); emit('done') }
 

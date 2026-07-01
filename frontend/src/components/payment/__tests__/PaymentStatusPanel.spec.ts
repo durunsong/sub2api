@@ -132,6 +132,29 @@ describe('PaymentStatusPanel', () => {
     openSpy.mockRestore()
   })
 
+  it('returns from QR mode without cancelling the order', async () => {
+    const wrapper = mount(PaymentStatusPanel, {
+      props: {
+        orderId: 42,
+        qrCode: 'https://pay.example.com/qr/42',
+        expiresAt: '2099-01-01T12:30:00Z',
+        paymentType: 'alipay',
+        orderType: 'balance',
+      },
+      global: {
+        stubs: {
+          Icon: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.get('button.btn.btn-secondary.w-full').trigger('click')
+
+    expect(cancelOrder).not.toHaveBeenCalled()
+    expect(wrapper.emitted('done')).toHaveLength(1)
+  })
+
   it('actively verifies a stuck pending order and settles it when upstream confirms payment', async () => {
     pollOrderStatus.mockResolvedValue(orderFactory('PENDING'))
     verifyOrder.mockResolvedValue({
