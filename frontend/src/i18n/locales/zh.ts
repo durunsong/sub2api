@@ -7283,7 +7283,7 @@ export default {
       easypay: '易支付',
       alipay: '支付宝',
       wxpay: '微信支付',
-      xorpay: 'XorPay',
+      xorpay: 'XorPay（支付宝）',
       stripe: 'Stripe',
       airwallex: 'Airwallex',
       card: '银行卡',
