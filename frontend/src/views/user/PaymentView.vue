@@ -8,7 +8,7 @@
         <!-- Tab Switcher (hide during payment and subscription confirm) -->
         <div v-if="tabs.length > 1 && paymentPhase === 'select' && !selectedPlan" class="flex space-x-1 rounded-xl bg-gray-100 p-1 dark:bg-dark-800">
           <button v-for="tab in tabs" :key="tab.key"
-            class="flex-1 rounded-lg px-4 py-2.5 text-sm font-medium transition-all"
+            class="flex-1 rounded-lg px-4 py-2.5 text-base font-semibold transition-all"
             :class="activeTab === tab.key ? 'bg-white text-gray-900 shadow dark:bg-dark-700 dark:text-white' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
             @click="activeTab = tab.key">{{ tab.label }}</button>
         </div>
@@ -216,12 +216,32 @@
             </template>
             <!-- Plan list -->
             <template v-else>
+              <div v-if="checkout.plans.length > 0" class="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  class="rounded-full border px-3 py-1.5 text-sm font-medium transition-colors"
+                  :class="selectedPlanPlatform === '' ? 'border-primary-500 bg-primary-50 text-primary-700 dark:border-primary-400 dark:bg-primary-900/30 dark:text-primary-200' : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:border-dark-700 dark:bg-dark-800 dark:text-gray-400 dark:hover:text-gray-200'"
+                  @click="selectedPlanPlatform = ''"
+                >
+                  {{ t('common.all') }}
+                </button>
+                <button
+                  v-for="platform in subscriptionPlanPlatforms"
+                  :key="platform"
+                  type="button"
+                  class="rounded-full border px-3 py-1.5 text-sm font-medium transition-colors"
+                  :class="selectedPlanPlatform === platform ? 'border-primary-500 bg-primary-50 text-primary-700 dark:border-primary-400 dark:bg-primary-900/30 dark:text-primary-200' : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:border-dark-700 dark:bg-dark-800 dark:text-gray-400 dark:hover:text-gray-200'"
+                  @click="selectedPlanPlatform = platform"
+                >
+                  {{ platformLabel(platform) }}
+                </button>
+              </div>
               <div v-if="checkout.plans.length === 0" class="card py-16 text-center">
                 <Icon name="gift" size="xl" class="mx-auto mb-3 text-gray-300 dark:text-dark-600" />
                 <p class="text-gray-500 dark:text-gray-400">{{ t('payment.noPlans') }}</p>
               </div>
               <div v-else :class="planGridClass">
-                <SubscriptionPlanCard v-for="plan in checkout.plans" :key="plan.id" :plan="plan" :active-subscriptions="activeSubscriptions" @select="selectPlan" />
+                <SubscriptionPlanCard v-for="plan in filteredSubscriptionPlans" :key="plan.id" :plan="plan" :active-subscriptions="activeSubscriptions" @select="selectPlan" />
               </div>
               <!-- Active subscriptions (compact, below plan list) -->
               <div v-if="activeSubscriptions.length > 0">
@@ -347,6 +367,7 @@ const activeTab = ref<'recharge' | 'subscription'>('recharge')
 const amount = ref<number | null>(null)
 const selectedMethod = ref('')
 const selectedPlan = ref<SubscriptionPlan | null>(null)
+const selectedPlanPlatform = ref('')
 const previewImage = ref('')
 
 const paymentPhase = ref<'select' | 'paying'>('select')
@@ -542,9 +563,19 @@ const creditedAmount = computed(() => Math.round((validAmount.value * balanceRec
 
 // Adaptive grid: center single card, 2-col for 2 plans, 3-col for 3+
 const planGridClass = computed(() => {
-  const n = checkout.value.plans.length
+  const n = filteredSubscriptionPlans.value.length
   if (n <= 2) return 'grid grid-cols-1 gap-4 lg:grid-cols-2'
   return 'grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3'
+})
+
+const subscriptionPlanPlatforms = computed(() => {
+  return Array.from(new Set(checkout.value.plans.map(plan => plan.group_platform).filter((platform): platform is string => !!platform)))
+    .sort((a, b) => platformLabel(a).localeCompare(platformLabel(b)))
+})
+
+const filteredSubscriptionPlans = computed(() => {
+  if (!selectedPlanPlatform.value) return checkout.value.plans
+  return checkout.value.plans.filter(plan => plan.group_platform === selectedPlanPlatform.value)
 })
 
 // Check if an amount fits a method's [min, max]. 0 = no limit.
