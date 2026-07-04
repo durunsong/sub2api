@@ -185,6 +185,7 @@ vi.mock("vue-i18n", async () => {
 });
 
 const AppLayoutStub = { template: "<div><slot /></div>" };
+const RouterLinkStub = { template: "<a><slot /></a>" };
 const ToggleStub = defineComponent({
   props: {
     modelValue: {
@@ -432,6 +433,8 @@ function mountView() {
     global: {
       stubs: {
         AppLayout: AppLayoutStub,
+        RouterLink: RouterLinkStub,
+        "router-link": RouterLinkStub,
         Select: SelectStub,
         Toggle: ToggleStub,
         Icon: true,
@@ -742,6 +745,8 @@ describe("admin SettingsView payment visible method controls", () => {
       global: {
         stubs: {
           AppLayout: AppLayoutStub,
+          RouterLink: RouterLinkStub,
+          "router-link": RouterLinkStub,
           Select: SelectStub,
           Toggle: ToggleStub,
           Icon: true,
@@ -835,6 +840,8 @@ describe("admin SettingsView payment visible method controls", () => {
       global: {
         stubs: {
           AppLayout: AppLayoutStub,
+          RouterLink: RouterLinkStub,
+          "router-link": RouterLinkStub,
           Select: SelectStub,
           Toggle: ToggleStub,
           Icon: true,
