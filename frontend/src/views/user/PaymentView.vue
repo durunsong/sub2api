@@ -236,7 +236,7 @@
                   {{ subscriptionPlanPlatformLabel(platform) }}
                 </button>
                 <button
-                  v-for="option in subscriptionPlanDurationFilters"
+                  v-for="option in visibleSubscriptionPlanDurationFilters"
                   :key="option.key"
                   type="button"
                   class="rounded-full border px-3 py-1.5 text-sm font-medium transition-colors"
@@ -585,10 +585,40 @@ const planGridClass = computed(() => {
   return 'grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3'
 })
 
+function subscriptionPlanDurationKey(plan: SubscriptionPlan): SubscriptionPlanDurationFilterKey | '' {
+  const unit = (plan.validity_unit || '').toLowerCase()
+  if (unit === 'week' || unit === 'weeks') return 'week'
+  if (unit === 'month' || unit === 'months') return 'month'
+
+  const days = plan.validity_days
+  if (!Number.isFinite(days)) return ''
+  if (days < 4) return 'day'
+  if (days > 6 && days < 10) return 'week'
+  if (days > 20 && days < 35) return 'month'
+  return ''
+}
+
+const plansMatchingSelectedDuration = computed(() =>
+  checkout.value.plans.filter(plan => !selectedPlanDuration.value || subscriptionPlanDurationKey(plan) === selectedPlanDuration.value),
+)
+
 const subscriptionPlanPlatforms = computed(() => {
-  return Array.from(new Set(checkout.value.plans.map(plan => plan.group_platform).filter((platform): platform is string => !!platform)))
-    .sort((a, b) => subscriptionPlanPlatformLabel(a).localeCompare(subscriptionPlanPlatformLabel(b)))
+  const platforms = new Set<string>()
+  plansMatchingSelectedDuration.value.forEach((plan) => {
+    if (plan.group_platform) platforms.add(plan.group_platform)
+  })
+  return Array.from(platforms).sort((a, b) => subscriptionPlanPlatformLabel(a).localeCompare(subscriptionPlanPlatformLabel(b)))
 })
+
+const plansMatchingSelectedPlatform = computed(() =>
+  checkout.value.plans.filter(plan => !selectedPlanPlatform.value || plan.group_platform === selectedPlanPlatform.value),
+)
+
+const visibleSubscriptionPlanDurationFilters = computed(() =>
+  subscriptionPlanDurationFilters.filter(option =>
+    plansMatchingSelectedPlatform.value.some(plan => subscriptionPlanDurationKey(plan) === option.key),
+  ),
+)
 
 function subscriptionPlanPlatformLabel(platform: string): string {
   if (platform === 'kiro') return 'Claude(Kiro)'
@@ -598,12 +628,7 @@ function subscriptionPlanPlatformLabel(platform: string): string {
 }
 
 function matchesSubscriptionPlanDuration(plan: SubscriptionPlan): boolean {
-  const days = plan.validity_days
-  if (!Number.isFinite(days)) return false
-  if (selectedPlanDuration.value === 'day') return days < 4
-  if (selectedPlanDuration.value === 'week') return days > 6 && days < 10
-  if (selectedPlanDuration.value === 'month') return days > 20 && days < 35
-  return true
+  return !selectedPlanDuration.value || subscriptionPlanDurationKey(plan) === selectedPlanDuration.value
 }
 
 const filteredSubscriptionPlans = computed(() => {
@@ -611,6 +636,18 @@ const filteredSubscriptionPlans = computed(() => {
     const matchesPlatform = !selectedPlanPlatform.value || plan.group_platform === selectedPlanPlatform.value
     return matchesPlatform && matchesSubscriptionPlanDuration(plan)
   })
+})
+
+watch(subscriptionPlanPlatforms, (platforms) => {
+  if (selectedPlanPlatform.value && !platforms.includes(selectedPlanPlatform.value)) {
+    selectedPlanPlatform.value = ''
+  }
+})
+
+watch(visibleSubscriptionPlanDurationFilters, (filters) => {
+  if (selectedPlanDuration.value && !filters.some(filter => filter.key === selectedPlanDuration.value)) {
+    selectedPlanDuration.value = ''
+  }
 })
 
 // Check if an amount fits a method's [min, max]. 0 = no limit.
