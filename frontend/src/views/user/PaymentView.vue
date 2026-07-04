@@ -220,8 +220,8 @@
                 <button
                   type="button"
                   class="rounded-full border px-3 py-1.5 text-sm font-medium transition-colors"
-                  :class="selectedPlanPlatform === '' ? 'border-primary-500 bg-primary-50 text-primary-700 dark:border-primary-400 dark:bg-primary-900/30 dark:text-primary-200' : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:border-dark-700 dark:bg-dark-800 dark:text-gray-400 dark:hover:text-gray-200'"
-                  @click="selectedPlanPlatform = ''"
+                  :class="selectedPlanPlatform === '' && selectedPlanDuration === '' ? 'border-primary-500 bg-primary-50 text-primary-700 dark:border-primary-400 dark:bg-primary-900/30 dark:text-primary-200' : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:border-dark-700 dark:bg-dark-800 dark:text-gray-400 dark:hover:text-gray-200'"
+                  @click="clearSubscriptionPlanFilters"
                 >
                   {{ t('common.all') }}
                 </button>
@@ -231,7 +231,7 @@
                   type="button"
                   class="rounded-full border px-3 py-1.5 text-sm font-medium transition-colors"
                   :class="selectedPlanPlatform === platform ? 'border-primary-500 bg-primary-50 text-primary-700 dark:border-primary-400 dark:bg-primary-900/30 dark:text-primary-200' : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:border-dark-700 dark:bg-dark-800 dark:text-gray-400 dark:hover:text-gray-200'"
-                  @click="selectedPlanPlatform = platform"
+                  @click="selectSubscriptionPlanPlatform(platform)"
                 >
                   {{ subscriptionPlanPlatformLabel(platform) }}
                 </button>
@@ -241,7 +241,7 @@
                   type="button"
                   class="rounded-full border px-3 py-1.5 text-sm font-medium transition-colors"
                   :class="selectedPlanDuration === option.key ? 'border-primary-500 bg-primary-50 text-primary-700 dark:border-primary-400 dark:bg-primary-900/30 dark:text-primary-200' : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:border-dark-700 dark:bg-dark-800 dark:text-gray-400 dark:hover:text-gray-200'"
-                  @click="selectedPlanDuration = selectedPlanDuration === option.key ? '' : option.key"
+                  @click="selectSubscriptionPlanDuration(option.key)"
                 >
                   {{ option.label }}
                 </button>
@@ -598,25 +598,17 @@ function subscriptionPlanDurationKey(plan: SubscriptionPlan): SubscriptionPlanDu
   return ''
 }
 
-const plansMatchingSelectedDuration = computed(() =>
-  checkout.value.plans.filter(plan => !selectedPlanDuration.value || subscriptionPlanDurationKey(plan) === selectedPlanDuration.value),
-)
-
 const subscriptionPlanPlatforms = computed(() => {
   const platforms = new Set<string>()
-  plansMatchingSelectedDuration.value.forEach((plan) => {
+  checkout.value.plans.forEach((plan) => {
     if (plan.group_platform) platforms.add(plan.group_platform)
   })
   return Array.from(platforms).sort((a, b) => subscriptionPlanPlatformLabel(a).localeCompare(subscriptionPlanPlatformLabel(b)))
 })
 
-const plansMatchingSelectedPlatform = computed(() =>
-  checkout.value.plans.filter(plan => !selectedPlanPlatform.value || plan.group_platform === selectedPlanPlatform.value),
-)
-
 const visibleSubscriptionPlanDurationFilters = computed(() =>
   subscriptionPlanDurationFilters.filter(option =>
-    plansMatchingSelectedPlatform.value.some(plan => subscriptionPlanDurationKey(plan) === option.key),
+    checkout.value.plans.some(plan => subscriptionPlanDurationKey(plan) === option.key),
   ),
 )
 
@@ -633,22 +625,25 @@ function matchesSubscriptionPlanDuration(plan: SubscriptionPlan): boolean {
 
 const filteredSubscriptionPlans = computed(() => {
   return checkout.value.plans.filter(plan => {
-    const matchesPlatform = !selectedPlanPlatform.value || plan.group_platform === selectedPlanPlatform.value
-    return matchesPlatform && matchesSubscriptionPlanDuration(plan)
+    if (selectedPlanPlatform.value) return plan.group_platform === selectedPlanPlatform.value
+    return matchesSubscriptionPlanDuration(plan)
   })
 })
 
-watch(subscriptionPlanPlatforms, (platforms) => {
-  if (selectedPlanPlatform.value && !platforms.includes(selectedPlanPlatform.value)) {
-    selectedPlanPlatform.value = ''
-  }
-})
+function clearSubscriptionPlanFilters() {
+  selectedPlanPlatform.value = ''
+  selectedPlanDuration.value = ''
+}
 
-watch(visibleSubscriptionPlanDurationFilters, (filters) => {
-  if (selectedPlanDuration.value && !filters.some(filter => filter.key === selectedPlanDuration.value)) {
-    selectedPlanDuration.value = ''
-  }
-})
+function selectSubscriptionPlanPlatform(platform: string) {
+  selectedPlanPlatform.value = platform
+  selectedPlanDuration.value = ''
+}
+
+function selectSubscriptionPlanDuration(duration: SubscriptionPlanDurationFilterKey) {
+  selectedPlanDuration.value = duration
+  selectedPlanPlatform.value = ''
+}
 
 // Check if an amount fits a method's [min, max]. 0 = no limit.
 function amountFitsMethod(amt: number, methodType: string): boolean {

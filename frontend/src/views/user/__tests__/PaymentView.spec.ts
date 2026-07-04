@@ -276,7 +276,7 @@ async function mountSubscriptionList(plans: SubscriptionPlan[]) {
 }
 
 describe('PaymentView subscription filters', () => {
-  it('shows custom platform labels and filters by platform plus duration', async () => {
+  it('shows custom labels and switches between platform and duration filters', async () => {
     const basePlan = checkoutInfoWithPlansFixture().data.plans[0]
     const plans: SubscriptionPlan[] = [
       { ...basePlan, id: 1, name: 'Kiro Day', group_platform: 'kiro', validity_days: 3 },
@@ -304,7 +304,9 @@ describe('PaymentView subscription filters', () => {
 
     await wrapper.findAll('button').find(button => button.text() === 'Claude(Kiro)')?.trigger('click')
     expect(wrapper.text()).toContain('Kiro Week')
+    expect(wrapper.text()).toContain('Kiro Day')
     expect(wrapper.text()).not.toContain('OpenAI Week')
+    expect(wrapper.text()).not.toContain('Anthropic Month')
   })
 
   it('filters plans by plural validity_unit values from checkout info', async () => {
@@ -323,16 +325,17 @@ describe('PaymentView subscription filters', () => {
     expect(wrapper.text()).not.toContain('OpenAI Week')
 
     await wrapper.findAll('button').find(button => button.text() === 'OpenAI(GPT)')?.trigger('click')
+    expect(wrapper.text()).toContain('OpenAI Week')
+    expect(wrapper.text()).toContain('OpenAI Month')
+    expect(wrapper.text()).not.toContain('Kiro Day')
     expect(wrapper.text()).toContain('周卡')
     expect(wrapper.text()).toContain('月卡')
 
-    await wrapper.findAll('button').find(button => button.text() === 'common.all')?.trigger('click')
-    await wrapper.findAll('button').find(button => button.text() === '月卡')?.trigger('click')
     await wrapper.findAll('button').find(button => button.text() === 'Claude(Kiro)')?.trigger('click')
     expect(wrapper.text()).toContain('Kiro Day')
+    expect(wrapper.text()).not.toContain('OpenAI Week')
+    expect(wrapper.text()).not.toContain('OpenAI Month')
     expect(wrapper.text()).toContain('天卡')
-    expect(wrapper.text()).not.toContain('周卡')
-    expect(wrapper.text()).not.toContain('月卡')
   })
 })
 
