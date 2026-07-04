@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it, vi } from 'vitest'
+import { createPinia } from 'pinia'
 import GroupBadge from '../GroupBadge.vue'
 
 vi.mock('vue-i18n', async () => {
@@ -19,6 +20,9 @@ describe('GroupBadge', () => {
         name: 'kiro free',
         platform: 'kiro',
         rateMultiplier: 1
+      },
+      global: {
+        plugins: [createPinia()]
       }
     })
 

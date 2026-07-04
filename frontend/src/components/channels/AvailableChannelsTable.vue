@@ -183,5 +183,4 @@ function exclusiveGroups(section: UserChannelPlatformSection): UserAvailableGrou
 function publicGroups(section: UserChannelPlatformSection): UserAvailableGroup[] {
   return section.groups.filter((g) => !g.is_exclusive)
 }
-
 </script>
