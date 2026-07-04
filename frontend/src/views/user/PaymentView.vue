@@ -51,7 +51,7 @@
             <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-dark-700 dark:bg-dark-800">
               <p class="text-xs font-medium text-gray-400 dark:text-gray-500">{{ t('payment.rechargeAccount') }}</p>
               <p class="mt-1 text-base font-semibold text-gray-900 dark:text-white">{{ user?.email || user?.username || '' }}</p>
-              <p class="mt-0.5 text-sm font-medium text-green-600 dark:text-green-400">{{ t('payment.currentBalance') }}: {{ formatSelectedPaymentAmount(user?.balance || 0) }}</p>
+              <p class="mt-0.5 text-sm font-medium text-green-600 dark:text-green-400">{{ t('payment.currentBalance') }}: {{ formatCreditedBalanceAmount(user?.balance || 0) }}</p>
             </div>
             <div v-if="enabledMethods.length === 0" class="card py-16 text-center">
               <p class="text-gray-500 dark:text-gray-400">{{ t('payment.notAvailable') }}</p>
@@ -91,7 +91,7 @@
                     </div>
                     <div v-if="balanceRechargeMultiplier !== 1" class="flex justify-between" :class="{ 'border-t border-gray-200 pt-2 dark:border-dark-600': feeRate <= 0 }">
                       <span class="text-gray-500 dark:text-gray-400">{{ t('payment.creditedBalance') }}</span>
-                      <span class="text-gray-900 dark:text-white">{{ formatSelectedPaymentAmount(creditedAmount) }}</span>
+                      <span class="text-gray-900 dark:text-white">{{ formatCreditedBalanceAmount(creditedAmount) }}</span>
                     </div>
                   </div>
                 </div>
@@ -640,6 +640,10 @@ function ceilPaymentAmount(value: number, currency: string): number {
 
 function formatSelectedPaymentAmount(value: number): string {
   return formatPaymentAmount(value, selectedCurrency.value, localeCode.value)
+}
+
+function formatCreditedBalanceAmount(value: number): string {
+  return formatPaymentAmount(value, 'USD', localeCode.value)
 }
 
 function formatSelectedSubscriptionPaymentAmount(value: number): string {
