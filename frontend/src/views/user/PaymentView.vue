@@ -6,10 +6,10 @@
       </div>
       <template v-else>
         <!-- Tab Switcher (hide during payment and subscription confirm) -->
-        <div v-if="tabs.length > 1 && paymentPhase === 'select' && !selectedPlan" class="flex space-x-1 rounded-xl bg-gray-100 p-1 dark:bg-dark-800">
+        <div v-if="tabs.length > 1 && paymentPhase === 'select' && !selectedPlan" class="flex gap-2 rounded-2xl border border-primary-100 bg-white/80 p-2 shadow-sm shadow-primary-100/60 backdrop-blur dark:border-primary-900/40 dark:bg-dark-800/80 dark:shadow-none">
           <button v-for="tab in tabs" :key="tab.key"
-            class="flex-1 rounded-lg px-4 py-2.5 text-base font-semibold transition-all"
-            :class="activeTab === tab.key ? 'bg-white text-gray-900 shadow dark:bg-dark-700 dark:text-white' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+            class="flex-1 rounded-xl border px-5 py-4 text-lg font-bold tracking-wide transition-all duration-200 active:scale-[0.99]"
+            :class="activeTab === tab.key ? 'border-primary-500 bg-primary-600 text-white shadow-lg shadow-primary-500/25 dark:border-primary-400 dark:bg-primary-500 dark:shadow-primary-900/30' : 'border-gray-200 bg-gray-50 text-gray-600 hover:border-primary-300 hover:bg-primary-50 hover:text-primary-700 dark:border-dark-600 dark:bg-dark-700/70 dark:text-gray-300 dark:hover:border-primary-500/60 dark:hover:bg-primary-900/20 dark:hover:text-primary-200'"
             @click="activeTab = tab.key">{{ tab.label }}</button>
         </div>
         <!-- Payment in progress (shared by recharge and subscription) -->

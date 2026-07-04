@@ -1,5 +1,11 @@
 <template>
-  <div class="auth-root relative flex min-h-screen items-center justify-center overflow-hidden p-4">
+  <div
+    ref="authRootRef"
+    class="auth-root relative flex min-h-screen items-center justify-center overflow-hidden p-4"
+    :class="{ 'auth-pointer-active': pointerActive }"
+    @mousemove="onPointerMove"
+    @mouseleave="pointerActive = false"
+  >
     <!-- Background -->
     <div
       class="absolute inset-0 bg-gradient-to-br from-gray-50 via-indigo-50/40 to-gray-100 dark:from-dark-950 dark:via-dark-900 dark:to-dark-950"
@@ -22,6 +28,7 @@
       <div
         class="auth-grid absolute inset-0 bg-[linear-gradient(rgba(99,102,241,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(99,102,241,0.04)_1px,transparent_1px)] bg-[size:64px_64px]"
       ></div>
+      <div class="auth-cursor-glow" :class="{ 'auth-cursor-glow-active': pointerActive }"></div>
     </div>
 
     <!-- Content Container -->
@@ -45,7 +52,7 @@
       </div>
 
       <!-- Card Container -->
-      <div class="auth-card card-glass rounded-2xl p-8 shadow-glass">
+      <div ref="authCardRef" class="auth-card card-glass rounded-2xl p-8 shadow-glass">
         <slot />
       </div>
 
@@ -63,11 +70,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useAppStore } from '@/stores'
 import { sanitizeUrl } from '@/utils/url'
 
 const appStore = useAppStore()
+const authRootRef = ref<HTMLElement | null>(null)
+const authCardRef = ref<HTMLElement | null>(null)
+const pointerActive = ref(false)
+const prefersReducedMotion = typeof window !== 'undefined'
+  && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+let rafId = 0
 
 const siteName = computed(() => appStore.siteName || 'Sub2API')
 const siteLogo = computed(() => sanitizeUrl(appStore.siteLogo || '', { allowRelative: true, allowDataUrl: true }))
@@ -79,6 +92,32 @@ const currentYear = computed(() => new Date().getFullYear())
 onMounted(() => {
   appStore.fetchPublicSettings()
 })
+
+onUnmounted(() => {
+  if (rafId) cancelAnimationFrame(rafId)
+})
+
+function onPointerMove(e: MouseEvent) {
+  if (prefersReducedMotion) return
+  const el = authRootRef.value
+  if (!el) return
+  const rect = el.getBoundingClientRect()
+  const x = e.clientX - rect.left
+  const y = e.clientY - rect.top
+  if (!pointerActive.value) pointerActive.value = true
+  if (rafId) return
+  rafId = requestAnimationFrame(() => {
+    el.style.setProperty('--mx', `${x}px`)
+    el.style.setProperty('--my', `${y}px`)
+    const card = authCardRef.value
+    if (card) {
+      const cardRect = card.getBoundingClientRect()
+      card.style.setProperty('--card-mx', `${e.clientX - cardRect.left}px`)
+      card.style.setProperty('--card-my', `${e.clientY - cardRect.top}px`)
+    }
+    rafId = 0
+  })
+}
 </script>
 
 <style scoped>
@@ -117,6 +156,25 @@ onMounted(() => {
 /* ===== Motion ===== */
 .auth-card {
   animation: auth-card-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  position: relative;
+  overflow: hidden;
+}
+.auth-card::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  background: radial-gradient(
+    180px circle at var(--card-mx, 50%) var(--card-my, 50%),
+    rgba(99, 102, 241, 0.16),
+    rgba(124, 58, 237, 0.07) 35%,
+    transparent 72%
+  );
+}
+.auth-pointer-active .auth-card::before {
+  opacity: 1;
 }
 @keyframes auth-card-in {
   from {
@@ -192,6 +250,38 @@ onMounted(() => {
 .auth-grid {
   animation: auth-grid-pan 40s linear infinite;
 }
+
+.auth-cursor-glow {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  background: radial-gradient(
+    300px circle at var(--mx, 50%) var(--my, 50%),
+    rgba(99, 102, 241, 0.2),
+    rgba(124, 58, 237, 0.08) 42%,
+    transparent 72%
+  );
+}
+.auth-cursor-glow-active {
+  opacity: 1;
+}
+:deep(.dark) .auth-cursor-glow {
+  background: radial-gradient(
+    320px circle at var(--mx, 50%) var(--my, 50%),
+    rgba(129, 140, 248, 0.22),
+    rgba(167, 139, 250, 0.1) 42%,
+    transparent 72%
+  );
+}
+:deep(.dark) .auth-card::before {
+  background: radial-gradient(
+    190px circle at var(--card-mx, 50%) var(--card-my, 50%),
+    rgba(129, 140, 248, 0.18),
+    rgba(167, 139, 250, 0.08) 35%,
+    transparent 72%
+  );
+}
 @keyframes auth-grid-pan {
   from {
     background-position: 0 0;
@@ -207,6 +297,10 @@ onMounted(() => {
   .auth-blob,
   .auth-grid {
     animation: none !important;
+  }
+  .auth-cursor-glow,
+  .auth-card::before {
+    display: none;
   }
 }
 </style>
