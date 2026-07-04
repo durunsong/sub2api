@@ -235,6 +235,79 @@ async function mountSubscriptionConfirm(options: Parameters<typeof checkoutInfoW
   return wrapper
 }
 
+async function mountSubscriptionList(plans: SubscriptionPlan[]) {
+  vi.useRealTimers()
+  routeState.path = '/purchase'
+  routeState.query = {
+    tab: 'subscription',
+  }
+  routerReplace.mockReset().mockResolvedValue(undefined)
+  routerPush.mockReset().mockResolvedValue(undefined)
+  routerResolve.mockClear()
+  createOrder.mockReset()
+  refreshUser.mockReset()
+  fetchActiveSubscriptions.mockReset().mockResolvedValue(undefined)
+  showError.mockReset()
+  showInfo.mockReset()
+  showWarning.mockReset()
+  getCheckoutInfo.mockReset().mockResolvedValue(checkoutInfoFixture({ plans }))
+  bridgeInvoke.mockReset()
+  window.localStorage.clear()
+  ;(window as Window & { WeixinJSBridge?: { invoke: typeof bridgeInvoke } }).WeixinJSBridge = undefined
+
+  const wrapper = shallowMount(PaymentView, {
+    global: {
+      stubs: {
+        AppLayout: {
+          template: '<div><slot /></div>',
+        },
+        SubscriptionPlanCard: {
+          props: ['plan'],
+          template: '<div class="plan-card">{{ plan.name }}</div>',
+        },
+        Teleport: true,
+        Transition: false,
+      },
+    },
+  })
+  await flushPromises()
+  await flushPromises()
+  return wrapper
+}
+
+describe('PaymentView subscription filters', () => {
+  it('shows custom platform labels and filters by platform plus duration', async () => {
+    const basePlan = checkoutInfoWithPlansFixture().data.plans[0]
+    const plans: SubscriptionPlan[] = [
+      { ...basePlan, id: 1, name: 'Kiro Day', group_platform: 'kiro', validity_days: 3 },
+      { ...basePlan, id: 2, name: 'Kiro Week', group_platform: 'kiro', validity_days: 7 },
+      { ...basePlan, id: 3, name: 'Anthropic Month', group_platform: 'anthropic', validity_days: 30 },
+      { ...basePlan, id: 4, name: 'OpenAI Week', group_platform: 'openai', validity_days: 7 },
+      { ...basePlan, id: 5, name: 'OpenAI Long', group_platform: 'openai', validity_days: 40 },
+    ]
+
+    const wrapper = await mountSubscriptionList(plans)
+
+    expect(wrapper.text()).toContain('Claude(Kiro)')
+    expect(wrapper.text()).toContain('Anthropic(Claude)')
+    expect(wrapper.text()).toContain('OpenAI(GPT)')
+    expect(wrapper.text()).toContain('天卡')
+    expect(wrapper.text()).toContain('周卡')
+    expect(wrapper.text()).toContain('月卡')
+
+    await wrapper.findAll('button').find(button => button.text() === '周卡')?.trigger('click')
+    expect(wrapper.text()).toContain('Kiro Week')
+    expect(wrapper.text()).toContain('OpenAI Week')
+    expect(wrapper.text()).not.toContain('Kiro Day')
+    expect(wrapper.text()).not.toContain('Anthropic Month')
+    expect(wrapper.text()).not.toContain('OpenAI Long')
+
+    await wrapper.findAll('button').find(button => button.text() === 'Claude(Kiro)')?.trigger('click')
+    expect(wrapper.text()).toContain('Kiro Week')
+    expect(wrapper.text()).not.toContain('OpenAI Week')
+  })
+})
+
 describe('PaymentView subscription confirmation amounts', () => {
   it('keeps subscription plan price independent from balance recharge multiplier', async () => {
     const wrapper = await mountSubscriptionConfirm({

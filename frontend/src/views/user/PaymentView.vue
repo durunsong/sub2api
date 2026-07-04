@@ -233,7 +233,17 @@
                   :class="selectedPlanPlatform === platform ? 'border-primary-500 bg-primary-50 text-primary-700 dark:border-primary-400 dark:bg-primary-900/30 dark:text-primary-200' : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:border-dark-700 dark:bg-dark-800 dark:text-gray-400 dark:hover:text-gray-200'"
                   @click="selectedPlanPlatform = platform"
                 >
-                  {{ platformLabel(platform) }}
+                  {{ subscriptionPlanPlatformLabel(platform) }}
+                </button>
+                <button
+                  v-for="option in subscriptionPlanDurationFilters"
+                  :key="option.key"
+                  type="button"
+                  class="rounded-full border px-3 py-1.5 text-sm font-medium transition-colors"
+                  :class="selectedPlanDuration === option.key ? 'border-primary-500 bg-primary-50 text-primary-700 dark:border-primary-400 dark:bg-primary-900/30 dark:text-primary-200' : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:border-dark-700 dark:bg-dark-800 dark:text-gray-400 dark:hover:text-gray-200'"
+                  @click="selectedPlanDuration = selectedPlanDuration === option.key ? '' : option.key"
+                >
+                  {{ option.label }}
                 </button>
               </div>
               <div v-if="checkout.plans.length === 0" class="card py-16 text-center">
@@ -368,6 +378,7 @@ const amount = ref<number | null>(null)
 const selectedMethod = ref('')
 const selectedPlan = ref<SubscriptionPlan | null>(null)
 const selectedPlanPlatform = ref('')
+const selectedPlanDuration = ref<SubscriptionPlanDurationFilterKey | ''>('')
 const previewImage = ref('')
 
 const paymentPhase = ref<'select' | 'paying'>('select')
@@ -555,6 +566,12 @@ const visibleMethods = computed(() => getVisibleMethods(checkout.value.methods))
 const enabledMethods = computed(() => Object.keys(visibleMethods.value))
 const validAmount = computed(() => amount.value ?? 0)
 const RECHARGE_MAX_AMOUNT = 1000
+type SubscriptionPlanDurationFilterKey = 'day' | 'week' | 'month'
+const subscriptionPlanDurationFilters: Array<{ key: SubscriptionPlanDurationFilterKey; label: string }> = [
+  { key: 'day', label: '天卡' },
+  { key: 'week', label: '周卡' },
+  { key: 'month', label: '月卡' },
+]
 const balanceRechargeMultiplier = computed(() => {
   const multiplier = checkout.value.balance_recharge_multiplier
   return Number.isFinite(multiplier) && multiplier > 0 ? multiplier : 1
@@ -570,12 +587,30 @@ const planGridClass = computed(() => {
 
 const subscriptionPlanPlatforms = computed(() => {
   return Array.from(new Set(checkout.value.plans.map(plan => plan.group_platform).filter((platform): platform is string => !!platform)))
-    .sort((a, b) => platformLabel(a).localeCompare(platformLabel(b)))
+    .sort((a, b) => subscriptionPlanPlatformLabel(a).localeCompare(subscriptionPlanPlatformLabel(b)))
 })
 
+function subscriptionPlanPlatformLabel(platform: string): string {
+  if (platform === 'kiro') return 'Claude(Kiro)'
+  if (platform === 'anthropic') return 'Anthropic(Claude)'
+  if (platform === 'openai') return 'OpenAI(GPT)'
+  return platformLabel(platform)
+}
+
+function matchesSubscriptionPlanDuration(plan: SubscriptionPlan): boolean {
+  const days = plan.validity_days
+  if (!Number.isFinite(days)) return false
+  if (selectedPlanDuration.value === 'day') return days < 4
+  if (selectedPlanDuration.value === 'week') return days > 6 && days < 10
+  if (selectedPlanDuration.value === 'month') return days > 20 && days < 35
+  return true
+}
+
 const filteredSubscriptionPlans = computed(() => {
-  if (!selectedPlanPlatform.value) return checkout.value.plans
-  return checkout.value.plans.filter(plan => plan.group_platform === selectedPlanPlatform.value)
+  return checkout.value.plans.filter(plan => {
+    const matchesPlatform = !selectedPlanPlatform.value || plan.group_platform === selectedPlanPlatform.value
+    return matchesPlatform && matchesSubscriptionPlanDuration(plan)
+  })
 })
 
 // Check if an amount fits a method's [min, max]. 0 = no limit.
