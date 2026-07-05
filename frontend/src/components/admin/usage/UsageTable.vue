@@ -170,6 +170,7 @@
               <span class="font-medium text-green-600 dark:text-green-400">${{ row.actual_cost?.toFixed(6) || '0.000000' }}</span>
               <!-- Cost Detail Tooltip -->
               <div
+                v-if="showCostDetail"
                 class="group relative"
                 @mouseenter="showTooltip($event, row)"
                 @mouseleave="hideTooltip"
@@ -474,6 +475,7 @@ interface Props {
   defaultSortOrder?: 'asc' | 'desc'
   showAccountBilling?: boolean
   showUpstreamEndpoint?: boolean
+  showCostDetail?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -482,7 +484,8 @@ const props = withDefaults(defineProps<Props>(), {
   defaultSortKey: '',
   defaultSortOrder: 'asc',
   showAccountBilling: true,
-  showUpstreamEndpoint: true
+  showUpstreamEndpoint: true,
+  showCostDetail: true,
 })
 const emit = defineEmits<{
   userClick: [userID: number, email?: string]
@@ -492,6 +495,7 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const showAccountBilling = props.showAccountBilling
 const showUpstreamEndpoint = props.showUpstreamEndpoint
+const showCostDetail = props.showCostDetail
 const ipGeoBatchLoading = ref(false)
 
 const showIpGeoToolbar = computed(() => props.columns.some((col) => col.key === 'ip_address'))

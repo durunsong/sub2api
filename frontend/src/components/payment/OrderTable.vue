@@ -24,7 +24,7 @@
       </div>
     </template>
     <template #cell-payment_type="{ value }">
-      <span class="text-sm text-gray-700 dark:text-gray-300">{{ t('payment.methods.' + value, value) }}</span>
+      <span class="text-sm text-gray-700 dark:text-gray-300">{{ formatPaymentMethod(value) }}</span>
     </template>
     <template #cell-status="{ value }">
       <OrderStatusBadge :status="value" />
@@ -46,6 +46,7 @@ import type { Column } from '@/components/common/types'
 import DataTable from '@/components/common/DataTable.vue'
 import OrderStatusBadge from '@/components/payment/OrderStatusBadge.vue'
 import { currencySymbol } from '@/components/payment/currency'
+import { formatPaymentMethodLabel } from '@/views/user/paymentUx'
 
 const { t } = useI18n()
 
@@ -53,9 +54,18 @@ const props = defineProps<{
   orders: PaymentOrder[]
   loading: boolean
   showUser?: boolean
+  /** User-facing orders: collapse provider aliases (e.g. xorpay → 支付宝). */
+  normalizePaymentMethod?: boolean
 }>()
 
 function formatDate(dateStr: string) { return new Date(dateStr).toLocaleString() }
+
+function formatPaymentMethod(paymentType: string): string {
+  if (props.normalizePaymentMethod) {
+    return formatPaymentMethodLabel(t, paymentType)
+  }
+  return t('payment.methods.' + paymentType, paymentType)
+}
 
 const creditedAmountSymbol = currencySymbol('USD')
 

@@ -44,9 +44,9 @@
               <th class="pb-2 text-left">{{ t('admin.dashboard.group') }}</th>
               <th class="pb-2 text-right">{{ t('admin.dashboard.requests') }}</th>
               <th class="pb-2 text-right">{{ t('admin.dashboard.tokens') }}</th>
-              <th class="pb-2 text-right">{{ t('admin.dashboard.actual') }}</th>
+              <th class="pb-2 text-right">{{ costColumnLabel }}</th>
               <th v-if="showAccountCost" class="pb-2 text-right">{{ t('admin.dashboard.accountCost') }}</th>
-              <th class="pb-2 text-right">{{ t('admin.dashboard.standard') }}</th>
+              <th v-if="showStandardCost" class="pb-2 text-right">{{ t('admin.dashboard.standard') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -79,7 +79,7 @@
                 <td v-if="showAccountCost" class="py-1.5 text-right text-orange-500 dark:text-orange-400">
                   ${{ formatCost(group.account_cost) }}
                 </td>
-                <td class="py-1.5 text-right text-gray-400 dark:text-gray-500">
+                <td v-if="showStandardCost" class="py-1.5 text-right text-gray-400 dark:text-gray-500">
                   ${{ formatCost(group.cost) }}
                 </td>
               </tr>
@@ -90,6 +90,7 @@
                     :items="breakdownItems"
                     :loading="breakdownLoading"
                     :show-account-cost="showAccountCost"
+                    :show-standard-cost="showStandardCost"
                   />
                 </td>
               </tr>
@@ -130,6 +131,8 @@ const props = withDefaults(defineProps<{
   showMetricToggle?: boolean
   enableBreakdown?: boolean
   showAccountCost?: boolean
+  showStandardCost?: boolean
+  costColumnLabelKey?: string
   startDate?: string
   endDate?: string
   filters?: Record<string, any>
@@ -139,6 +142,8 @@ const props = withDefaults(defineProps<{
   showMetricToggle: false,
   enableBreakdown: true,
   showAccountCost: true,
+  showStandardCost: true,
+  costColumnLabelKey: 'admin.dashboard.actual',
 })
 
 const emit = defineEmits<{
@@ -149,7 +154,14 @@ const expandedKey = ref<string | null>(null)
 const breakdownItems = ref<UserBreakdownItem[]>([])
 const breakdownLoading = ref(false)
 const showAccountCost = computed(() => props.showAccountCost)
-const distributionColspan = computed(() => showAccountCost.value ? 6 : 5)
+const showStandardCost = computed(() => props.showStandardCost)
+const costColumnLabel = computed(() => t(props.costColumnLabelKey))
+const distributionColspan = computed(() => {
+  let cols = 4
+  if (showAccountCost.value) cols += 1
+  if (showStandardCost.value) cols += 1
+  return cols
+})
 
 const toggleBreakdown = async (type: string, id: number | string) => {
   const key = `${type}-${id}`

@@ -145,6 +145,27 @@ describe('ModelDistributionChart', () => {
     expect(wrapper.findAll('tbody tr')[0].findAll('td')).toHaveLength(5)
   })
 
+  it('can hide standard cost and use user cost label for user usage stats', () => {
+    const wrapper = mount(ModelDistributionChart, {
+      props: {
+        modelStats,
+        showAccountCost: false,
+        showStandardCost: false,
+        costColumnLabelKey: 'usage.cost',
+      },
+      global: {
+        stubs: {
+          LoadingSpinner: true,
+        },
+      },
+    })
+
+    expect(wrapper.text()).not.toContain('Standard')
+    expect(wrapper.text()).toContain('usage.cost')
+    expect(wrapper.findAll('thead th')).toHaveLength(4)
+    expect(wrapper.findAll('tbody tr')[0].findAll('td')).toHaveLength(4)
+  })
+
   it('renders Others in the spending ranking table and uses a dedicated chart color', async () => {
     const wrapper = mount(ModelDistributionChart, {
       props: {

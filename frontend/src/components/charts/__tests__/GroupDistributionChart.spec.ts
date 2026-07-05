@@ -130,4 +130,25 @@ describe('GroupDistributionChart', () => {
     expect(wrapper.findAll('thead th')).toHaveLength(5)
     expect(wrapper.findAll('tbody tr')[0].findAll('td')).toHaveLength(5)
   })
+
+  it('can hide standard cost and use user cost label for user usage stats', () => {
+    const wrapper = mount(GroupDistributionChart, {
+      props: {
+        groupStats,
+        showAccountCost: false,
+        showStandardCost: false,
+        costColumnLabelKey: 'usage.cost',
+      },
+      global: {
+        stubs: {
+          LoadingSpinner: true,
+        },
+      },
+    })
+
+    expect(wrapper.text()).not.toContain('Standard')
+    expect(wrapper.text()).toContain('usage.cost')
+    expect(wrapper.findAll('thead th')).toHaveLength(4)
+    expect(wrapper.findAll('tbody tr')[0].findAll('td')).toHaveLength(4)
+  })
 })

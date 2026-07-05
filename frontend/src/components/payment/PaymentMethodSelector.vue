@@ -20,9 +20,9 @@
         @click="method.available && emit('select', method.type)"
       >
         <span class="flex items-center gap-2">
-          <img :src="methodIcon(method.type)" :alt="t('payment.methods.' + method.type)" class="h-7 w-7 object-contain" />
+          <img :src="methodIcon(method.type)" :alt="methodLabel(method.type)" class="h-7 w-7 object-contain" />
           <span class="flex flex-col items-start leading-none">
-            <span class="text-base font-semibold">{{ t('payment.methods.' + method.type) }}</span>
+            <span class="text-base font-semibold">{{ methodLabel(method.type) }}</span>
             <span
               v-if="method.fee_rate > 0"
               class="text-[10px] tracking-wide text-gray-500 dark:text-dark-400"
@@ -40,6 +40,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { METHOD_ORDER } from './providerConfig'
+import { formatPaymentMethodLabel } from '@/views/user/paymentUx'
 import alipayIcon from '@/assets/icons/alipay.svg'
 import wxpayIcon from '@/assets/icons/wxpay.svg'
 import stripeIcon from '@/assets/icons/stripe.svg'
@@ -84,6 +85,10 @@ function methodIcon(type: string): string {
   if (type.includes('wxpay')) return METHOD_ICONS.wxpay
   if (type === 'airwallex') return METHOD_ICONS.airwallex
   return METHOD_ICONS[type] || alipayIcon
+}
+
+function methodLabel(type: string): string {
+  return formatPaymentMethodLabel(t, type)
 }
 
 function methodSelectedClass(type: string): string {

@@ -64,4 +64,22 @@ describe('UsageStatsCards', () => {
     expect(text).toContain('Cache Read')
     expect(text).toContain('22')
   })
+
+  it('can hide standard cost for user usage stats', () => {
+    const wrapper = mount(UsageStatsCards, {
+      props: {
+        stats,
+        showAccountCost: false,
+        showStandardCost: false,
+      },
+      global: {
+        stubs: {
+          Icon: true,
+        },
+      },
+    })
+
+    expect(wrapper.text()).not.toContain('Standard')
+    expect(wrapper.text()).toContain('$0.0010')
+  })
 })

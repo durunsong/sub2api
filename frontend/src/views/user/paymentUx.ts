@@ -19,6 +19,7 @@ export interface PaymentScenarioErrorDescriptor {
 
 export function normalizePaymentMethodForDisplay(paymentType: string): string {
   const trimmed = paymentType.trim().toLowerCase()
+  if (trimmed === 'xorpay') return 'alipay'
   const visibleMethod = normalizeVisibleMethod(trimmed)
   if (visibleMethod) return visibleMethod
   return DISPLAY_METHOD_ALIASES[trimmed] ?? trimmed
@@ -26,6 +27,14 @@ export function normalizePaymentMethodForDisplay(paymentType: string): string {
 
 export function paymentMethodI18nKey(paymentType: string): string {
   return `payment.methods.${normalizePaymentMethodForDisplay(paymentType)}`
+}
+
+export function formatPaymentMethodLabel(
+  translate: (key: string, fallback?: string) => string,
+  paymentType: string,
+): string {
+  const normalized = normalizePaymentMethodForDisplay(paymentType)
+  return translate(paymentMethodI18nKey(paymentType), normalized)
 }
 
 export function buildPaymentErrorToastMessage(message: string, hint?: string): string {

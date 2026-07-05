@@ -123,6 +123,36 @@ describe('admin order currency display', () => {
     expect(text).toContain('$100.00')
   })
 
+  it('normalizes xorpay to alipay label for user-facing order tables', () => {
+    const DataTableWithPaymentTypeStub = {
+      props: ['data'],
+      template: `
+        <div>
+          <div v-for="row in data" :key="row.id">
+            <slot name="cell-payment_type" :value="row.payment_type" :row="row" />
+          </div>
+        </div>
+      `,
+    }
+
+    const wrapper = mount(OrderTable, {
+      props: {
+        orders: [orderFactory({ id: 1, payment_type: 'xorpay' })],
+        loading: false,
+        normalizePaymentMethod: true,
+      },
+      global: {
+        stubs: {
+          DataTable: DataTableWithPaymentTypeStub,
+          OrderStatusBadge: true,
+        },
+      },
+    })
+
+    expect(wrapper.text()).toContain('payment.methods.alipay')
+    expect(wrapper.text()).not.toContain('payment.methods.xorpay')
+  })
+
   it('renders payment currency consistently in the admin order table', () => {
     const wrapper = mount(AdminOrderTable, {
       props: {

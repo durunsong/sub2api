@@ -170,6 +170,45 @@ describe('admin UsageTable tooltip', () => {
     expect(text).toContain('$0.069568')
   })
 
+  it('hides cost detail tooltip trigger for user usage view', async () => {
+    const row = {
+      request_id: 'req-user-1',
+      actual_cost: 0.092883,
+      total_cost: 0.092883,
+      rate_multiplier: 14,
+      service_tier: 'priority',
+      input_cost: 0.020285,
+      output_cost: 0.00303,
+      cache_creation_cost: 0,
+      cache_read_cost: 0.069568,
+      input_tokens: 4057,
+      output_tokens: 101,
+      cache_creation_tokens: 0,
+      cache_read_tokens: 0,
+    }
+
+    const wrapper = mount(UsageTable, {
+      props: {
+        data: [row],
+        loading: false,
+        columns: [],
+        showAccountBilling: false,
+        showCostDetail: false,
+      },
+      global: {
+        stubs: {
+          DataTable: DataTableStub,
+          EmptyState: true,
+          Icon: true,
+          Teleport: true,
+        },
+      },
+    })
+
+    expect(wrapper.text()).toContain('$0.092883')
+    expect(wrapper.findAll('.group.relative')).toHaveLength(1)
+  })
+
   it('shows requested and upstream models separately for admin rows', () => {
     const row = {
       request_id: 'req-admin-model-1',

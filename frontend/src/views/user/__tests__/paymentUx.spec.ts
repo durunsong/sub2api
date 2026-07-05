@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildPaymentErrorToastMessage,
   describePaymentScenarioError,
+  formatPaymentMethodLabel,
   normalizePaymentMethodForDisplay,
 } from '../paymentUx'
 
@@ -14,6 +15,25 @@ describe('normalizePaymentMethodForDisplay', () => {
 
   it('leaves non-aliased methods untouched', () => {
     expect(normalizePaymentMethodForDisplay('stripe')).toBe('stripe')
+  })
+
+  it('maps xorpay to alipay for user-facing order labels', () => {
+    expect(normalizePaymentMethodForDisplay('xorpay')).toBe('alipay')
+    expect(normalizePaymentMethodForDisplay(' XorPay ')).toBe('alipay')
+  })
+})
+
+describe('formatPaymentMethodLabel', () => {
+  const t = (key: string, fallback?: string) => {
+    const labels: Record<string, string> = {
+      'payment.methods.alipay': '支付宝',
+      'payment.methods.xorpay': 'XorPay（支付宝）',
+    }
+    return labels[key] ?? fallback ?? key
+  }
+
+  it('shows alipay label for xorpay payment type', () => {
+    expect(formatPaymentMethodLabel(t, 'xorpay')).toBe('支付宝')
   })
 })
 
