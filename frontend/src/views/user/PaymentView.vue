@@ -351,6 +351,7 @@ import { DEFAULT_PAYMENT_CURRENCY, currencySymbol, formatPaymentAmount, normaliz
 import type { PaymentMethodOption } from '@/components/payment/PaymentMethodSelector.vue'
 import { buildPaymentErrorToastMessage, describePaymentScenarioError } from './paymentUx'
 import { hasWechatResumeQuery, parseWechatResumeRoute, stripWechatResumeQuery } from './paymentWechatResume'
+import { formatPlanValiditySuffix } from '@/utils/subscriptionPlanValidity'
 
 const i18n = useI18n()
 const { t } = i18n
@@ -846,10 +847,11 @@ const renewalPlans = computed(() => {
 
 const planValiditySuffix = computed(() => {
   if (!selectedPlan.value) return ''
-  const u = selectedPlan.value.validity_unit || 'day'
-  if (u === 'month') return t('payment.perMonth')
-  if (u === 'year') return t('payment.perYear')
-  return `${selectedPlan.value.validity_days}${t('payment.days')}`
+  return formatPlanValiditySuffix(
+    selectedPlan.value.validity_days,
+    selectedPlan.value.validity_unit,
+    t,
+  )
 })
 
 function selectPlan(plan: SubscriptionPlan) {
