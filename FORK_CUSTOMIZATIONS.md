@@ -9,7 +9,7 @@
 
 ## 一句话
 
-本仓库 = [Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.1.143** + **Kiro** + **XorPay** + **Grok/Kiro 配额** + **UI/支付/版本弹窗** 等定制（相对官方 **256** 文件差异）。
+本仓库 = [Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.1.145** + **Kiro** + **XorPay** + **Grok/Kiro 配额** + **UI/支付/版本弹窗** 等定制（相对官方 **279** 文件差异）。
 
 ## 核心模块
 
@@ -29,4 +29,4 @@
 
 ---
 
-*最后更新：2026-07-02*
+*最后更新：2026-07-06*

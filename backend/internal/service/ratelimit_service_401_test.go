@@ -18,7 +18,9 @@ type rateLimitAccountRepoStub struct {
 	setErrorCalls          int
 	tempCalls              int
 	updateCredentialsCalls int
+	updateExtraCalls       int
 	lastCredentials        map[string]any
+	lastExtraUpdates       map[string]any
 	lastErrorMsg           string
 	lastTempReason         string
 	lastErrorID            int64
@@ -42,6 +44,12 @@ func (r *rateLimitAccountRepoStub) SetTempUnschedulable(ctx context.Context, id 
 func (r *rateLimitAccountRepoStub) UpdateCredentials(ctx context.Context, id int64, credentials map[string]any) error {
 	r.updateCredentialsCalls++
 	r.lastCredentials = shallowCopyMap(credentials)
+	return nil
+}
+
+func (r *rateLimitAccountRepoStub) UpdateExtra(ctx context.Context, id int64, updates map[string]any) error {
+	r.updateExtraCalls++
+	r.lastExtraUpdates = shallowCopyMap(updates)
 	return nil
 }
 
@@ -159,10 +167,16 @@ func TestRateLimitService_HandleUpstreamError_OAuth401SetsTempUnschedulable(t *t
 		shouldDisable := service.HandleUpstreamError(context.Background(), account, 401, http.Header{}, []byte("unauthorized"))
 
 		require.True(t, shouldDisable)
-		require.Equal(t, 1, repo.setErrorCalls, "Antigravity 401 without temp_unschedulable_rules uses generic auth error handling")
-		require.Equal(t, 0, repo.tempCalls)
-		require.Contains(t, repo.lastErrorMsg, "invalid or expired credentials")
-		require.Empty(t, invalidator.accounts, "Antigravity 401 bypasses generic OAuth cache invalidation path")
+		require.Equal(t, 0, repo.setErrorCalls, "Antigravity OAuth 401 must keep status=active so refresh worker can recover it")
+		require.Equal(t, 1, repo.tempCalls)
+		require.Equal(t, int64(100), repo.lastTempID)
+		require.Contains(t, repo.lastTempReason, "invalid or expired credentials")
+		require.Equal(t, 1, repo.updateExtraCalls)
+		require.Equal(t, true, repo.lastExtraUpdates[antigravityForceTokenRefreshExtraKey])
+		require.Equal(t, "401_invalid", repo.lastExtraUpdates[antigravityForceTokenRefreshReasonExtraKey])
+		require.Equal(t, true, account.Extra[antigravityForceTokenRefreshExtraKey])
+		require.Len(t, invalidator.accounts, 1)
+		require.Equal(t, int64(100), invalidator.accounts[0].ID)
 	})
 }
 
@@ -273,6 +287,7 @@ func TestRateLimitService_HandleUpstreamError_OAuth401DoesNotOverwriteCredential
 
 	require.True(t, shouldDisable)
 	require.Equal(t, 0, repo.updateCredentialsCalls, "401 handler must not write credentials back from the request-start snapshot")
+	require.Equal(t, 0, repo.updateExtraCalls, "OpenAI 401 must not set Antigravity force-refresh marker")
 	require.Equal(t, 1, repo.tempCalls, "401 handler should still set temp-unschedulable cooldown")
 	require.Nil(t, repo.lastCredentials, "no credentials should have been persisted")
 }
@@ -344,7 +359,7 @@ func TestRateLimitService_HandleUpstreamError_OAuth401NoRefreshTokenSetsError(t 
 		require.True(t, shouldDisable)
 		require.Equal(t, 1, repo.setErrorCalls, "Antigravity OAuth without refresh_token cannot self-recover")
 		require.Equal(t, 0, repo.tempCalls)
-		require.Contains(t, repo.lastErrorMsg, "invalid or expired credentials")
-		require.Empty(t, invalidator.accounts, "Antigravity 401 bypasses generic OAuth cache invalidation path")
+		require.Contains(t, repo.lastErrorMsg, "refresh_token missing")
+		require.Len(t, invalidator.accounts, 1, "cache should still be invalidated")
 	})
 }
