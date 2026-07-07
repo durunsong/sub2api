@@ -106,6 +106,9 @@ func RegisterAdminRoutes(
 		// 风控中心
 		registerContentModerationRoutes(admin, h)
 
+		// IP 封禁
+		registerIPBanRoutes(admin, h)
+
 		// 邀请返利（专属用户管理）
 		registerAffiliateRoutes(admin, h)
 	}
@@ -116,6 +119,17 @@ func registerAdminComplianceRoutes(admin *gin.RouterGroup, h *handler.Handlers) 
 	{
 		compliance.GET("", h.Admin.Compliance.GetStatus)
 		compliance.POST("/accept", h.Admin.Compliance.Accept)
+	}
+}
+
+func registerIPBanRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
+	ipBans := admin.Group("/ip-bans")
+	{
+		ipBans.GET("", h.Admin.IPBan.List)
+		ipBans.GET("/:id", h.Admin.IPBan.GetByID)
+		ipBans.POST("", h.Admin.IPBan.Create)
+		ipBans.PUT("/:id", h.Admin.IPBan.Update)
+		ipBans.DELETE("/:id", h.Admin.IPBan.Delete)
 	}
 }
 

@@ -1975,6 +1975,38 @@ export interface UpdatePromoCodeRequest {
   notes?: string
 }
 
+// ==================== IP Ban Types ====================
+
+export type IPBanStatus = 'active' | 'inactive'
+
+export interface IPBan {
+  id: number
+  pattern: string
+  status: IPBanStatus
+  reason?: string | null
+  source: string
+  created_by?: number | null
+  expires_at?: string | null
+  last_hit_at?: string | null
+  hit_count: number
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateIPBanRequest {
+  pattern: string
+  reason?: string
+  source?: string
+  expires_at?: number | null
+}
+
+export interface UpdateIPBanRequest {
+  pattern?: string
+  reason?: string
+  status?: IPBanStatus
+  expires_at?: number | null
+}
+
 // ==================== TOTP (2FA) Types ====================
 
 export interface TotpStatus {

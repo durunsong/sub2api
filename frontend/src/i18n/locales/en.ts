@@ -436,6 +436,7 @@ export default {
     channelMonitor: 'Channel Monitor',
     channelStatus: 'Channel Status',
     riskControl: 'Risk Control',
+    ipBans: 'IP Bans',
   },
 
   // Auth
@@ -4894,6 +4895,52 @@ export default {
       failedToUpdate: 'Failed to update promo code',
       failedToDelete: 'Failed to delete promo code',
       failedToLoadUsages: 'Failed to load usage records'
+    },
+
+    // IP Bans
+    ipBans: {
+      title: 'IP Bans',
+      description: 'Globally block registration and API key usage by IP or CIDR',
+      createRule: 'Create Ban',
+      editRule: 'Edit Ban',
+      deleteRule: 'Delete Ban',
+      searchPlaceholder: 'Search IP, CIDR, or reason...',
+      allStatus: 'All Status',
+      columns: {
+        pattern: 'IP / CIDR',
+        status: 'Status',
+        reason: 'Reason',
+        source: 'Source',
+        hitCount: 'Hits',
+        lastHitAt: 'Last Hit',
+        expiresAt: 'Expires At',
+        createdAt: 'Created At',
+        actions: 'Actions'
+      },
+      pattern: 'IP / CIDR',
+      patternPlaceholder: 'e.g. 203.0.113.10 or 203.0.113.0/24',
+      patternHelp: 'Supports single IPv4/IPv6 addresses or CIDR ranges. Matching clients cannot register, request verification codes, or use API keys.',
+      status: 'Status',
+      statusActive: 'Active',
+      statusInactive: 'Inactive',
+      expired: 'Expired',
+      expiresAt: 'Expires At',
+      permanent: 'Permanent',
+      neverHit: 'No hits',
+      reason: 'Reason',
+      reasonPlaceholder: 'e.g. abuse, bulk registration, abnormal spending',
+      enable: 'Enable',
+      disable: 'Disable',
+      ruleCreated: 'IP ban created',
+      ruleUpdated: 'IP ban updated',
+      ruleDeleted: 'IP ban deleted',
+      ruleEnabled: 'IP ban enabled',
+      ruleDisabled: 'IP ban disabled',
+      deleteConfirm: 'Are you sure you want to delete this IP ban rule? This action cannot be undone.',
+      failedToLoad: 'Failed to load IP bans',
+      failedToCreate: 'Failed to create IP ban',
+      failedToUpdate: 'Failed to update IP ban',
+      failedToDelete: 'Failed to delete IP ban'
     },
 
     // Usage Records

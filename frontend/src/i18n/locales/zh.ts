@@ -436,6 +436,7 @@ export default {
     channelMonitor: '渠道监控',
     channelStatus: '渠道状态',
     riskControl: '风控中心',
+    ipBans: 'IP 封禁',
   },
 
   // Auth
@@ -5045,6 +5046,52 @@ export default {
       failedToUpdate: '更新优惠码失败',
       failedToDelete: '删除优惠码失败',
       failedToLoadUsages: '加载使用记录失败'
+    },
+
+    // IP Bans
+    ipBans: {
+      title: 'IP 封禁',
+      description: '按 IP 或 CIDR 全局封禁注册和 API Key 调用',
+      createRule: '创建封禁',
+      editRule: '编辑封禁',
+      deleteRule: '删除封禁',
+      searchPlaceholder: '搜索 IP、CIDR 或原因...',
+      allStatus: '全部状态',
+      columns: {
+        pattern: 'IP / CIDR',
+        status: '状态',
+        reason: '原因',
+        source: '来源',
+        hitCount: '命中次数',
+        lastHitAt: '最后命中',
+        expiresAt: '过期时间',
+        createdAt: '创建时间',
+        actions: '操作'
+      },
+      pattern: 'IP / CIDR',
+      patternPlaceholder: '例如 203.0.113.10 或 203.0.113.0/24',
+      patternHelp: '支持单个 IPv4/IPv6 地址或 CIDR 网段。命中后将禁止注册、发送验证码和使用 API Key。',
+      status: '状态',
+      statusActive: '启用',
+      statusInactive: '停用',
+      expired: '已过期',
+      expiresAt: '过期时间',
+      permanent: '永久',
+      neverHit: '暂无命中',
+      reason: '原因',
+      reasonPlaceholder: '例如 薅羊毛、批量注册、异常消耗',
+      enable: '启用',
+      disable: '停用',
+      ruleCreated: 'IP 封禁已创建',
+      ruleUpdated: 'IP 封禁已更新',
+      ruleDeleted: 'IP 封禁已删除',
+      ruleEnabled: 'IP 封禁已启用',
+      ruleDisabled: 'IP 封禁已停用',
+      deleteConfirm: '确定要删除这条 IP 封禁规则吗？此操作无法撤销。',
+      failedToLoad: '加载 IP 封禁失败',
+      failedToCreate: '创建 IP 封禁失败',
+      failedToUpdate: '更新 IP 封禁失败',
+      failedToDelete: '删除 IP 封禁失败'
     },
 
     // Usage Records
