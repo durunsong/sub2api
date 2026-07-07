@@ -89,7 +89,14 @@ func (s *IPBanService) Create(ctx context.Context, input CreateIPBanInput) (*IPB
 	if source == "" {
 		source = "manual"
 	}
-	ban := &IPBan{Pattern: pattern, Status: IPBanStatusActive, Reason: strings.TrimSpace(input.Reason), Source: source, CreatedBy: input.CreatedBy, ExpiresAt: input.ExpiresAt}
+	ban := &IPBan{
+		Pattern:   pattern,
+		Status:    IPBanStatusActive,
+		Reason:    strings.TrimSpace(input.Reason),
+		Source:    source,
+		CreatedBy: input.CreatedBy,
+		ExpiresAt: input.ExpiresAt,
+	}
 	if err := s.repo.Create(ctx, ban); err != nil {
 		return nil, err
 	}
@@ -97,7 +104,9 @@ func (s *IPBanService) Create(ctx context.Context, input CreateIPBanInput) (*IPB
 	return ban, nil
 }
 
-func (s *IPBanService) GetByID(ctx context.Context, id int64) (*IPBan, error) { return s.repo.GetByID(ctx, id) }
+func (s *IPBanService) GetByID(ctx context.Context, id int64) (*IPBan, error) {
+	return s.repo.GetByID(ctx, id)
+}
 
 func (s *IPBanService) List(ctx context.Context, params pagination.PaginationParams, filters IPBanListFilters) ([]IPBan, *pagination.PaginationResult, error) {
 	filters.Search = strings.TrimSpace(filters.Search)
