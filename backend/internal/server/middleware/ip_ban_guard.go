@@ -48,7 +48,7 @@ func checkIPBan(c *gin.Context, ipBanService *service.IPBanService, cfg *config.
 		return false
 	}
 	service.MarkOpsClientBusinessLimited(c, service.OpsClientBusinessLimitedReasonIPRestriction)
-	writeError(c, 403, service.ErrIPBanned.Status.Message)
+	writeError(c, 403, service.ErrIPBanned.Message)
 	c.Abort()
 	return true
 }

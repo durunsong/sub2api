@@ -1,4 +1,4 @@
-﻿package repository
+package repository
 
 import (
 	"context"
@@ -75,7 +75,7 @@ func (r *ipBanRepository) List(ctx context.Context, params pagination.Pagination
 	if err != nil {
 		return nil, nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out, err := scanIPBanRows(rows)
 	if err != nil {
 		return nil, nil, err
@@ -131,7 +131,7 @@ func (r *ipBanRepository) ListActive(ctx context.Context, now time.Time) ([]serv
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	return scanIPBanRows(rows)
 }
 

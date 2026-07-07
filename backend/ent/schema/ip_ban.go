@@ -1,4 +1,4 @@
-﻿package schema
+package schema
 
 import (
 	"github.com/Wei-Shaw/sub2api/ent/schema/mixins"
