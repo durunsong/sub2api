@@ -41,6 +41,7 @@ import { usePaymentStore } from '@/stores/payment'
 import { paymentAPI } from '@/api/payment'
 import { extractI18nErrorMessage } from '@/utils/apiError'
 import { useAppStore } from '@/stores'
+import { isBuiltInAlipayMethod, isBuiltInWxpayMethod } from '@/components/payment/providerConfig'
 import QRCode from 'qrcode'
 import alipayIcon from '@/assets/icons/alipay.svg'
 import wxpayIcon from '@/assets/icons/wxpay.svg'
@@ -70,8 +71,8 @@ const countdownDisplay = computed(() => {
 })
 
 // XorPay returns an Alipay QR, so treat it as Alipay for branding/scan hints.
-const isAlipay = computed(() => paymentType.value.includes('alipay') || paymentType.value === 'xorpay')
-const isWxpay = computed(() => paymentType.value.includes('wxpay'))
+const isAlipay = computed(() => isBuiltInAlipayMethod(paymentType.value) || paymentType.value === 'xorpay')
+const isWxpay = computed(() => isBuiltInWxpayMethod(paymentType.value))
 
 const scanTitle = computed(() => {
   if (isAlipay.value) return t('payment.qr.scanAlipay')
