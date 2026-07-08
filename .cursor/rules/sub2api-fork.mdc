@@ -1,0 +1,38 @@
+---
+description: sub2api Fork 定制保护 — 合并上游前必读，禁止覆盖 Kiro/XorPay/Access Ban
+globs:
+  - personal_code/sub2api/**
+alwaysApply: false
+---
+
+# sub2api Fork 定制规则
+
+本目录是 [Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) 的 Fork，**不是官方纯净版**。
+
+## 改代码前强制阅读
+
+1. [`AGENTS.md`](../AGENTS.md) — AI 协作摘要与禁区
+2. [`docs/FORK_VS_UPSTREAM.md`](../docs/FORK_VS_UPSTREAM.md) — 相对官方 v0.1.146 的完整差异（300+ 文件）
+
+## 绝对不可因「对齐上游」而删除或覆盖
+
+| 模块 | 标识 |
+|------|------|
+| Kiro 平台 | `backend/internal/pkg/kiro/`、`service/kiro_*`、`PlatformKiro` |
+| XorPay 支付 | `payment/provider/xorpay.go`、`TypeXorPay` |
+| Access Ban | `ip_ban_service.go`、`accessban/`、迁移 `159`/`160`、`IpBansView` |
+| Grok+Kiro 配额 | 迁移 `157` CHECK 须含 `kiro` 与 `grok` |
+| UI/支付定制 | `VersionBadge` 隐藏在线更新、用户端隐藏倍率、XorPay 展示名 |
+
+## merge 上游时
+
+- 以 **tag** 为基线，不要假设 `upstream/main` 可直接覆盖
+- Wire 顺序：`kiroTokenProvider` → `grokTokenProvider`；保留 `IPBanService` → `AuthService`
+- 冲突文件优先保留 Fork 实现，再手工吸收上游新特性
+- 新增 Fork 定制后更新 `docs/FORK_VS_UPSTREAM.md` 与 `AGENTS.md`
+
+## 禁止
+
+- 恢复 VersionBadge「立即更新」
+- 删除 `159`/`160` 或回退 Access Ban 为仅 IP
+- 用上游 `157` 覆盖而丢失 `kiro` 平台
