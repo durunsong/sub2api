@@ -53,9 +53,8 @@ func checkIPBan(c *gin.Context, ipBanService *service.IPBanService, cfg *config.
 	return true
 }
 
-func getIPBanClientIP(c *gin.Context, cfg *config.Config) string {
-	if cfg != nil && cfg.TrustForwardedIPForAPIKeyACL() {
-		return ippkg.GetClientIP(c)
-	}
-	return ippkg.GetTrustedClientIP(c)
+func getIPBanClientIP(c *gin.Context, _ *config.Config) string {
+	// ponytail: match ops/request logs (GetClientIP). Admins ban the IP they see there;
+	// GetTrustedClientIP ignores X-Forwarded-For when trusted_proxies is empty (default deploy).
+	return ippkg.GetClientIP(c)
 }
