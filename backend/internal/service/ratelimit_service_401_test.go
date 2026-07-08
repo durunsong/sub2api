@@ -127,8 +127,8 @@ func TestRateLimitService_HandleUpstreamError_OAuth401SetsTempUnschedulable(t *t
 			Type:     AccountTypeOAuth,
 			Status:   StatusActive,
 			Credentials: map[string]any{
-				"access_token":  "expired-at",
-				"refresh_token": "rt-100",
+				"access_token":               "expired-at",
+				"refresh_token":              "rt-100",
 				"temp_unschedulable_enabled": true,
 				"temp_unschedulable_rules": []any{
 					map[string]any{

@@ -317,6 +317,7 @@ func TestNewWxpay(t *testing.T) {
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("expected error, got nil")
+					return
 				}
 				if tt.errSubstr != "" && !strings.Contains(err.Error(), tt.errSubstr) {
 					t.Errorf("error %q should contain %q", err.Error(), tt.errSubstr)
@@ -328,6 +329,7 @@ func TestNewWxpay(t *testing.T) {
 			}
 			if got == nil {
 				t.Fatal("expected non-nil Wxpay instance")
+				return
 			}
 			if got.instanceID != "test-instance" {
 				t.Errorf("instanceID = %q, want %q", got.instanceID, "test-instance")
@@ -451,6 +453,7 @@ func TestResolveWxpayCreateMode(t *testing.T) {
 			if tt.wantErr != "" {
 				if err == nil {
 					t.Fatal("expected error, got nil")
+					return
 				}
 				if !strings.Contains(err.Error(), tt.wantErr) {
 					t.Fatalf("error %q should contain %q", err.Error(), tt.wantErr)

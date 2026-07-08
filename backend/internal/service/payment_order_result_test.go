@@ -135,6 +135,7 @@ func TestValidateSelectedCreateOrderAmountCurrencyRejectsFractionalZeroDecimal(t
 	})
 	if err == nil {
 		t.Fatal("expected fractional JPY amount to fail")
+		return
 	}
 	if appErr := infraerrors.FromError(err); appErr.Reason != "INVALID_AMOUNT" {
 		t.Fatalf("reason = %q, want INVALID_AMOUNT", appErr.Reason)
@@ -244,6 +245,7 @@ func TestCalculateCreateOrderPayAmountRejectsFractionalZeroDecimal(t *testing.T)
 	_, _, err := calculateCreateOrderPayAmount(100.5, 0, "JPY")
 	if err == nil {
 		t.Fatal("expected fractional JPY amount to fail")
+		return
 	}
 	if appErr := infraerrors.FromError(err); appErr.Reason != "INVALID_AMOUNT" {
 		t.Fatalf("reason = %q, want INVALID_AMOUNT", appErr.Reason)
@@ -338,6 +340,7 @@ func TestMaybeBuildWeChatOAuthRequiredResponse(t *testing.T) {
 	}
 	if resp == nil {
 		t.Fatal("expected oauth_required response, got nil")
+		return
 	}
 	if resp.ResultType != payment.CreatePaymentResultOAuthRequired {
 		t.Fatalf("result type = %q, want %q", resp.ResultType, payment.CreatePaymentResultOAuthRequired)
@@ -376,6 +379,7 @@ func TestMaybeBuildWeChatOAuthRequiredResponseRequiresMPConfigInWeChat(t *testin
 	}
 	if err == nil {
 		t.Fatal("expected error, got nil")
+		return
 	}
 
 	appErr := infraerrors.FromError(err)
@@ -415,6 +419,7 @@ func TestMaybeBuildWeChatOAuthRequiredResponseRequiresResumeSigningKey(t *testin
 	}
 	if err == nil {
 		t.Fatal("expected error, got nil")
+		return
 	}
 
 	appErr := infraerrors.FromError(err)
@@ -452,6 +457,7 @@ func TestMaybeBuildWeChatOAuthRequiredResponseFallsBackToConfiguredLegacySigning
 	}
 	if resp == nil {
 		t.Fatal("expected oauth-required response, got nil")
+		return
 	}
 	if resp.ResultType != payment.CreatePaymentResultOAuthRequired {
 		t.Fatalf("result type = %q, want %q", resp.ResultType, payment.CreatePaymentResultOAuthRequired)

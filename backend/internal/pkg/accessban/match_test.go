@@ -58,10 +58,10 @@ func TestMatchesEmailRegex(t *testing.T) {
 		"cppttlf4390v+baxxsxjh9zj@hotmail.com",
 	}
 	rules := map[string]bool{
-		`@365\.liout\.com$`:            true,
-		`\.[^@]*\.[^@]+@gmail\.com$`:   true,
-		`\+[^@]+@hotmail\.com$`:         true,
-		`^[^@]+@example\.com$`:          false,
+		`@365\.liout\.com$`:          true,
+		`\.[^@]*\.[^@]+@gmail\.com$`: true,
+		`\+[^@]+@hotmail\.com$`:      true,
+		`^[^@]+@example\.com$`:       false,
 	}
 	for pattern, wantAny := range rules {
 		matched := 0

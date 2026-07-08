@@ -30,7 +30,7 @@ func (s *stubIPBanRepo) List(context.Context, pagination.PaginationParams, servi
 	return nil, nil, nil
 }
 func (s *stubIPBanRepo) Update(context.Context, *service.IPBan) error { return nil }
-func (s *stubIPBanRepo) Delete(context.Context, int64) error        { return nil }
+func (s *stubIPBanRepo) Delete(context.Context, int64) error          { return nil }
 func (s *stubIPBanRepo) ListActive(context.Context, time.Time) ([]service.IPBan, error) {
 	return append([]service.IPBan(nil), s.active...), nil
 }

@@ -157,6 +157,7 @@ func TestGetUserErrorRequestDetail_InvalidID(t *testing.T) {
 	_, err := svc.GetUserErrorRequestDetail(context.Background(), 1, 0)
 	if err == nil {
 		t.Fatal("expected error for id=0")
+		return
 	}
 	_, err = svc.GetUserErrorRequestDetail(context.Background(), 1, -5)
 	if err == nil {

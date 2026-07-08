@@ -769,6 +769,7 @@ func TestVisibleMethodLoadBalancerRejectsInvalidSourceWhenMultipleProvidersEnabl
 			_, err = lb.SelectInstance(ctx, "", tt.method, payment.StrategyRoundRobin, 9.9)
 			if err == nil {
 				t.Fatal("SelectInstance should reject invalid visible method source configuration")
+				return
 			}
 			if infraerrors.Reason(err) != "INVALID_PAYMENT_VISIBLE_METHOD_SOURCE" {
 				t.Fatalf("Reason(err) = %q, want %q", infraerrors.Reason(err), "INVALID_PAYMENT_VISIBLE_METHOD_SOURCE")

@@ -291,6 +291,7 @@ func TestNewClient_无代理(t *testing.T) {
 	}
 	if client == nil {
 		t.Fatal("NewClient 返回 nil")
+		return
 	}
 	if client.httpClient == nil {
 		t.Fatal("httpClient 为 nil")
@@ -311,6 +312,7 @@ func TestNewClient_有代理(t *testing.T) {
 	}
 	if client == nil {
 		t.Fatal("NewClient 返回 nil")
+		return
 	}
 	if client.httpClient.Transport == nil {
 		t.Fatal("有代理时 Transport 不应为 nil")
@@ -336,6 +338,7 @@ func TestNewClient_无效代理URL(t *testing.T) {
 	_, err := NewClient("://invalid")
 	if err == nil {
 		t.Fatal("无效代理 URL 应返回错误")
+		return
 	}
 	if !strings.Contains(err.Error(), "invalid proxy URL") {
 		t.Errorf("错误信息应包含 'invalid proxy URL': got %s", err.Error())
@@ -566,6 +569,7 @@ func TestClient_ExchangeCode_无ClientSecret(t *testing.T) {
 	_, err := client.ExchangeCode(context.Background(), "code", "verifier")
 	if err == nil {
 		t.Fatal("缺少 client_secret 时应返回错误")
+		return
 	}
 	if !strings.Contains(err.Error(), AntigravityOAuthClientSecretEnv) {
 		t.Errorf("错误信息应包含环境变量名: got %s", err.Error())
@@ -951,6 +955,7 @@ func TestClient_ExchangeCode_ServerError_RealCall(t *testing.T) {
 	_, err := client.ExchangeCode(context.Background(), "expired-code", "verifier")
 	if err == nil {
 		t.Fatal("服务器返回 400 时应返回错误")
+		return
 	}
 	if !strings.Contains(err.Error(), "token 交换失败") {
 		t.Errorf("错误信息应包含 'token 交换失败': got %s", err.Error())
@@ -979,6 +984,7 @@ func TestClient_ExchangeCode_InvalidJSON_RealCall(t *testing.T) {
 	_, err := client.ExchangeCode(context.Background(), "code", "verifier")
 	if err == nil {
 		t.Fatal("无效 JSON 响应应返回错误")
+		return
 	}
 	if !strings.Contains(err.Error(), "token 解析失败") {
 		t.Errorf("错误信息应包含 'token 解析失败': got %s", err.Error())
@@ -1082,6 +1088,7 @@ func TestClient_RefreshToken_ServerError_RealCall(t *testing.T) {
 	_, err := client.RefreshToken(context.Background(), "revoked-token")
 	if err == nil {
 		t.Fatal("服务器返回 401 时应返回错误")
+		return
 	}
 	if !strings.Contains(err.Error(), "token 刷新失败") {
 		t.Errorf("错误信息应包含 'token 刷新失败': got %s", err.Error())
@@ -1107,6 +1114,7 @@ func TestClient_RefreshToken_InvalidJSON_RealCall(t *testing.T) {
 	_, err := client.RefreshToken(context.Background(), "refresh-tok")
 	if err == nil {
 		t.Fatal("无效 JSON 响应应返回错误")
+		return
 	}
 	if !strings.Contains(err.Error(), "token 解析失败") {
 		t.Errorf("错误信息应包含 'token 解析失败': got %s", err.Error())
@@ -1202,6 +1210,7 @@ func TestClient_GetUserInfo_Unauthorized_RealCall(t *testing.T) {
 	_, err := client.GetUserInfo(context.Background(), "bad-token")
 	if err == nil {
 		t.Fatal("服务器返回 401 时应返回错误")
+		return
 	}
 	if !strings.Contains(err.Error(), "获取用户信息失败") {
 		t.Errorf("错误信息应包含 '获取用户信息失败': got %s", err.Error())
@@ -1226,6 +1235,7 @@ func TestClient_GetUserInfo_InvalidJSON_RealCall(t *testing.T) {
 	_, err := client.GetUserInfo(context.Background(), "token")
 	if err == nil {
 		t.Fatal("无效 JSON 响应应返回错误")
+		return
 	}
 	if !strings.Contains(err.Error(), "用户信息解析失败") {
 		t.Errorf("错误信息应包含 '用户信息解析失败': got %s", err.Error())
@@ -1356,6 +1366,7 @@ func TestClient_LoadCodeAssist_HTTPError_RealCall(t *testing.T) {
 	_, _, err := client.LoadCodeAssist(context.Background(), "bad-token")
 	if err == nil {
 		t.Fatal("服务器返回 403 时应返回错误")
+		return
 	}
 	if !strings.Contains(err.Error(), "loadCodeAssist 失败") {
 		t.Errorf("错误信息应包含 'loadCodeAssist 失败': got %s", err.Error())
@@ -1379,6 +1390,7 @@ func TestClient_LoadCodeAssist_InvalidJSON_RealCall(t *testing.T) {
 	_, _, err := client.LoadCodeAssist(context.Background(), "token")
 	if err == nil {
 		t.Fatal("无效 JSON 响应应返回错误")
+		return
 	}
 	if !strings.Contains(err.Error(), "响应解析失败") {
 		t.Errorf("错误信息应包含 '响应解析失败': got %s", err.Error())
@@ -1575,6 +1587,7 @@ func TestClient_FetchAvailableModels_HTTPError_RealCall(t *testing.T) {
 	_, _, err := client.FetchAvailableModels(context.Background(), "bad-token", "proj")
 	if err == nil {
 		t.Fatal("服务器返回 403 时应返回错误")
+		return
 	}
 	if !strings.Contains(err.Error(), "fetchAvailableModels 失败") {
 		t.Errorf("错误信息应包含 'fetchAvailableModels 失败': got %s", err.Error())
@@ -1595,6 +1608,7 @@ func TestClient_FetchAvailableModels_InvalidJSON_RealCall(t *testing.T) {
 	_, _, err := client.FetchAvailableModels(context.Background(), "token", "proj")
 	if err == nil {
 		t.Fatal("无效 JSON 响应应返回错误")
+		return
 	}
 	if !strings.Contains(err.Error(), "响应解析失败") {
 		t.Errorf("错误信息应包含 '响应解析失败': got %s", err.Error())
