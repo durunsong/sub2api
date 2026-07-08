@@ -38,6 +38,7 @@ type AdminService interface {
 	CreateUser(ctx context.Context, input *CreateUserInput) (*User, error)
 	UpdateUser(ctx context.Context, id int64, input *UpdateUserInput) (*User, error)
 	DeleteUser(ctx context.Context, id int64) error
+	BatchDeleteUsers(ctx context.Context, ids []int64) (*UserBatchDeleteResult, error)
 	UpdateUserBalance(ctx context.Context, userID int64, balance float64, operation string, notes string) (*User, error)
 	BatchUpdateConcurrency(ctx context.Context, userIDs []int64, value int, mode string) (int, error)
 	GetUserAPIKeys(ctx context.Context, userID int64, page, pageSize int, sortBy, sortOrder string) ([]APIKey, int64, error)
@@ -464,6 +465,16 @@ type GenerateRedeemCodesInput struct {
 	GroupID      *int64 // 订阅类型专用：关联的分组ID
 	ValidityDays int    // 订阅类型专用：有效天数
 	ExpiresAt    *time.Time
+}
+
+type UserBatchDeleteResult struct {
+	DeletedIDs []int64                  `json:"deleted_ids"`
+	Skipped    []UserBatchDeleteSkipped `json:"skipped"`
+}
+
+type UserBatchDeleteSkipped struct {
+	ID     int64  `json:"id"`
+	Reason string `json:"reason"`
 }
 
 type ProxyBatchDeleteResult struct {
@@ -945,6 +956,26 @@ func (s *adminServiceImpl) DeleteUser(ctx context.Context, id int64) error {
 		s.authCacheInvalidator.InvalidateAuthCacheByUserID(ctx, id)
 	}
 	return nil
+}
+
+func (s *adminServiceImpl) BatchDeleteUsers(ctx context.Context, ids []int64) (*UserBatchDeleteResult, error) {
+	result := &UserBatchDeleteResult{}
+	if len(ids) == 0 {
+		return result, nil
+	}
+
+	for _, id := range ids {
+		if err := s.DeleteUser(ctx, id); err != nil {
+			result.Skipped = append(result.Skipped, UserBatchDeleteSkipped{
+				ID:     id,
+				Reason: err.Error(),
+			})
+			continue
+		}
+		result.DeletedIDs = append(result.DeletedIDs, id)
+	}
+
+	return result, nil
 }
 
 func (s *adminServiceImpl) listUserAPIKeysForDeletion(ctx context.Context, userID int64) ([]APIKey, error) {

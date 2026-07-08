@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/accessban"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/gin-gonic/gin"
@@ -42,16 +43,12 @@ func TestGatewayIPBanGuardUsesForwardedClientIPWithoutTrustedProxies(t *testing.
 	gin.SetMode(gin.TestMode)
 
 	repo := &stubIPBanRepo{
-		active: []service.IPBan{{ID: 1, Pattern: "1.2.3.4", Status: service.IPBanStatusActive}},
+		active: []service.IPBan{{ID: 1, RuleType: accessban.RuleTypeIP, Pattern: "1.2.3.4", Status: service.IPBanStatusActive}},
 	}
 	svc := service.NewIPBanService(repo)
-	cfg := &config.Config{
-		RunMode: config.RunModeSimple,
-		Server:  config.ServerConfig{TrustedProxies: nil},
-	}
+	cfg := &config.Config{RunMode: config.RunModeSimple}
 
 	router := gin.New()
-	require.NoError(t, router.SetTrustedProxies(nil))
 	router.Use(GatewayIPBanGuard(svc, cfg, AnthropicErrorWriter))
 	router.GET("/t", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"ok": true})
@@ -69,32 +66,26 @@ func TestGatewayIPBanGuardUsesForwardedClientIPWithoutTrustedProxies(t *testing.
 	require.Equal(t, []int64{1}, repo.hits)
 }
 
-func TestGatewayIPBanGuardDoesNotDependOnAPIKeyACLTrustSetting(t *testing.T) {
+func TestGatewayIPBanGuardBlocksUARule(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	repo := &stubIPBanRepo{
-		active: []service.IPBan{{ID: 2, Pattern: "203.0.113.10", Status: service.IPBanStatusActive}},
+		active: []service.IPBan{{ID: 2, RuleType: accessban.RuleTypeUA, Pattern: "evilbot", Status: service.IPBanStatusActive}},
 	}
 	svc := service.NewIPBanService(repo)
-	cfg := &config.Config{
-		RunMode: config.RunModeSimple,
-		Server:  config.ServerConfig{TrustedProxies: nil},
-	}
-	cfg.SetTrustForwardedIPForAPIKeyACL(false)
+	cfg := &config.Config{RunMode: config.RunModeSimple}
 
 	router := gin.New()
-	require.NoError(t, router.SetTrustedProxies(nil))
 	router.Use(GatewayIPBanGuard(svc, cfg, AnthropicErrorWriter))
-	router.GET("/t", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"ok": true})
-	})
+	router.GET("/t", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"ok": true}) })
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/t", nil)
 	req.RemoteAddr = "9.9.9.9:12345"
-	req.Header.Set("X-Real-IP", "203.0.113.10")
+	req.Header.Set("User-Agent", "evilbot/1.0")
 	router.ServeHTTP(w, req)
 
 	require.Equal(t, http.StatusForbidden, w.Code)
+	require.Contains(t, w.Body.String(), service.ErrClientAccessBanned.Message)
 	require.Equal(t, []int64{2}, repo.hits)
 }

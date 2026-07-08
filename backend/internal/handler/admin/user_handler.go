@@ -336,6 +336,32 @@ func (h *UserHandler) Delete(c *gin.Context) {
 	response.Success(c, gin.H{"message": "User deleted successfully"})
 }
 
+// BatchDelete handles batch deleting users
+// POST /api/v1/admin/users/batch-delete
+func (h *UserHandler) BatchDelete(c *gin.Context) {
+	type BatchDeleteRequest struct {
+		IDs []int64 `json:"ids" binding:"required,min=1"`
+	}
+
+	var req BatchDeleteRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+	}
+	if len(req.IDs) > 500 {
+		response.BadRequest(c, "ids cannot exceed 500")
+		return
+	}
+
+	result, err := h.adminService.BatchDeleteUsers(c.Request.Context(), req.IDs)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+
+	response.Success(c, result)
+}
+
 // UpdateBalance handles updating user balance
 // POST /api/v1/admin/users/:id/balance
 func (h *UserHandler) UpdateBalance(c *gin.Context) {

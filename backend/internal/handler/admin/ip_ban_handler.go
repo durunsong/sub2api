@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/pkg/accessban"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
 	servermiddleware "github.com/Wei-Shaw/sub2api/internal/server/middleware"
@@ -13,7 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// IPBanHandler handles global client IP/CIDR ban management.
+// IPBanHandler handles global access ban management.
 type IPBanHandler struct {
 	ipBanService *service.IPBanService
 }
@@ -23,14 +24,18 @@ func NewIPBanHandler(ipBanService *service.IPBanService) *IPBanHandler {
 }
 
 type CreateIPBanRequest struct {
+	RuleType  string `json:"rule_type"`
 	Pattern   string `json:"pattern" binding:"required"`
+	UAPattern string `json:"ua_pattern"`
 	Reason    string `json:"reason"`
 	Source    string `json:"source"`
 	ExpiresAt *int64 `json:"expires_at"`
 }
 
 type UpdateIPBanRequest struct {
+	RuleType  *string `json:"rule_type"`
 	Pattern   *string `json:"pattern"`
+	UAPattern *string `json:"ua_pattern"`
 	Reason    *string `json:"reason"`
 	Status    *string `json:"status" binding:"omitempty,oneof=active inactive"`
 	ExpiresAt *int64  `json:"expires_at"`
@@ -43,8 +48,9 @@ func (h *IPBanHandler) List(c *gin.Context) {
 		search = search[:100]
 	}
 	filters := service.IPBanListFilters{
-		Search: search,
-		Status: strings.TrimSpace(c.Query("status")),
+		Search:   search,
+		Status:   strings.TrimSpace(c.Query("status")),
+		RuleType: accessban.NormalizeRuleType(c.Query("rule_type")),
 	}
 	params := pagination.PaginationParams{
 		Page:      page,
@@ -82,9 +88,11 @@ func (h *IPBanHandler) Create(c *gin.Context) {
 	}
 
 	input := service.CreateIPBanInput{
-		Pattern: req.Pattern,
-		Reason:  req.Reason,
-		Source:  req.Source,
+		RuleType:  req.RuleType,
+		Pattern:   req.Pattern,
+		UAPattern: req.UAPattern,
+		Reason:    req.Reason,
+		Source:    req.Source,
 	}
 	if subject, ok := servermiddleware.GetAuthSubjectFromContext(c); ok {
 		input.CreatedBy = &subject.UserID
@@ -114,9 +122,11 @@ func (h *IPBanHandler) Update(c *gin.Context) {
 	}
 
 	input := service.UpdateIPBanInput{
-		Pattern: req.Pattern,
-		Reason:  req.Reason,
-		Status:  req.Status,
+		RuleType:  req.RuleType,
+		Pattern:   req.Pattern,
+		UAPattern: req.UAPattern,
+		Reason:    req.Reason,
+		Status:    req.Status,
 	}
 	if req.ExpiresAt != nil {
 		var expiresAt *time.Time
@@ -144,13 +154,13 @@ func (h *IPBanHandler) Delete(c *gin.Context) {
 		response.ErrorFrom(c, err)
 		return
 	}
-	response.Success(c, gin.H{"message": "IP ban rule deleted successfully"})
+	response.Success(c, gin.H{"message": "Access ban rule deleted successfully"})
 }
 
 func parseIPBanID(c *gin.Context) (int64, bool) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "Invalid IP ban rule ID")
+		response.BadRequest(c, "Invalid access ban rule ID")
 		return 0, false
 	}
 	return id, true

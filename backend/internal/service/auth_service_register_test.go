@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/accessban"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
@@ -250,6 +251,7 @@ func newAuthService(repo *userRepoStub, settings map[string]string, emailCache E
 		nil, // defaultSubAssigner
 		nil, // affiliateService
 		quotaRepo,
+		nil,
 	)
 }
 
@@ -400,6 +402,37 @@ func TestAuthService_Register_EmailSuffixNotAllowed(t *testing.T) {
 	require.Equal(t, "EMAIL_SUFFIX_NOT_ALLOWED", appErr.Reason)
 	require.Equal(t, "2", appErr.Metadata["allowed_suffix_count"])
 	require.Equal(t, "@example.com,@company.com", appErr.Metadata["allowed_suffixes"])
+}
+
+func TestAuthService_Register_EmailRegexBanned(t *testing.T) {
+	repo := &userRepoStub{}
+	banSvc := NewIPBanService(&memoryIPBanRepo{
+		rules: []IPBan{{
+			ID:       1,
+			RuleType: accessban.RuleTypeEmailRegex,
+			Pattern:  `@365\.liout\.com$`,
+			Status:   IPBanStatusActive,
+		}},
+	})
+	service := NewAuthService(
+		nil,
+		repo,
+		nil,
+		nil,
+		&config.Config{JWT: config.JWTConfig{Secret: "test-secret", ExpireHour: 1}},
+		NewSettingService(&settingRepoStub{values: map[string]string{
+			SettingKeyRegistrationEnabled: "true",
+		}}, &config.Config{}),
+		nil, nil, nil, nil, nil, nil, nil,
+		banSvc,
+	)
+
+	_, _, err := service.Register(context.Background(), "hyi2eo8mze@365.liout.com", "password")
+	require.ErrorIs(t, err, ErrEmailBanned)
+
+	_, user, err := service.Register(context.Background(), "user@gmail.com", "password")
+	require.NoError(t, err)
+	require.NotNil(t, user)
 }
 
 func TestAuthService_Register_EmailSuffixAllowed(t *testing.T) {
@@ -757,7 +790,7 @@ func newAuthServiceWithDingTalkCfg(settings map[string]string, dtCfg config.Ding
 		DingTalk: dtCfg,
 	}
 	settingService := NewSettingService(&settingRepoStub{values: settings}, cfg)
-	return NewAuthService(nil, nil, nil, nil, cfg, settingService, nil, nil, nil, nil, nil, nil, nil)
+	return NewAuthService(nil, nil, nil, nil, cfg, settingService, nil, nil, nil, nil, nil, nil, nil, nil)
 }
 
 // minDingTalkURLs 返回一个包含必填字段的基础 DingTalkConnectConfig（不设 Enabled/BypassRegistration/Policy）。

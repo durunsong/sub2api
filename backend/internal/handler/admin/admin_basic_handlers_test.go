@@ -27,6 +27,7 @@ func setupAdminRouter() (*gin.Engine, *stubAdminService) {
 	router.POST("/api/v1/admin/users", userHandler.Create)
 	router.PUT("/api/v1/admin/users/:id", userHandler.Update)
 	router.DELETE("/api/v1/admin/users/:id", userHandler.Delete)
+	router.POST("/api/v1/admin/users/batch-delete", userHandler.BatchDelete)
 	router.POST("/api/v1/admin/users/:id/balance", userHandler.UpdateBalance)
 	router.GET("/api/v1/admin/users/:id/api-keys", userHandler.GetUserAPIKeys)
 	router.GET("/api/v1/admin/users/:id/usage", userHandler.GetUserUsage)
@@ -113,6 +114,12 @@ func TestUserHandlerEndpoints(t *testing.T) {
 
 	rec = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodDelete, "/api/v1/admin/users/1", nil)
+	router.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	rec = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/admin/users/batch-delete", bytes.NewBufferString(`{"ids":[1,2]}`))
+	req.Header.Set("Content-Type", "application/json")
 	router.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusOK, rec.Code)
 

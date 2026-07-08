@@ -13,6 +13,12 @@
             />
           </div>
           <Select
+            v-model="filters.rule_type"
+            :options="filterRuleTypeOptions"
+            class="w-44"
+            @change="reloadFromFirstPage"
+          />
+          <Select
             v-model="filters.status"
             :options="filterStatusOptions"
             class="w-40"
@@ -45,10 +51,20 @@
           default-sort-order="desc"
           @sort="handleSort"
         >
-          <template #cell-pattern="{ value }">
+          <template #cell-rule_type="{ row }">
+            <span class="badge badge-gray">{{ getRuleTypeLabel(row.rule_type) }}</span>
+          </template>
+
+          <template #cell-pattern="{ value, row }">
             <code class="rounded bg-gray-100 px-2 py-1 font-mono text-sm text-gray-900 dark:bg-dark-700 dark:text-gray-100">
               {{ value }}
             </code>
+            <div
+              v-if="row.ua_pattern"
+              class="mt-1 font-mono text-xs text-gray-500 dark:text-dark-400"
+            >
+              UA: {{ row.ua_pattern }}
+            </div>
           </template>
 
           <template #cell-status="{ row }">
@@ -139,17 +155,38 @@
       @close="closeFormDialog"
     >
       <form id="ip-ban-form" class="space-y-4" @submit.prevent="submitForm">
+        <div v-if="!editingBan">
+          <label class="input-label">{{ t('admin.ipBans.ruleType') }}</label>
+          <Select v-model="form.rule_type" :options="ruleTypeOptions" />
+        </div>
+        <div v-else>
+          <label class="input-label">{{ t('admin.ipBans.ruleType') }}</label>
+          <div class="text-sm text-gray-700 dark:text-gray-300">{{ getRuleTypeLabel(form.rule_type) }}</div>
+        </div>
         <div>
-          <label class="input-label">{{ t('admin.ipBans.pattern') }}</label>
+          <label class="input-label">{{ patternFieldLabel }}</label>
           <input
             v-model="form.pattern"
             type="text"
             required
             class="input font-mono"
-            :placeholder="t('admin.ipBans.patternPlaceholder')"
+            :placeholder="patternFieldPlaceholder"
           />
           <p class="mt-1 text-xs text-gray-500 dark:text-dark-400">
-            {{ t('admin.ipBans.patternHelp') }}
+            {{ patternFieldHelp }}
+          </p>
+        </div>
+        <div v-if="showUAPatternField">
+          <label class="input-label">{{ t('admin.ipBans.uaPattern') }}</label>
+          <input
+            v-model="form.ua_pattern"
+            type="text"
+            required
+            class="input font-mono"
+            :placeholder="t('admin.ipBans.uaPatternPlaceholder')"
+          />
+          <p class="mt-1 text-xs text-gray-500 dark:text-dark-400">
+            {{ t('admin.ipBans.uaPatternHelp') }}
           </p>
         </div>
         <div v-if="editingBan">
@@ -207,7 +244,7 @@ import { useI18n } from 'vue-i18n'
 import { adminAPI } from '@/api/admin'
 import { getPersistedPageSize } from '@/composables/usePersistedPageSize'
 import { useAppStore } from '@/stores/app'
-import type { IPBan, IPBanStatus } from '@/types'
+import type { AccessBanRuleType, IPBan, IPBanStatus } from '@/types'
 import { formatCompactNumber, formatDateTime, parseDateTimeLocalInput } from '@/utils/format'
 import type { Column } from '@/components/common/types'
 import AppLayout from '@/components/layout/AppLayout.vue'
@@ -231,7 +268,7 @@ const deletingBan = ref<IPBan | null>(null)
 const showFormDialog = ref(false)
 const showDeleteDialog = ref(false)
 
-const filters = reactive({ status: '' })
+const filters = reactive({ status: '', rule_type: '' })
 const pagination = reactive({
   page: 1,
   page_size: getPersistedPageSize(),
@@ -242,10 +279,70 @@ const sortState = reactive({
   sort_order: 'desc' as 'asc' | 'desc'
 })
 const form = reactive({
+  rule_type: 'ip' as AccessBanRuleType,
   pattern: '',
+  ua_pattern: '',
   status: 'active' as IPBanStatus,
   expires_at_str: '',
   reason: ''
+})
+
+const filterRuleTypeOptions = computed(() => [
+  { value: '', label: t('admin.ipBans.allRuleTypes') },
+  { value: 'ip', label: t('admin.ipBans.ruleTypes.ip') },
+  { value: 'ua', label: t('admin.ipBans.ruleTypes.ua') },
+  { value: 'ip_ua', label: t('admin.ipBans.ruleTypes.ip_ua') },
+  { value: 'email_suffix', label: t('admin.ipBans.ruleTypes.email_suffix') },
+  { value: 'email_regex', label: t('admin.ipBans.ruleTypes.email_regex') }
+])
+
+const ruleTypeOptions = computed(() => filterRuleTypeOptions.value.filter((item) => item.value !== ''))
+
+const showUAPatternField = computed(() => form.rule_type === 'ip_ua')
+
+const patternFieldLabel = computed(() => {
+  switch (form.rule_type) {
+    case 'ua':
+      return t('admin.ipBans.uaPattern')
+    case 'email_suffix':
+      return t('admin.ipBans.emailSuffix')
+    case 'email_regex':
+      return t('admin.ipBans.emailRegex')
+    case 'ip_ua':
+      return t('admin.ipBans.pattern')
+    default:
+      return t('admin.ipBans.pattern')
+  }
+})
+
+const patternFieldPlaceholder = computed(() => {
+  switch (form.rule_type) {
+    case 'ua':
+      return t('admin.ipBans.uaPatternPlaceholder')
+    case 'email_suffix':
+      return t('admin.ipBans.emailSuffixPlaceholder')
+    case 'email_regex':
+      return t('admin.ipBans.emailRegexPlaceholder')
+    case 'ip_ua':
+      return t('admin.ipBans.patternPlaceholder')
+    default:
+      return t('admin.ipBans.patternPlaceholder')
+  }
+})
+
+const patternFieldHelp = computed(() => {
+  switch (form.rule_type) {
+    case 'ua':
+      return t('admin.ipBans.uaPatternHelp')
+    case 'email_suffix':
+      return t('admin.ipBans.emailSuffixHelp')
+    case 'email_regex':
+      return t('admin.ipBans.emailRegexHelp')
+    case 'ip_ua':
+      return t('admin.ipBans.ipUaHelp')
+    default:
+      return t('admin.ipBans.patternHelp')
+  }
 })
 
 const filterStatusOptions = computed(() => [
@@ -260,6 +357,7 @@ const statusOptions = computed(() => [
 ])
 
 const columns = computed<Column[]>(() => [
+  { key: 'rule_type', label: t('admin.ipBans.columns.ruleType') },
   { key: 'pattern', label: t('admin.ipBans.columns.pattern'), sortable: true },
   { key: 'status', label: t('admin.ipBans.columns.status'), sortable: true },
   { key: 'reason', label: t('admin.ipBans.columns.reason') },
@@ -285,6 +383,7 @@ const loadBans = async () => {
       pagination.page_size,
       {
         status: filters.status || undefined,
+        rule_type: filters.rule_type || undefined,
         search: searchQuery.value || undefined,
         sort_by: sortState.sort_by,
         sort_order: sortState.sort_order
@@ -346,7 +445,9 @@ const openCreateDialog = () => {
 
 const openEditDialog = (ban: IPBan) => {
   editingBan.value = ban
+  form.rule_type = ban.rule_type || 'ip'
   form.pattern = ban.pattern
+  form.ua_pattern = ban.ua_pattern || ''
   form.status = ban.status
   form.reason = ban.reason || ''
   form.expires_at_str = ban.expires_at ? toDateTimeLocal(ban.expires_at) : ''
@@ -360,7 +461,9 @@ const closeFormDialog = () => {
 }
 
 const resetForm = () => {
+  form.rule_type = 'ip'
   form.pattern = ''
+  form.ua_pattern = ''
   form.status = 'active'
   form.expires_at_str = ''
   form.reason = ''
@@ -373,6 +476,7 @@ const submitForm = async () => {
     if (editingBan.value) {
       await adminAPI.ipBans.update(editingBan.value.id, {
         pattern: form.pattern,
+        ua_pattern: form.ua_pattern || undefined,
         status: form.status,
         reason: form.reason || '',
         expires_at: expiresAt ?? 0
@@ -380,7 +484,9 @@ const submitForm = async () => {
       appStore.showSuccess(t('admin.ipBans.ruleUpdated'))
     } else {
       await adminAPI.ipBans.create({
+        rule_type: form.rule_type,
         pattern: form.pattern,
+        ua_pattern: form.ua_pattern || undefined,
         reason: form.reason || undefined,
         expires_at: expiresAt
       })
@@ -422,6 +528,11 @@ const confirmDelete = async () => {
   } catch (error: any) {
     appStore.showError(getErrorMessage(error, t('admin.ipBans.failedToDelete')))
   }
+}
+
+const getRuleTypeLabel = (ruleType?: AccessBanRuleType | string) => {
+  const key = ruleType || 'ip'
+  return t(`admin.ipBans.ruleTypes.${key}`)
 }
 
 const getStatusClass = (ban: IPBan) => {

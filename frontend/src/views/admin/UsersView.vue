@@ -243,6 +243,15 @@
             </div>
 
             <!-- Create User Button (full width on mobile, auto width on desktop) -->
+            <button
+              @click="openBatchDelete"
+              :disabled="selectedCount === 0"
+              class="btn btn-danger flex-1 md:flex-initial"
+              :title="t('admin.users.batchDeleteAction')"
+            >
+              <Icon name="trash" size="md" class="mr-2" />
+              {{ t('admin.users.batchDeleteAction') }}
+            </button>
             <button @click="showCreateModal = true" class="btn btn-primary flex-1 md:flex-initial">
               <Icon name="plus" size="md" class="mr-2" />
               {{ t('admin.users.createUser') }}
@@ -264,6 +273,28 @@
           :sort-storage-key="USER_SORT_STORAGE_KEY"
           @sort="handleSort"
         >
+          <template #header-select>
+            <input
+              type="checkbox"
+              class="h-4 w-4 cursor-pointer rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+              :checked="allVisibleSelected"
+              @click.stop
+              @change="toggleSelectAllVisible($event)"
+            />
+          </template>
+
+          <template #cell-select="{ row }">
+            <input
+              type="checkbox"
+              class="h-4 w-4 cursor-pointer rounded border-gray-300 text-primary-600 focus:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-40"
+              :checked="selectedUserIds.has(row.id)"
+              :disabled="row.role === 'admin'"
+              :title="row.role === 'admin' ? t('admin.users.roles.admin') : undefined"
+              @click.stop
+              @change="toggleSelectRow(row, $event)"
+            />
+          </template>
+
           <template #cell-email="{ value }">
             <div class="flex items-center gap-2">
               <div
@@ -737,6 +768,16 @@
     </Teleport>
 
     <ConfirmDialog :show="showDeleteDialog" :title="t('admin.users.deleteUser')" :message="t('admin.users.deleteConfirm', { email: deletingUser?.email })" :danger="true" @confirm="confirmDelete" @cancel="showDeleteDialog = false" />
+    <ConfirmDialog
+      :show="showBatchDeleteDialog"
+      :title="t('admin.users.batchDelete')"
+      :message="t('admin.users.batchDeleteConfirm', { count: selectedCount })"
+      :confirm-text="t('common.delete')"
+      :cancel-text="t('common.cancel')"
+      :danger="true"
+      @confirm="confirmBatchDelete"
+      @cancel="showBatchDeleteDialog = false"
+    />
     <UserCreateModal :show="showCreateModal" @close="showCreateModal = false" @success="loadUsers" />
     <UserEditModal :show="showEditModal" :user="editingUser" @close="closeEditModal" @success="loadUsers" />
     <UserPlatformQuotaModal
@@ -759,6 +800,7 @@ import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores/app'
 import { getPersistedPageSize } from '@/composables/usePersistedPageSize'
+import { useTableSelection } from '@/composables/useTableSelection'
 import { formatDateTime } from '@/utils/format'
 import Icon from '@/components/icons/Icon.vue'
 
@@ -998,11 +1040,12 @@ const hasVisibleAttributeColumns = computed(() =>
 )
 
 // Filtered columns based on visibility
-const columns = computed<Column[]>(() =>
-  allColumns.value.filter(col =>
+const columns = computed<Column[]>(() => {
+  const visible = allColumns.value.filter(col =>
     col.key === 'email' || col.key === 'actions' || !hiddenColumns.has(col.key)
   )
-)
+  return [{ key: 'select', label: '', sortable: false }, ...visible]
+})
 
 const users = ref<AdminUser[]>([])
 const loading = ref(false)
@@ -1276,6 +1319,28 @@ const sortedUsers = computed(() => {
     .map((x) => x.row)
 })
 
+const {
+  selectedSet: selectedUserIds,
+  selectedCount,
+  select,
+  deselect,
+  clear: clearSelectedUsers,
+  removeMany: removeSelectedUsers
+} = useTableSelection<AdminUser>({
+  rows: sortedUsers,
+  getId: (user) => user.id
+})
+
+const deletableVisibleUsers = computed(() =>
+  sortedUsers.value.filter((user) => user.role !== 'admin')
+)
+
+const allVisibleSelected = computed(() => {
+  const deletable = deletableVisibleUsers.value
+  if (deletable.length === 0) return false
+  return deletable.every((user) => selectedUserIds.value.has(user.id))
+})
+
 // User attribute definitions and values
 const attributeDefinitions = ref<UserAttributeDefinition[]>([])
 const userAttributeValues = ref<Record<number, Record<number, string>>>({})
@@ -1289,6 +1354,7 @@ const pagination = reactive({
 const showCreateModal = ref(false)
 const showEditModal = ref(false)
 const showDeleteDialog = ref(false)
+const showBatchDeleteDialog = ref(false)
 const showApiKeysModal = ref(false)
 const showAttributesModal = ref(false)
 const showPlatformQuotaModal = ref(false)
@@ -1733,17 +1799,69 @@ const handleDelete = (user: AdminUser) => {
   showDeleteDialog.value = true
 }
 
+const toggleSelectAllVisible = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  if (target.checked) {
+    deletableVisibleUsers.value.forEach((user) => select(user.id))
+  } else {
+    deletableVisibleUsers.value.forEach((user) => deselect(user.id))
+  }
+}
+
+const toggleSelectRow = (user: AdminUser, event: Event) => {
+  if (user.role === 'admin') return
+  const target = event.target as HTMLInputElement
+  if (target.checked) {
+    select(user.id)
+  } else {
+    deselect(user.id)
+  }
+}
+
+const openBatchDelete = () => {
+  if (selectedCount.value === 0) return
+  showBatchDeleteDialog.value = true
+}
+
 const confirmDelete = async () => {
   if (!deletingUser.value) return
   try {
     await adminAPI.users.delete(deletingUser.value.id)
     appStore.showSuccess(t('common.success'))
     showDeleteDialog.value = false
+    removeSelectedUsers([deletingUser.value.id])
     deletingUser.value = null
     loadUsers()
   } catch (error: any) {
     appStore.showError(error.response?.data?.detail || t('admin.users.failedToDelete'))
     console.error('Error deleting user:', error)
+  }
+}
+
+const confirmBatchDelete = async () => {
+  const ids = Array.from(selectedUserIds.value)
+  if (ids.length === 0) {
+    showBatchDeleteDialog.value = false
+    return
+  }
+
+  try {
+    const result = await adminAPI.users.batchDelete(ids)
+    const deleted = result.deleted_ids?.length || 0
+    const skipped = result.skipped?.length || 0
+
+    if (deleted > 0) {
+      appStore.showSuccess(t('admin.users.batchDeleteDone', { deleted, skipped }))
+    } else if (skipped > 0) {
+      appStore.showInfo(t('admin.users.batchDeleteSkipped', { skipped }))
+    }
+
+    clearSelectedUsers()
+    showBatchDeleteDialog.value = false
+    loadUsers()
+  } catch (error: any) {
+    appStore.showError(error.response?.data?.detail || t('admin.users.batchDeleteFailed'))
+    console.error('Error batch deleting users:', error)
   }
 }
 

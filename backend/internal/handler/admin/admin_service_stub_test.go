@@ -181,6 +181,10 @@ func (s *stubAdminService) DeleteUser(ctx context.Context, id int64) error {
 	return nil
 }
 
+func (s *stubAdminService) BatchDeleteUsers(ctx context.Context, ids []int64) (*service.UserBatchDeleteResult, error) {
+	return &service.UserBatchDeleteResult{DeletedIDs: ids}, nil
+}
+
 func (s *stubAdminService) UpdateUserBalance(ctx context.Context, userID int64, balance float64, operation string, notes string) (*service.User, error) {
 	user := service.User{ID: userID, Balance: balance, Status: service.StatusActive}
 	return &user, nil

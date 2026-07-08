@@ -1978,10 +1978,13 @@ export interface UpdatePromoCodeRequest {
 // ==================== IP Ban Types ====================
 
 export type IPBanStatus = 'active' | 'inactive'
+export type AccessBanRuleType = 'ip' | 'ua' | 'ip_ua' | 'email_suffix' | 'email_regex'
 
 export interface IPBan {
   id: number
+  rule_type: AccessBanRuleType
   pattern: string
+  ua_pattern?: string | null
   status: IPBanStatus
   reason?: string | null
   source: string
@@ -1994,14 +1997,18 @@ export interface IPBan {
 }
 
 export interface CreateIPBanRequest {
+  rule_type?: AccessBanRuleType
   pattern: string
+  ua_pattern?: string
   reason?: string
   source?: string
   expires_at?: number | null
 }
 
 export interface UpdateIPBanRequest {
+  rule_type?: AccessBanRuleType
   pattern?: string
+  ua_pattern?: string
   reason?: string
   status?: IPBanStatus
   expires_at?: number | null

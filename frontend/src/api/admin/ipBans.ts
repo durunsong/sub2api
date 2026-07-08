@@ -12,6 +12,7 @@ export async function list(
   pageSize: number = 20,
   filters?: {
     status?: string
+    rule_type?: string
     search?: string
     sort_by?: string
     sort_order?: 'asc' | 'desc'

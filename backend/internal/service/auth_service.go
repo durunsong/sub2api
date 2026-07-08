@@ -75,6 +75,7 @@ type AuthService struct {
 	affiliateService      *AffiliateService
 	defaultSubAssigner    DefaultSubscriptionAssigner
 	userPlatformQuotaRepo UserPlatformQuotaRepository
+	accessBanService      *IPBanService
 }
 
 type DefaultSubscriptionAssigner interface {
@@ -103,6 +104,7 @@ func NewAuthService(
 	defaultSubAssigner DefaultSubscriptionAssigner,
 	affiliateService *AffiliateService,
 	userPlatformQuotaRepo UserPlatformQuotaRepository,
+	accessBanService *IPBanService,
 ) *AuthService {
 	return &AuthService{
 		entClient:             entClient,
@@ -118,6 +120,7 @@ func NewAuthService(
 		affiliateService:      affiliateService,
 		defaultSubAssigner:    defaultSubAssigner,
 		userPlatformQuotaRepo: userPlatformQuotaRepo,
+		accessBanService:      accessBanService,
 	}
 }
 
@@ -438,6 +441,9 @@ func (s *AuthService) IsEmailVerifyEnabled(ctx context.Context) bool {
 
 // Login 用户登录，返回JWT token
 func (s *AuthService) Login(ctx context.Context, email, password string) (string, *User, error) {
+	if err := s.validateLoginEmailPolicy(ctx, email); err != nil {
+		return "", nil, err
+	}
 	// 查找用户
 	user, err := s.userRepo.GetByEmail(ctx, email)
 	if err != nil {
@@ -1098,12 +1104,45 @@ func inferLegacySignupSource(email string) string {
 }
 
 func (s *AuthService) validateRegistrationEmailPolicy(ctx context.Context, email string) error {
+	if err := ValidateRegistrationEmailFormat(email); err != nil {
+		return err
+	}
+	if err := s.validateEmailAccessBan(ctx, email); err != nil {
+		return err
+	}
 	if s.settingService == nil {
 		return nil
 	}
 	whitelist := s.settingService.GetRegistrationEmailSuffixWhitelist(ctx)
 	if !IsRegistrationEmailSuffixAllowed(email, whitelist) {
 		return buildEmailSuffixNotAllowedError(whitelist)
+	}
+	return nil
+}
+
+func (s *AuthService) validateEmailAccessBan(ctx context.Context, email string) error {
+	if s.accessBanService == nil {
+		return nil
+	}
+	_, banned, err := s.accessBanService.CheckEmail(ctx, email)
+	if err != nil {
+		return ErrServiceUnavailable
+	}
+	if banned {
+		return ErrEmailBanned
+	}
+	return nil
+}
+
+func (s *AuthService) validateLoginEmailPolicy(ctx context.Context, email string) error {
+	if err := ValidateRegistrationEmailFormat(email); err != nil {
+		return ErrInvalidCredentials
+	}
+	if err := s.validateEmailAccessBan(ctx, email); err != nil {
+		if errors.Is(err, ErrEmailBanned) {
+			return ErrEmailBanned
+		}
+		return ErrServiceUnavailable
 	}
 	return nil
 }

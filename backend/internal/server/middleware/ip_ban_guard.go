@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"github.com/Wei-Shaw/sub2api/internal/config"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/accessban"
 	ippkg "github.com/Wei-Shaw/sub2api/internal/pkg/ip"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
 	"github.com/Wei-Shaw/sub2api/internal/service"
@@ -9,52 +10,60 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// IPBanGuard blocks globally banned client IPs/CIDRs for normal API responses.
+// IPBanGuard blocks globally banned client IPs/CIDRs/UA combinations for normal API responses.
 func IPBanGuard(ipBanService *service.IPBanService, cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if checkIPBan(c, ipBanService, cfg, func(c *gin.Context, status int, message string) {
-			response.ErrorFrom(c, service.ErrIPBanned)
-		}) {
+		ban, blocked, err := evaluateAccessBan(c, ipBanService, cfg)
+		if err != nil {
+			AbortWithError(c, 500, "INTERNAL_ERROR", "Failed to check access ban status")
 			return
 		}
-		c.Next()
+		if !blocked {
+			c.Next()
+			return
+		}
+		if ban != nil && accessban.NormalizeRuleType(ban.RuleType) == accessban.RuleTypeIP {
+			response.ErrorFrom(c, service.ErrIPBanned)
+			return
+		}
+		response.ErrorFrom(c, service.ErrClientAccessBanned)
 	}
 }
 
-// GatewayIPBanGuard blocks globally banned IPs while preserving gateway error shape.
+// GatewayIPBanGuard blocks globally banned client signals while preserving gateway error shape.
 func GatewayIPBanGuard(ipBanService *service.IPBanService, cfg *config.Config, writeError GatewayErrorWriter) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if writeError == nil {
 			writeError = AnthropicErrorWriter
 		}
-		if checkIPBan(c, ipBanService, cfg, writeError) {
+		ban, blocked, err := evaluateAccessBan(c, ipBanService, cfg)
+		if err != nil {
+			AbortWithError(c, 500, "INTERNAL_ERROR", "Failed to check access ban status")
 			return
 		}
-		c.Next()
+		if !blocked {
+			c.Next()
+			return
+		}
+		service.MarkOpsClientBusinessLimited(c, service.OpsClientBusinessLimitedReasonIPRestriction)
+		writeError(c, 403, clientAccessBanMessage(ban))
+		c.Abort()
 	}
 }
 
-func checkIPBan(c *gin.Context, ipBanService *service.IPBanService, cfg *config.Config, writeError GatewayErrorWriter) bool {
+func evaluateAccessBan(c *gin.Context, ipBanService *service.IPBanService, cfg *config.Config) (*service.IPBan, bool, error) {
 	if ipBanService == nil {
-		return false
+		return nil, false, nil
 	}
-	clientIP := getIPBanClientIP(c, cfg)
-	_, banned, err := ipBanService.Check(c.Request.Context(), clientIP)
-	if err != nil {
-		AbortWithError(c, 500, "INTERNAL_ERROR", "Failed to check IP ban status")
-		return true
-	}
-	if !banned {
-		return false
-	}
-	service.MarkOpsClientBusinessLimited(c, service.OpsClientBusinessLimitedReasonIPRestriction)
-	writeError(c, 403, service.ErrIPBanned.Message)
-	c.Abort()
-	return true
+	_ = cfg
+	clientIP := ippkg.GetClientIP(c)
+	userAgent := c.GetHeader("User-Agent")
+	return ipBanService.CheckClient(c.Request.Context(), clientIP, userAgent)
 }
 
-func getIPBanClientIP(c *gin.Context, _ *config.Config) string {
-	// ponytail: match ops/request logs (GetClientIP). Admins ban the IP they see there;
-	// GetTrustedClientIP ignores X-Forwarded-For when trusted_proxies is empty (default deploy).
-	return ippkg.GetClientIP(c)
+func clientAccessBanMessage(ban *service.IPBan) string {
+	if ban != nil && accessban.NormalizeRuleType(ban.RuleType) == accessban.RuleTypeIP {
+		return service.ErrIPBanned.Message
+	}
+	return service.ErrClientAccessBanned.Message
 }

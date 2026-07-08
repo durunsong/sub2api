@@ -30,7 +30,9 @@ func (IPBan) Mixin() []ent.Mixin {
 
 func (IPBan) Fields() []ent.Field {
 	return []ent.Field{
-		field.String("pattern").MaxLen(64).NotEmpty().Comment("Banned IP or CIDR pattern"),
+		field.String("rule_type").MaxLen(20).Default("ip").Comment("ip/ua/ip_ua/email_suffix/email_regex"),
+		field.String("pattern").MaxLen(255).NotEmpty().Comment("Primary match pattern"),
+		field.String("ua_pattern").MaxLen(255).Optional().Nillable().Comment("UA pattern for ip_ua rules"),
 		field.String("status").MaxLen(20).Default("active").Comment("active/inactive"),
 		field.String("reason").MaxLen(255).Optional().Nillable().Comment("Ban reason"),
 		field.String("source").MaxLen(50).Default("manual").Comment("Ban source"),

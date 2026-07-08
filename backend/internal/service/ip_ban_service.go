@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/pkg/accessban"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	ippkg "github.com/Wei-Shaw/sub2api/internal/pkg/ip"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
@@ -17,15 +18,23 @@ const (
 )
 
 var (
-	ErrIPBanNotFound       = infraerrors.NotFound("IP_BAN_NOT_FOUND", "IP ban rule not found")
+	ErrIPBanNotFound       = infraerrors.NotFound("IP_BAN_NOT_FOUND", "access ban rule not found")
 	ErrInvalidIPBanPattern = infraerrors.BadRequest("INVALID_IP_BAN_PATTERN", "invalid IP or CIDR pattern")
-	ErrIPBanAlreadyExists  = infraerrors.Conflict("IP_BAN_ALREADY_EXISTS", "IP ban rule already exists")
+	ErrInvalidUABanPattern = infraerrors.BadRequest("INVALID_UA_BAN_PATTERN", "invalid User-Agent pattern")
+	ErrInvalidEmailBanPattern = infraerrors.BadRequest("INVALID_EMAIL_BAN_PATTERN", "invalid email suffix pattern")
+	ErrInvalidEmailRegexBanPattern = infraerrors.BadRequest("INVALID_EMAIL_REGEX_BAN_PATTERN", "invalid email regex pattern")
+	ErrInvalidAccessBanRuleType = infraerrors.BadRequest("INVALID_ACCESS_BAN_RULE_TYPE", "invalid access ban rule type")
+	ErrIPBanAlreadyExists  = infraerrors.Conflict("IP_BAN_ALREADY_EXISTS", "access ban rule already exists")
 	ErrIPBanned            = infraerrors.Forbidden("IP_BANNED", "Your IP is banned")
+	ErrEmailBanned         = infraerrors.Forbidden("EMAIL_BANNED", "This email address is not allowed")
+	ErrClientAccessBanned  = infraerrors.Forbidden("CLIENT_ACCESS_BANNED", "Access denied")
 )
 
 type IPBan struct {
 	ID        int64      `json:"id"`
+	RuleType  string     `json:"rule_type"`
 	Pattern   string     `json:"pattern"`
+	UAPattern string     `json:"ua_pattern,omitempty"`
 	Status    string     `json:"status"`
 	Reason    string     `json:"reason,omitempty"`
 	Source    string     `json:"source"`
@@ -38,12 +47,15 @@ type IPBan struct {
 }
 
 type IPBanListFilters struct {
-	Search string
-	Status string
+	Search   string
+	Status   string
+	RuleType string
 }
 
 type CreateIPBanInput struct {
+	RuleType  string
 	Pattern   string
+	UAPattern string
 	Reason    string
 	Source    string
 	CreatedBy *int64
@@ -51,7 +63,9 @@ type CreateIPBanInput struct {
 }
 
 type UpdateIPBanInput struct {
+	RuleType  *string
 	Pattern   *string
+	UAPattern *string
 	Reason    *string
 	Status    *string
 	ExpiresAt **time.Time
@@ -81,16 +95,18 @@ func NewIPBanService(repo IPBanRepository) *IPBanService {
 }
 
 func (s *IPBanService) Create(ctx context.Context, input CreateIPBanInput) (*IPBan, error) {
-	pattern := strings.TrimSpace(input.Pattern)
-	if !ippkg.ValidateIPPattern(pattern) {
-		return nil, ErrInvalidIPBanPattern
+	ruleType, pattern, uaPattern, err := normalizeAccessBanInput(input.RuleType, input.Pattern, input.UAPattern)
+	if err != nil {
+		return nil, err
 	}
 	source := strings.TrimSpace(input.Source)
 	if source == "" {
 		source = "manual"
 	}
 	ban := &IPBan{
+		RuleType:  ruleType,
 		Pattern:   pattern,
+		UAPattern: uaPattern,
 		Status:    IPBanStatusActive,
 		Reason:    strings.TrimSpace(input.Reason),
 		Source:    source,
@@ -111,6 +127,7 @@ func (s *IPBanService) GetByID(ctx context.Context, id int64) (*IPBan, error) {
 func (s *IPBanService) List(ctx context.Context, params pagination.PaginationParams, filters IPBanListFilters) ([]IPBan, *pagination.PaginationResult, error) {
 	filters.Search = strings.TrimSpace(filters.Search)
 	filters.Status = strings.TrimSpace(filters.Status)
+	filters.RuleType = accessban.NormalizeRuleType(filters.RuleType)
 	return s.repo.List(ctx, params, filters)
 }
 
@@ -119,12 +136,29 @@ func (s *IPBanService) Update(ctx context.Context, id int64, input UpdateIPBanIn
 	if err != nil {
 		return nil, err
 	}
-	if input.Pattern != nil {
-		pattern := strings.TrimSpace(*input.Pattern)
-		if !ippkg.ValidateIPPattern(pattern) {
-			return nil, ErrInvalidIPBanPattern
+	if input.RuleType != nil {
+		ruleType := accessban.NormalizeRuleType(*input.RuleType)
+		if ruleType == "" {
+			return nil, ErrInvalidAccessBanRuleType
 		}
-		ban.Pattern = pattern
+		ban.RuleType = ruleType
+	}
+	if input.Pattern != nil || input.UAPattern != nil || input.RuleType != nil {
+		pattern := ban.Pattern
+		uaPattern := ban.UAPattern
+		if input.Pattern != nil {
+			pattern = *input.Pattern
+		}
+		if input.UAPattern != nil {
+			uaPattern = *input.UAPattern
+		}
+		ruleType, normalizedPattern, normalizedUA, err := normalizeAccessBanInput(ban.RuleType, pattern, uaPattern)
+		if err != nil {
+			return nil, err
+		}
+		ban.RuleType = ruleType
+		ban.Pattern = normalizedPattern
+		ban.UAPattern = normalizedUA
 	}
 	if input.Reason != nil {
 		ban.Reason = strings.TrimSpace(*input.Reason)
@@ -132,7 +166,7 @@ func (s *IPBanService) Update(ctx context.Context, id int64, input UpdateIPBanIn
 	if input.Status != nil {
 		status := strings.TrimSpace(*input.Status)
 		if status != IPBanStatusActive && status != IPBanStatusInactive {
-			return nil, infraerrors.BadRequest("INVALID_IP_BAN_STATUS", "invalid IP ban status")
+			return nil, infraerrors.BadRequest("INVALID_IP_BAN_STATUS", "invalid access ban status")
 		}
 		ban.Status = status
 	}
@@ -154,9 +188,11 @@ func (s *IPBanService) Delete(ctx context.Context, id int64) error {
 	return nil
 }
 
-func (s *IPBanService) Check(ctx context.Context, clientIP string) (*IPBan, bool, error) {
+// CheckClient matches IP / UA / IP+UA rules for gateway and auth client guards.
+func (s *IPBanService) CheckClient(ctx context.Context, clientIP, userAgent string) (*IPBan, bool, error) {
 	clientIP = strings.TrimSpace(clientIP)
-	if clientIP == "" || s == nil || s.repo == nil {
+	userAgent = strings.TrimSpace(userAgent)
+	if s == nil || s.repo == nil {
 		return nil, false, nil
 	}
 	now := time.Now()
@@ -165,12 +201,104 @@ func (s *IPBanService) Check(ctx context.Context, clientIP string) (*IPBan, bool
 		return nil, false, err
 	}
 	for i := range bans {
-		if ippkg.MatchesPattern(clientIP, bans[i].Pattern) {
-			_ = s.repo.RecordHit(ctx, bans[i].ID, now)
-			return &bans[i], true, nil
+		switch accessban.NormalizeRuleType(bans[i].RuleType) {
+		case accessban.RuleTypeIP, accessban.RuleTypeUA, accessban.RuleTypeIPUA:
+		default:
+			continue
 		}
+		if clientRuleNeedsIP(bans[i].RuleType) && clientIP == "" {
+			continue
+		}
+		if !accessban.MatchesClient(bans[i].RuleType, bans[i].Pattern, bans[i].UAPattern, clientIP, userAgent) {
+			continue
+		}
+		_ = s.repo.RecordHit(ctx, bans[i].ID, now)
+		return &bans[i], true, nil
 	}
 	return nil, false, nil
+}
+
+// CheckEmail matches email suffix ban rules for registration/login flows.
+func (s *IPBanService) CheckEmail(ctx context.Context, email string) (*IPBan, bool, error) {
+	email = strings.TrimSpace(email)
+	if email == "" || s == nil || s.repo == nil {
+		return nil, false, nil
+	}
+	now := time.Now()
+	bans, err := s.listActiveCached(ctx, now)
+	if err != nil {
+		return nil, false, err
+	}
+	for i := range bans {
+		ruleType := accessban.NormalizeRuleType(bans[i].RuleType)
+		matched := false
+		switch ruleType {
+		case accessban.RuleTypeEmailSuffix:
+			matched = accessban.MatchesEmailSuffix(email, bans[i].Pattern)
+		case accessban.RuleTypeEmailRegex:
+			matched = accessban.MatchesEmailRegex(email, bans[i].Pattern)
+		default:
+			continue
+		}
+		if !matched {
+			continue
+		}
+		_ = s.repo.RecordHit(ctx, bans[i].ID, now)
+		return &bans[i], true, nil
+	}
+	return nil, false, nil
+}
+
+func clientRuleNeedsIP(ruleType string) bool {
+	switch accessban.NormalizeRuleType(ruleType) {
+	case accessban.RuleTypeIP, accessban.RuleTypeIPUA:
+		return true
+	default:
+		return false
+	}
+}
+
+func normalizeAccessBanInput(ruleType, pattern, uaPattern string) (string, string, string, error) {
+	ruleType = accessban.NormalizeRuleType(ruleType)
+	if ruleType == "" {
+		ruleType = accessban.RuleTypeIP
+	}
+	pattern = strings.TrimSpace(pattern)
+	uaPattern = strings.TrimSpace(uaPattern)
+
+	switch ruleType {
+	case accessban.RuleTypeIP:
+		if !ippkg.ValidateIPPattern(pattern) {
+			return "", "", "", ErrInvalidIPBanPattern
+		}
+		return ruleType, pattern, "", nil
+	case accessban.RuleTypeUA:
+		if !accessban.ValidateUAPattern(pattern) {
+			return "", "", "", ErrInvalidUABanPattern
+		}
+		return ruleType, pattern, "", nil
+	case accessban.RuleTypeIPUA:
+		if !ippkg.ValidateIPPattern(pattern) {
+			return "", "", "", ErrInvalidIPBanPattern
+		}
+		if !accessban.ValidateUAPattern(uaPattern) {
+			return "", "", "", ErrInvalidUABanPattern
+		}
+		return ruleType, pattern, uaPattern, nil
+	case accessban.RuleTypeEmailSuffix:
+		normalized, err := normalizeRegistrationEmailSuffix(pattern)
+		if err != nil || normalized == "" {
+			return "", "", "", ErrInvalidEmailBanPattern
+		}
+		return ruleType, normalized, "", nil
+	case accessban.RuleTypeEmailRegex:
+		if !accessban.ValidateEmailRegexPattern(pattern) {
+			return "", "", "", ErrInvalidEmailRegexBanPattern
+		}
+		return ruleType, pattern, "", nil
+	default:
+		return "", "", "", ErrInvalidAccessBanRuleType
+	}
 }
 
 func (s *IPBanService) listActiveCached(ctx context.Context, now time.Time) ([]IPBan, error) {
