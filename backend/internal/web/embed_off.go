@@ -25,6 +25,15 @@ func NewFrontendServer(settingsProvider PublicSettingsProvider) (*FrontendServer
 	return nil, errors.New("frontend not embedded")
 }
 
+// RegisterEmbeddedFrontend is a no-op when frontend is not embedded.
+func RegisterEmbeddedFrontend(
+	_ *gin.Engine,
+	_ PublicSettingsProvider,
+	_ func(func()),
+	_ func(),
+) {
+}
+
 // InvalidateCache is a no-op for non-embed builds
 func (s *FrontendServer) InvalidateCache() {}
 

@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"log"
 	"sync/atomic"
 	"time"
 
@@ -64,19 +63,7 @@ func SetupRouter(
 
 	// Serve embedded frontend with settings injection if available
 	if web.HasEmbeddedFrontend() {
-		frontendServer, err := web.NewFrontendServer(settingService)
-		if err != nil {
-			log.Printf("Warning: Failed to create frontend server with settings injection: %v, using legacy mode", err)
-			r.Use(web.ServeEmbeddedFrontend())
-			settingService.SetOnUpdateCallback(refreshFrameOrigins)
-		} else {
-			// Register combined callback: invalidate HTML cache + refresh frame origins
-			settingService.SetOnUpdateCallback(func() {
-				frontendServer.InvalidateCache()
-				refreshFrameOrigins()
-			})
-			r.Use(frontendServer.Middleware())
-		}
+		web.RegisterEmbeddedFrontend(r, settingService, settingService.SetOnUpdateCallback, refreshFrameOrigins)
 	} else {
 		settingService.SetOnUpdateCallback(refreshFrameOrigins)
 	}

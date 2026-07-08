@@ -112,7 +112,9 @@ func MatchesEmailRegex(email, pattern string) bool {
 
 func compileEmailRegex(pattern string) (*regexp.Regexp, error) {
 	if cached, ok := emailRegexCache.Load(pattern); ok {
-		return cached.(*regexp.Regexp), nil
+		if re, ok := cached.(*regexp.Regexp); ok {
+			return re, nil
+		}
 	}
 	re, err := regexp.Compile(pattern)
 	if err != nil {

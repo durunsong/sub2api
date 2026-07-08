@@ -18,16 +18,16 @@ const (
 )
 
 var (
-	ErrIPBanNotFound       = infraerrors.NotFound("IP_BAN_NOT_FOUND", "access ban rule not found")
-	ErrInvalidIPBanPattern = infraerrors.BadRequest("INVALID_IP_BAN_PATTERN", "invalid IP or CIDR pattern")
-	ErrInvalidUABanPattern = infraerrors.BadRequest("INVALID_UA_BAN_PATTERN", "invalid User-Agent pattern")
-	ErrInvalidEmailBanPattern = infraerrors.BadRequest("INVALID_EMAIL_BAN_PATTERN", "invalid email suffix pattern")
+	ErrIPBanNotFound               = infraerrors.NotFound("IP_BAN_NOT_FOUND", "access ban rule not found")
+	ErrInvalidIPBanPattern         = infraerrors.BadRequest("INVALID_IP_BAN_PATTERN", "invalid IP or CIDR pattern")
+	ErrInvalidUABanPattern         = infraerrors.BadRequest("INVALID_UA_BAN_PATTERN", "invalid User-Agent pattern")
+	ErrInvalidEmailBanPattern      = infraerrors.BadRequest("INVALID_EMAIL_BAN_PATTERN", "invalid email suffix pattern")
 	ErrInvalidEmailRegexBanPattern = infraerrors.BadRequest("INVALID_EMAIL_REGEX_BAN_PATTERN", "invalid email regex pattern")
-	ErrInvalidAccessBanRuleType = infraerrors.BadRequest("INVALID_ACCESS_BAN_RULE_TYPE", "invalid access ban rule type")
-	ErrIPBanAlreadyExists  = infraerrors.Conflict("IP_BAN_ALREADY_EXISTS", "access ban rule already exists")
-	ErrIPBanned            = infraerrors.Forbidden("IP_BANNED", "Your IP is banned")
-	ErrEmailBanned         = infraerrors.Forbidden("EMAIL_BANNED", "This email address is not allowed")
-	ErrClientAccessBanned  = infraerrors.Forbidden("CLIENT_ACCESS_BANNED", "Access denied")
+	ErrInvalidAccessBanRuleType    = infraerrors.BadRequest("INVALID_ACCESS_BAN_RULE_TYPE", "invalid access ban rule type")
+	ErrIPBanAlreadyExists          = infraerrors.Conflict("IP_BAN_ALREADY_EXISTS", "access ban rule already exists")
+	ErrIPBanned                    = infraerrors.Forbidden("IP_BANNED", "Your IP is banned")
+	ErrEmailBanned                 = infraerrors.Forbidden("EMAIL_BANNED", "This email address is not allowed")
+	ErrClientAccessBanned          = infraerrors.Forbidden("CLIENT_ACCESS_BANNED", "Access denied")
 )
 
 type IPBan struct {
