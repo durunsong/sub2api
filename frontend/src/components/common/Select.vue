@@ -340,6 +340,15 @@ const toggle = () => {
   isOpen.value = !isOpen.value
 }
 
+const handleEscapeWhileOpen = (event: KeyboardEvent) => {
+  if (event.key !== 'Escape' || !isOpen.value) return
+  // Capture phase: close this dropdown before BaseDialog handles Escape.
+  event.preventDefault()
+  event.stopPropagation()
+  isOpen.value = false
+  triggerRef.value?.focus()
+}
+
 watch(isOpen, (open) => {
   if (open) {
     calculateDropdownPosition()
@@ -360,11 +369,13 @@ watch(isOpen, (open) => {
     // Add scroll listener to update position
     window.addEventListener('scroll', updateTriggerRect, { capture: true, passive: true })
     window.addEventListener('resize', calculateDropdownPosition)
+    document.addEventListener('keydown', handleEscapeWhileOpen, true)
   } else {
     searchQuery.value = ''
     focusedIndex.value = -1
     window.removeEventListener('scroll', updateTriggerRect, { capture: true })
     window.removeEventListener('resize', calculateDropdownPosition)
+    document.removeEventListener('keydown', handleEscapeWhileOpen, true)
   }
 })
 
@@ -409,9 +420,7 @@ const onDropdownKeyDown = (e: KeyboardEvent) => {
       }
       break
     case 'Escape':
-      e.preventDefault()
-      isOpen.value = false
-      triggerRef.value?.focus()
+      handleEscapeWhileOpen(e)
       break
     case 'Tab':
       isOpen.value = false
@@ -451,6 +460,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
+  document.removeEventListener('keydown', handleEscapeWhileOpen, true)
   window.removeEventListener('scroll', updateTriggerRect, { capture: true })
   window.removeEventListener('resize', calculateDropdownPosition)
 })
