@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.7
 # =============================================================================
 # Sub2API Multi-Stage Dockerfile
 # =============================================================================
@@ -18,8 +19,8 @@ ARG NPM_CONFIG_REGISTRY=https://registry.npmmirror.com
 # Stage 1: Frontend Builder
 # -----------------------------------------------------------------------------
 FROM ${NODE_IMAGE} AS frontend-builder
-
 ARG NPM_CONFIG_REGISTRY
+
 ENV NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY}
 
 WORKDIR /app/frontend
@@ -29,7 +30,9 @@ RUN npm install -g pnpm@9 --registry="${NPM_CONFIG_REGISTRY}"
 
 # Install dependencies first (better caching)
 COPY frontend/package.json frontend/pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile --ignore-scripts
+RUN --mount=type=cache,id=sub2api-pnpm-store,target=/root/.local/share/pnpm/store \
+    if [ -n "${NPM_CONFIG_REGISTRY}" ]; then pnpm config set registry "${NPM_CONFIG_REGISTRY}"; fi && \
+    pnpm install --frozen-lockfile --prefer-offline --ignore-scripts
 
 # Copy frontend source and build.
 # LegalDocumentView.vue (admin-compliance gate) build-time imports
