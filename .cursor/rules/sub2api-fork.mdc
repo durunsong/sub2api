@@ -12,7 +12,7 @@ alwaysApply: false
 ## 改代码前强制阅读
 
 1. [`AGENTS.md`](../AGENTS.md) — AI 协作摘要与禁区
-2. [`docs/FORK_VS_UPSTREAM.md`](../docs/FORK_VS_UPSTREAM.md) — 相对官方 v0.1.146 的完整差异（300+ 文件）
+2. [`docs/FORK_VS_UPSTREAM.md`](../docs/FORK_VS_UPSTREAM.md) — 相对官方 v0.1.147 的完整差异（300+ 文件）
 
 ## 绝对不可因「对齐上游」而删除或覆盖
 

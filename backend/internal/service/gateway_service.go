@@ -1448,3 +1448,16 @@ func (s *GatewayService) debugLogGatewaySnapshot(tag string, headers http.Header
 	// 写入文件（调试用，并发写入可能交错但不影响可读性）
 	_, _ = f.WriteString(buf.String())
 }
+
+func (s *GatewayService) streamKeepaliveIntervalForAccount(account *Account) time.Duration {
+	if account != nil && account.Platform == PlatformKiro {
+		if s != nil && s.cfg != nil && s.cfg.Gateway.KiroStreamKeepaliveInterval > 0 {
+			return time.Duration(s.cfg.Gateway.KiroStreamKeepaliveInterval) * time.Second
+		}
+		return defaultKiroStreamKeepalive
+	}
+	if s != nil && s.cfg != nil && s.cfg.Gateway.StreamKeepaliveInterval > 0 {
+		return time.Duration(s.cfg.Gateway.StreamKeepaliveInterval) * time.Second
+	}
+	return 0
+}

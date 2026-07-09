@@ -13,7 +13,8 @@ const mergeMessages = <T extends Record<string, unknown>>(base: T, override: Rec
     if (isRecord(value) && isRecord(base[key])) {
       mergeMessages(base[key] as Record<string, unknown>, value)
     } else {
-      ;(base as Record<string, unknown>)[key] = value
+      const target = base as Record<string, unknown>
+      target[key] = value
     }
   }
   return base
