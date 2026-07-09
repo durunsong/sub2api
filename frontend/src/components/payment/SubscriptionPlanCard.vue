@@ -84,9 +84,10 @@
       <!-- Subscribe Button -->
       <button
         type="button"
-        :class="['w-full rounded-xl py-3 text-sm font-semibold transition-all active:scale-[0.98]', btnClass]"
+        :class="['inline-flex w-full items-center justify-center gap-1.5 rounded-xl py-3 text-sm font-semibold transition-all active:scale-[0.98]', btnClass]"
         @click="emit('select', plan)"
       >
+        <Icon name="bolt" size="sm" :stroke-width="2" />
         {{ isRenewal ? t('payment.renewNow') : t('payment.subscribeNow') }}
       </button>
     </div>
@@ -96,6 +97,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import Icon from '@/components/icons/Icon.vue'
 import type { SubscriptionPlan } from '@/types/payment'
 import type { UserSubscription } from '@/types'
 import {
