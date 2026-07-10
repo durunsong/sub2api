@@ -1126,14 +1126,9 @@ func copyOpenAIUsageFromResponsesUsage(usage *apicompat.ResponsesUsage) OpenAIUs
 		CacheCreationInputTokens: usage.CacheCreationInputTokens,
 	}
 	if usage.InputTokensDetails != nil {
+		// CacheCreationInputTokens 已由 apicompat.ResponsesUsage 解出规范值
+		// （含嵌套显式 0 优先于顶层别名），此处只抄 CachedTokens，不再二次回填。
 		result.CacheReadInputTokens = usage.InputTokensDetails.CachedTokens
-		if result.CacheCreationInputTokens == 0 {
-			if usage.InputTokensDetails.CacheWriteTokens > 0 {
-				result.CacheCreationInputTokens = usage.InputTokensDetails.CacheWriteTokens
-			} else {
-				result.CacheCreationInputTokens = usage.InputTokensDetails.CacheCreationTokens
-			}
-		}
 	}
 	return result
 }
