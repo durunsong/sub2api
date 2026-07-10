@@ -3,6 +3,10 @@ export default {
       title: 'Account Management',
       description: 'Manage AI platform accounts and credentials',
       createAccount: 'Create Account',
+      add: 'Add',
+      messages: {
+        accountCreated: 'Account created successfully',
+      },
       autoRefresh: 'Auto Refresh',
       enableAutoRefresh: 'Enable auto refresh',
       refreshInterval5s: '5 seconds',
@@ -139,6 +143,9 @@ export default {
         modelCreditOveragesUntil: '{model} using AI Credits until {time}',
         creditsExhausted: 'Credits Exhausted',
         creditsExhaustedUntil: 'AI Credits exhausted, expected recovery at {time}',
+        overageActive: 'Overage',
+        overageExhausted: 'Overage Exhausted',
+        overageExhaustedUntil: 'Overage exhausted, expected recovery at {time}',
         overloadedUntil: 'Overloaded until {time}',
         viewTempUnschedDetails: 'View temp unschedulable details'
       },
@@ -337,6 +344,10 @@ export default {
       bulkDeleteSuccess: 'Deleted {count} account(s)',
       bulkDeletePartial: 'Partially deleted: {success} succeeded, {failed} failed',
       bulkDeleteFailed: 'Bulk delete failed',
+      bulkResetStatusTitle: 'Bulk Reset Status',
+      bulkResetStatusConfirm: 'Reset the status of {count} selected account(s)?',
+      bulkRefreshTokenTitle: 'Bulk Refresh Token',
+      bulkRefreshTokenConfirm: 'Refresh the token of {count} selected account(s)?',
       recoverState: 'Recover State',
       recoverStateHint: 'Used to recover error, rate-limit, and temporary unschedulable runtime state.',
       recoverStateSuccess: 'Account state recovered successfully',
@@ -504,6 +515,14 @@ export default {
         webSearchDefault: 'Default',
         webSearchEnabled: 'Enabled',
         webSearchDisabled: 'Disabled',
+        customHeaders: 'Custom Request Headers',
+        customHeadersDesc:
+          'Add custom headers to upstream API requests. Overrides existing headers with the same name. Auth headers (Authorization, x-api-key) are not allowed.',
+        customHeadersHint:
+          'Applied last, overrides existing values. Forbidden: Host, Content-Length, Authorization, x-api-key.',
+        headerAddRow: 'Add header',
+        headerNamePlaceholder: 'Header name',
+        headerValuePlaceholder: 'Value',
       },
       modelRestriction: 'Model Restriction (Optional)',
       modelWhitelist: 'Model Whitelist',
@@ -516,6 +535,8 @@ export default {
       requestModel: 'Request model',
       actualModel: 'Actual model',
       addMapping: 'Add Mapping',
+      fromModel: 'Request model',
+      toModel: 'Actual model',
       mappingExists: 'Mapping for {model} already exists',
       wildcardOnlyAtEnd: 'Wildcard * can only be at the end',
       targetNoWildcard: 'Target model cannot contain wildcard *',
@@ -807,6 +828,8 @@ export default {
           failedToGenerateUrl: 'Failed to generate OpenAI auth URL',
           failedToExchangeCode: 'Failed to exchange OpenAI auth code',
           failedToValidateRT: 'Failed to validate refresh token',
+          accessTokenAuth: 'Access Token Auth',
+          mobileRefreshTokenAuth: 'Mobile Refresh Token Auth',
           errors: {
             OPENAI_OAUTH_PROXY_REQUIRED:
               'No proxy is configured and this server could not reach OpenAI directly, so the OpenAI OAuth request failed. Select a proxy that can access OpenAI and retry; if the authorization code has expired, regenerate the authorization URL.'
@@ -1158,6 +1181,7 @@ export default {
       usageStatistics: 'Usage Statistics',
       last30DaysUsage: 'Last 30 days usage statistics (based on actual usage days)',
       stats: {
+        approxCost: 'approx. {amount}',
         totalCost: '30-Day Total Cost',
         accumulatedCost: 'Accumulated cost',
         standardCost: 'Standard',

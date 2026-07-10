@@ -581,6 +581,9 @@ export default {
         missingRange: '请选择时间范围',
         submitSuccess: '清理任务已创建',
         submitFailed: '创建清理任务失败',
+        errorConfirm: '确定要清理当前筛选范围内的错误请求日志吗？该操作不可恢复。',
+        errorSubmitSuccess: '已清理 {count} 条错误请求日志',
+        errorSubmitFailed: '清理错误请求日志失败',
         loadFailed: '加载清理任务失败',
         status: {
           pending: '待执行',

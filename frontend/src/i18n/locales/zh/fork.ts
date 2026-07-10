@@ -2,6 +2,11 @@ export default {
   nav: {
     ipBans: '访问封禁',
   },
+  home: {
+    providers: {
+      kiro: 'Kiro',
+    },
+  },
   admin: {
     users: {
       columns: {
@@ -68,6 +73,52 @@ export default {
       kiroAccount: 'Kiro 账号',
       stats: {
         kiroCredits: '消费Credits',
+      },
+      oauth: {
+        kiro: {
+          title: 'Kiro 授权',
+          followSteps: '按照以下步骤授权您的 Kiro 账号：',
+          step1GenerateUrl: '点击下方按钮生成授权 URL',
+          generateAuthUrl: '生成授权 URL',
+          step2OpenUrl: '在浏览器中打开 URL 并完成授权',
+          openUrlDesc:
+            '在新标签页中打开授权 URL。浏览器会先进入 app.kiro.dev 的 Kiro 登录页，请在那里选择 Google 或 GitHub。授权后浏览器可能跳转到 http://localhost:49153/oauth/callback 并提示无法访问，这是正常现象。',
+          step3EnterCode: '输入回调链接或 Code',
+          authCodeDesc:
+            '授权完成后，请复制浏览器地址栏中的完整回调链接（推荐），或仅复制其中的 code 参数值并粘贴到下方。',
+          authCode: '回调链接或 Code',
+          authCodePlaceholder:
+            '方式1（推荐）：粘贴完整回调链接\n(http://localhost:49153/oauth/callback?code=...&state=...&login_option=github)\n方式2：仅粘贴 code 参数值',
+          authCodeHint: '系统会自动从链接中解析 code/state 以及 Kiro 回调元数据；若无法访问 localhost 页面，请直接复制地址栏完整链接。',
+          importDialogTitle: '导入 Kiro Token',
+          authModeTitle: 'Kiro 授权方式',
+          oauthTitle: '社交 OAuth',
+          oauthSubtitle: '浏览器授权，支持 Google 或 GitHub',
+          oauthProviderTitle: '社交登录提供商',
+          googleTitle: 'Google',
+          githubTitle: 'GitHub',
+          googleDesc: '使用 Google 账号登录 Kiro',
+          githubDesc: '使用 GitHub 账号登录 Kiro',
+          idcTitle: 'AWS Builder ID / IDC',
+          importTitle: '从 Kiro IDE 导入',
+          socialSubtitle: 'Google / GitHub 登录',
+          idcSubtitle: 'AWS Builder ID 或企业 Identity Center',
+          googleOauth: 'Google OAuth',
+          githubOauth: 'GitHub OAuth',
+          idcLogin: 'Builder ID / IDC 登录',
+          importTokenFile: '导入 Token 文件',
+          importSubtitle: '已在 Kiro IDE 登录时使用',
+          startUrlLabel: 'Builder ID / IDC Start URL',
+          idcStartUrlLabel: 'Builder ID / IDC Start URL',
+          startUrlPlaceholder: 'https://view.awsapps.com/start',
+          regionLabel: 'Region',
+          regionPlaceholder: 'us-east-1',
+          tokenJsonLabel: 'Kiro Token JSON',
+          tokenJsonHint: '先在 Kiro IDE 完成登录，再粘贴 `~/.aws/sso/cache/kiro-auth-token.json` 的内容。',
+          deviceRegistrationLabel: 'Device Registration JSON',
+          deviceRegistrationHint: '可选。只有 token 文件里缺少完整客户端信息、只剩 `clientIdHash` 时才需要补充。',
+          importAndUpdate: '导入并更新',
+        },
       },
     },
     ipBans: {
@@ -142,7 +193,13 @@ export default {
       },
     },
   },
-  paymentMethods: {
-    xorpay: 'XorPay（支付宝）',
+  payment: {
+    meteredTitle: '按量付费模式',
+    meteredDesc: '无需订阅，充值即用，按实际消耗扣费。余额所有渠道通用，可自由切换。',
+    rechargeNow: '立即充值',
+    mySubscriptions: '我的订阅',
+    methods: {
+      xorpay: 'XorPay（支付宝）',
+    },
   },
 }

@@ -47,6 +47,8 @@ export default {
       createChannel: '创建渠道',
       editChannel: '编辑渠道',
       deleteChannel: '删除渠道',
+      noGroupsSelected: '请先为 {platform} 选择至少一个分组',
+      emptyModelsInPricing: '{platform} 存在未填写模型的定价条目，请补全或删除',
       statusActive: '启用',
       statusDisabled: '停用',
       allStatus: '全部状态',

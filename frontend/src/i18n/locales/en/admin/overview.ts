@@ -156,6 +156,7 @@ export default {
       actions: {
         download: 'Download',
         restore: 'Restore',
+        delete: 'Delete',
         restoreConfirm: 'Are you sure you want to restore from this backup? This will overwrite the current database!',
         restorePasswordPrompt: 'Please enter your admin password to confirm the restore operation',
         restoreSuccess: 'Database restored successfully',
@@ -420,6 +421,7 @@ export default {
       createUser: 'Create User',
       editUser: 'Edit User',
       deleteUser: 'Delete User',
+      passwordCopied: 'Password copied to clipboard',
       deleteConfirmMessage: "Are you sure you want to delete user '{email}'? This action cannot be undone.",
       searchPlaceholder: 'Search by email, username, notes, or API key...',
       searchUsers: 'Search by email, username, notes, or API key',

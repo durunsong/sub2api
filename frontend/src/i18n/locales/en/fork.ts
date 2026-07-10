@@ -2,6 +2,11 @@ export default {
   nav: {
     ipBans: 'Access Bans',
   },
+  home: {
+    providers: {
+      kiro: 'Kiro',
+    },
+  },
   admin: {
     users: {
       columns: {
@@ -68,6 +73,53 @@ export default {
       kiroAccount: 'Kiro Account',
       stats: {
         kiroCredits: 'Credits Used',
+      },
+      oauth: {
+        kiro: {
+          title: 'Kiro Authorization',
+          followSteps: 'Follow these steps to authorize your Kiro account:',
+          step1GenerateUrl: 'Click the button below to generate the authorization URL',
+          generateAuthUrl: 'Generate Authorization URL',
+          step2OpenUrl: 'Open the URL in your browser and complete authorization',
+          openUrlDesc:
+            'Open the authorization URL in a new tab. The Kiro sign-in page will open at app.kiro.dev; choose Google or GitHub there. After approval, the browser may redirect to http://localhost:49153/oauth/callback and show an unreachable-page error; that is expected.',
+          step3EnterCode: 'Enter Callback URL or Code',
+          authCodeDesc:
+            'After authorization, copy the full callback URL from the browser address bar (recommended), or paste only the code parameter value below.',
+          authCode: 'Callback URL or Code',
+          authCodePlaceholder:
+            'Option 1 (recommended): Paste the full callback URL\n(http://localhost:49153/oauth/callback?code=...&state=...&login_option=github)\nOption 2: Paste only the code value',
+          authCodeHint:
+            'The system will auto-extract code/state and Kiro callback metadata from the URL. If the localhost page cannot be reached, copy the full URL from the address bar.',
+          importDialogTitle: 'Import Kiro Token',
+          authModeTitle: 'Kiro Authorization Method',
+          oauthTitle: 'Social OAuth',
+          oauthSubtitle: 'Browser-based auth with Google or GitHub',
+          oauthProviderTitle: 'Social Sign-In Provider',
+          googleTitle: 'Google',
+          githubTitle: 'GitHub',
+          googleDesc: 'Sign in to Kiro with your Google account',
+          githubDesc: 'Sign in to Kiro with your GitHub account',
+          idcTitle: 'AWS Builder ID / IDC',
+          importTitle: 'Import from Kiro IDE',
+          socialSubtitle: 'Google / GitHub sign-in',
+          idcSubtitle: 'AWS Builder ID or enterprise Identity Center',
+          googleOauth: 'Google OAuth',
+          githubOauth: 'GitHub OAuth',
+          idcLogin: 'Builder ID / IDC Login',
+          importTokenFile: 'Import Token File',
+          importSubtitle: 'Use this if you already signed in via Kiro IDE',
+          startUrlLabel: 'Builder ID / IDC Start URL',
+          idcStartUrlLabel: 'Builder ID / IDC Start URL',
+          startUrlPlaceholder: 'https://view.awsapps.com/start',
+          regionLabel: 'Region',
+          regionPlaceholder: 'us-east-1',
+          tokenJsonLabel: 'Kiro Token JSON',
+          tokenJsonHint: 'Sign in through Kiro IDE first, then paste the contents of `~/.aws/sso/cache/kiro-auth-token.json` here.',
+          deviceRegistrationLabel: 'Device Registration JSON',
+          deviceRegistrationHint: 'Optional. Only needed when the token file does not include full client details and only has `clientIdHash`.',
+          importAndUpdate: 'Import and Update',
+        },
       },
     },
     ipBans: {
@@ -142,7 +194,13 @@ export default {
       },
     },
   },
-  paymentMethods: {
-    xorpay: 'XorPay (Alipay)',
+  payment: {
+    meteredTitle: 'Pay-as-you-go mode',
+    meteredDesc: 'No subscription required. Top up and pay by actual usage. Balance works across all available channels.',
+    rechargeNow: 'Recharge Now',
+    mySubscriptions: 'My Subscriptions',
+    methods: {
+      xorpay: 'XorPay (Alipay)',
+    },
   },
 }

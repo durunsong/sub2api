@@ -150,6 +150,7 @@ export default {
       actions: {
         download: '下载',
         restore: '恢复',
+        delete: '删除',
         restoreConfirm: '确定要从此备份恢复吗？这将覆盖当前数据库！',
         restorePasswordPrompt: '请输入管理员密码以确认恢复操作',
         restoreSuccess: '数据库恢复成功',
@@ -414,6 +415,7 @@ export default {
       createUser: '创建用户',
       editUser: '编辑用户',
       deleteUser: '删除用户',
+      passwordCopied: '密码已复制到剪贴板',
       deleteConfirmMessage: "确定要删除用户 '{email}' 吗？此操作无法撤销。",
       searchPlaceholder: '邮箱/用户名/备注/API Key 模糊搜索...',
       searchUsers: '邮箱/用户名/备注/API Key 模糊搜索',
