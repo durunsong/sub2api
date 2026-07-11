@@ -232,6 +232,13 @@
                     ${{ row.group?.daily_limit_usd?.toFixed(2) }}
                   </span>
                 </div>
+                <div class="token-consumed">
+                  {{
+                    t('admin.subscriptions.tokenConsumed', {
+                      tokens: formatTokenCount(row.daily_usage_tokens)
+                    })
+                  }}
+                </div>
                 <div class="reset-info" v-if="row.daily_window_start">
                   <svg
                     class="h-3 w-3"
@@ -268,6 +275,13 @@
                     <span class="text-gray-400">/</span>
                     ${{ row.group?.weekly_limit_usd?.toFixed(2) }}
                   </span>
+                </div>
+                <div class="token-consumed">
+                  {{
+                    t('admin.subscriptions.tokenConsumed', {
+                      tokens: formatTokenCount(row.weekly_usage_tokens)
+                    })
+                  }}
                 </div>
                 <div class="reset-info" v-if="row.weekly_window_start">
                   <svg
@@ -306,6 +320,13 @@
                     ${{ row.group?.monthly_limit_usd?.toFixed(2) }}
                   </span>
                 </div>
+                <div class="token-consumed">
+                  {{
+                    t('admin.subscriptions.tokenConsumed', {
+                      tokens: formatTokenCount(row.monthly_usage_tokens)
+                    })
+                  }}
+                </div>
                 <div class="reset-info" v-if="row.monthly_window_start">
                   <svg
                     class="h-3 w-3"
@@ -331,12 +352,27 @@
                   !row.group?.weekly_limit_usd &&
                   !row.group?.monthly_limit_usd
                 "
-                class="flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-50 to-teal-50 px-3 py-2 dark:from-emerald-900/20 dark:to-teal-900/20"
+                class="space-y-1"
               >
-                <span class="text-lg text-emerald-600 dark:text-emerald-400">∞</span>
-                <span class="text-xs font-medium text-emerald-700 dark:text-emerald-300">
-                  {{ t('admin.subscriptions.unlimited') }}
-                </span>
+                <div
+                  class="flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-50 to-teal-50 px-3 py-2 dark:from-emerald-900/20 dark:to-teal-900/20"
+                >
+                  <span class="text-lg text-emerald-600 dark:text-emerald-400">∞</span>
+                  <span class="text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                    {{ t('admin.subscriptions.unlimited') }}
+                  </span>
+                </div>
+                <div class="text-[10px] tabular-nums text-gray-500 dark:text-gray-400">
+                  {{
+                    t('admin.subscriptions.tokenConsumed', {
+                      tokens: formatTokenCount(
+                        row.monthly_usage_tokens ||
+                          row.weekly_usage_tokens ||
+                          row.daily_usage_tokens
+                      )
+                    })
+                  }}
+                </div>
               </div>
             </div>
           </template>
@@ -1389,6 +1425,10 @@ const formatDailyUsageWindow = (subscription: UserSubscription): string => {
   return formatResetTime(subscription.daily_window_start, 'daily')
 }
 
+const formatTokenCount = (tokens?: number | null): string => {
+  return (tokens || 0).toLocaleString()
+}
+
 // Format reset time based on window start and period type
 const formatResetTime = (windowStart: string | null, period: 'daily' | 'weekly' | 'monthly'): string => {
   if (!windowStart) return t('admin.subscriptions.windowNotActive')
@@ -1455,6 +1495,10 @@ onUnmounted(() => {
 
 .usage-amount {
   @apply whitespace-nowrap text-xs tabular-nums text-gray-600 dark:text-gray-300;
+}
+
+.token-consumed {
+  @apply pl-12 text-[10px] tabular-nums text-gray-500 dark:text-gray-400;
 }
 
 .reset-info {

@@ -53757,6 +53757,12 @@ type UserSubscriptionMutation struct {
 	addweekly_usage_usd     *float64
 	monthly_usage_usd       *float64
 	addmonthly_usage_usd    *float64
+	daily_usage_tokens      *int64
+	adddaily_usage_tokens   *int64
+	weekly_usage_tokens     *int64
+	addweekly_usage_tokens  *int64
+	monthly_usage_tokens    *int64
+	addmonthly_usage_tokens *int64
 	assigned_at             *time.Time
 	notes                   *string
 	clearedFields           map[string]struct{}
@@ -54488,6 +54494,174 @@ func (m *UserSubscriptionMutation) ResetMonthlyUsageUsd() {
 	m.addmonthly_usage_usd = nil
 }
 
+// SetDailyUsageTokens sets the "daily_usage_tokens" field.
+func (m *UserSubscriptionMutation) SetDailyUsageTokens(i int64) {
+	m.daily_usage_tokens = &i
+	m.adddaily_usage_tokens = nil
+}
+
+// DailyUsageTokens returns the value of the "daily_usage_tokens" field in the mutation.
+func (m *UserSubscriptionMutation) DailyUsageTokens() (r int64, exists bool) {
+	v := m.daily_usage_tokens
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDailyUsageTokens returns the old "daily_usage_tokens" field's value of the UserSubscription entity.
+// If the UserSubscription object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserSubscriptionMutation) OldDailyUsageTokens(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDailyUsageTokens is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDailyUsageTokens requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDailyUsageTokens: %w", err)
+	}
+	return oldValue.DailyUsageTokens, nil
+}
+
+// AddDailyUsageTokens adds i to the "daily_usage_tokens" field.
+func (m *UserSubscriptionMutation) AddDailyUsageTokens(i int64) {
+	if m.adddaily_usage_tokens != nil {
+		*m.adddaily_usage_tokens += i
+	} else {
+		m.adddaily_usage_tokens = &i
+	}
+}
+
+// AddedDailyUsageTokens returns the value that was added to the "daily_usage_tokens" field in this mutation.
+func (m *UserSubscriptionMutation) AddedDailyUsageTokens() (r int64, exists bool) {
+	v := m.adddaily_usage_tokens
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetDailyUsageTokens resets all changes to the "daily_usage_tokens" field.
+func (m *UserSubscriptionMutation) ResetDailyUsageTokens() {
+	m.daily_usage_tokens = nil
+	m.adddaily_usage_tokens = nil
+}
+
+// SetWeeklyUsageTokens sets the "weekly_usage_tokens" field.
+func (m *UserSubscriptionMutation) SetWeeklyUsageTokens(i int64) {
+	m.weekly_usage_tokens = &i
+	m.addweekly_usage_tokens = nil
+}
+
+// WeeklyUsageTokens returns the value of the "weekly_usage_tokens" field in the mutation.
+func (m *UserSubscriptionMutation) WeeklyUsageTokens() (r int64, exists bool) {
+	v := m.weekly_usage_tokens
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWeeklyUsageTokens returns the old "weekly_usage_tokens" field's value of the UserSubscription entity.
+// If the UserSubscription object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserSubscriptionMutation) OldWeeklyUsageTokens(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWeeklyUsageTokens is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWeeklyUsageTokens requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWeeklyUsageTokens: %w", err)
+	}
+	return oldValue.WeeklyUsageTokens, nil
+}
+
+// AddWeeklyUsageTokens adds i to the "weekly_usage_tokens" field.
+func (m *UserSubscriptionMutation) AddWeeklyUsageTokens(i int64) {
+	if m.addweekly_usage_tokens != nil {
+		*m.addweekly_usage_tokens += i
+	} else {
+		m.addweekly_usage_tokens = &i
+	}
+}
+
+// AddedWeeklyUsageTokens returns the value that was added to the "weekly_usage_tokens" field in this mutation.
+func (m *UserSubscriptionMutation) AddedWeeklyUsageTokens() (r int64, exists bool) {
+	v := m.addweekly_usage_tokens
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetWeeklyUsageTokens resets all changes to the "weekly_usage_tokens" field.
+func (m *UserSubscriptionMutation) ResetWeeklyUsageTokens() {
+	m.weekly_usage_tokens = nil
+	m.addweekly_usage_tokens = nil
+}
+
+// SetMonthlyUsageTokens sets the "monthly_usage_tokens" field.
+func (m *UserSubscriptionMutation) SetMonthlyUsageTokens(i int64) {
+	m.monthly_usage_tokens = &i
+	m.addmonthly_usage_tokens = nil
+}
+
+// MonthlyUsageTokens returns the value of the "monthly_usage_tokens" field in the mutation.
+func (m *UserSubscriptionMutation) MonthlyUsageTokens() (r int64, exists bool) {
+	v := m.monthly_usage_tokens
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMonthlyUsageTokens returns the old "monthly_usage_tokens" field's value of the UserSubscription entity.
+// If the UserSubscription object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserSubscriptionMutation) OldMonthlyUsageTokens(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMonthlyUsageTokens is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMonthlyUsageTokens requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMonthlyUsageTokens: %w", err)
+	}
+	return oldValue.MonthlyUsageTokens, nil
+}
+
+// AddMonthlyUsageTokens adds i to the "monthly_usage_tokens" field.
+func (m *UserSubscriptionMutation) AddMonthlyUsageTokens(i int64) {
+	if m.addmonthly_usage_tokens != nil {
+		*m.addmonthly_usage_tokens += i
+	} else {
+		m.addmonthly_usage_tokens = &i
+	}
+}
+
+// AddedMonthlyUsageTokens returns the value that was added to the "monthly_usage_tokens" field in this mutation.
+func (m *UserSubscriptionMutation) AddedMonthlyUsageTokens() (r int64, exists bool) {
+	v := m.addmonthly_usage_tokens
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetMonthlyUsageTokens resets all changes to the "monthly_usage_tokens" field.
+func (m *UserSubscriptionMutation) ResetMonthlyUsageTokens() {
+	m.monthly_usage_tokens = nil
+	m.addmonthly_usage_tokens = nil
+}
+
 // SetAssignedBy sets the "assigned_by" field.
 func (m *UserSubscriptionMutation) SetAssignedBy(i int64) {
 	m.assigned_by_user = &i
@@ -54804,7 +54978,7 @@ func (m *UserSubscriptionMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UserSubscriptionMutation) Fields() []string {
-	fields := make([]string, 0, 17)
+	fields := make([]string, 0, 20)
 	if m.created_at != nil {
 		fields = append(fields, usersubscription.FieldCreatedAt)
 	}
@@ -54846,6 +55020,15 @@ func (m *UserSubscriptionMutation) Fields() []string {
 	}
 	if m.monthly_usage_usd != nil {
 		fields = append(fields, usersubscription.FieldMonthlyUsageUsd)
+	}
+	if m.daily_usage_tokens != nil {
+		fields = append(fields, usersubscription.FieldDailyUsageTokens)
+	}
+	if m.weekly_usage_tokens != nil {
+		fields = append(fields, usersubscription.FieldWeeklyUsageTokens)
+	}
+	if m.monthly_usage_tokens != nil {
+		fields = append(fields, usersubscription.FieldMonthlyUsageTokens)
 	}
 	if m.assigned_by_user != nil {
 		fields = append(fields, usersubscription.FieldAssignedBy)
@@ -54892,6 +55075,12 @@ func (m *UserSubscriptionMutation) Field(name string) (ent.Value, bool) {
 		return m.WeeklyUsageUsd()
 	case usersubscription.FieldMonthlyUsageUsd:
 		return m.MonthlyUsageUsd()
+	case usersubscription.FieldDailyUsageTokens:
+		return m.DailyUsageTokens()
+	case usersubscription.FieldWeeklyUsageTokens:
+		return m.WeeklyUsageTokens()
+	case usersubscription.FieldMonthlyUsageTokens:
+		return m.MonthlyUsageTokens()
 	case usersubscription.FieldAssignedBy:
 		return m.AssignedBy()
 	case usersubscription.FieldAssignedAt:
@@ -54935,6 +55124,12 @@ func (m *UserSubscriptionMutation) OldField(ctx context.Context, name string) (e
 		return m.OldWeeklyUsageUsd(ctx)
 	case usersubscription.FieldMonthlyUsageUsd:
 		return m.OldMonthlyUsageUsd(ctx)
+	case usersubscription.FieldDailyUsageTokens:
+		return m.OldDailyUsageTokens(ctx)
+	case usersubscription.FieldWeeklyUsageTokens:
+		return m.OldWeeklyUsageTokens(ctx)
+	case usersubscription.FieldMonthlyUsageTokens:
+		return m.OldMonthlyUsageTokens(ctx)
 	case usersubscription.FieldAssignedBy:
 		return m.OldAssignedBy(ctx)
 	case usersubscription.FieldAssignedAt:
@@ -55048,6 +55243,27 @@ func (m *UserSubscriptionMutation) SetField(name string, value ent.Value) error 
 		}
 		m.SetMonthlyUsageUsd(v)
 		return nil
+	case usersubscription.FieldDailyUsageTokens:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDailyUsageTokens(v)
+		return nil
+	case usersubscription.FieldWeeklyUsageTokens:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWeeklyUsageTokens(v)
+		return nil
+	case usersubscription.FieldMonthlyUsageTokens:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMonthlyUsageTokens(v)
+		return nil
 	case usersubscription.FieldAssignedBy:
 		v, ok := value.(int64)
 		if !ok {
@@ -55086,6 +55302,15 @@ func (m *UserSubscriptionMutation) AddedFields() []string {
 	if m.addmonthly_usage_usd != nil {
 		fields = append(fields, usersubscription.FieldMonthlyUsageUsd)
 	}
+	if m.adddaily_usage_tokens != nil {
+		fields = append(fields, usersubscription.FieldDailyUsageTokens)
+	}
+	if m.addweekly_usage_tokens != nil {
+		fields = append(fields, usersubscription.FieldWeeklyUsageTokens)
+	}
+	if m.addmonthly_usage_tokens != nil {
+		fields = append(fields, usersubscription.FieldMonthlyUsageTokens)
+	}
 	return fields
 }
 
@@ -55100,6 +55325,12 @@ func (m *UserSubscriptionMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedWeeklyUsageUsd()
 	case usersubscription.FieldMonthlyUsageUsd:
 		return m.AddedMonthlyUsageUsd()
+	case usersubscription.FieldDailyUsageTokens:
+		return m.AddedDailyUsageTokens()
+	case usersubscription.FieldWeeklyUsageTokens:
+		return m.AddedWeeklyUsageTokens()
+	case usersubscription.FieldMonthlyUsageTokens:
+		return m.AddedMonthlyUsageTokens()
 	}
 	return nil, false
 }
@@ -55129,6 +55360,27 @@ func (m *UserSubscriptionMutation) AddField(name string, value ent.Value) error 
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddMonthlyUsageUsd(v)
+		return nil
+	case usersubscription.FieldDailyUsageTokens:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddDailyUsageTokens(v)
+		return nil
+	case usersubscription.FieldWeeklyUsageTokens:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddWeeklyUsageTokens(v)
+		return nil
+	case usersubscription.FieldMonthlyUsageTokens:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddMonthlyUsageTokens(v)
 		return nil
 	}
 	return fmt.Errorf("unknown UserSubscription numeric field %s", name)
@@ -55237,6 +55489,15 @@ func (m *UserSubscriptionMutation) ResetField(name string) error {
 		return nil
 	case usersubscription.FieldMonthlyUsageUsd:
 		m.ResetMonthlyUsageUsd()
+		return nil
+	case usersubscription.FieldDailyUsageTokens:
+		m.ResetDailyUsageTokens()
+		return nil
+	case usersubscription.FieldWeeklyUsageTokens:
+		m.ResetWeeklyUsageTokens()
+		return nil
+	case usersubscription.FieldMonthlyUsageTokens:
+		m.ResetMonthlyUsageTokens()
 		return nil
 	case usersubscription.FieldAssignedBy:
 		m.ResetAssignedBy()

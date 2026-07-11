@@ -106,6 +106,13 @@
                   }}
                 </span>
               </div>
+              <p class="text-xs tabular-nums text-gray-500 dark:text-dark-400">
+                {{
+                  t('userSubscriptions.tokenConsumed', {
+                    tokens: formatTokenCount(subscription.daily_usage_tokens)
+                  })
+                }}
+              </p>
               <div class="relative h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-dark-600">
                 <div
                   class="absolute inset-y-0 left-0 rounded-full transition-all duration-300"
@@ -143,6 +150,13 @@
                   }}
                 </span>
               </div>
+              <p class="text-xs tabular-nums text-gray-500 dark:text-dark-400">
+                {{
+                  t('userSubscriptions.tokenConsumed', {
+                    tokens: formatTokenCount(subscription.weekly_usage_tokens)
+                  })
+                }}
+              </p>
               <div class="relative h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-dark-600">
                 <div
                   class="absolute inset-y-0 left-0 rounded-full transition-all duration-300"
@@ -184,6 +198,13 @@
                   }}
                 </span>
               </div>
+              <p class="text-xs tabular-nums text-gray-500 dark:text-dark-400">
+                {{
+                  t('userSubscriptions.tokenConsumed', {
+                    tokens: formatTokenCount(subscription.monthly_usage_tokens)
+                  })
+                }}
+              </p>
               <div class="relative h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-dark-600">
                 <div
                   class="absolute inset-y-0 left-0 rounded-full transition-all duration-300"
@@ -230,6 +251,17 @@
                   </p>
                   <p class="text-xs text-emerald-600/70 dark:text-emerald-400/70">
                     {{ t('userSubscriptions.unlimitedDesc') }}
+                  </p>
+                  <p class="mt-1 text-xs tabular-nums text-emerald-600/70 dark:text-emerald-400/70">
+                    {{
+                      t('userSubscriptions.tokenConsumed', {
+                        tokens: formatTokenCount(
+                          subscription.monthly_usage_tokens ||
+                            subscription.weekly_usage_tokens ||
+                            subscription.daily_usage_tokens
+                        )
+                      })
+                    }}
                   </p>
                 </div>
               </div>
@@ -353,6 +385,10 @@ function formatDailyUsageWindow(subscription: UserSubscription): string {
   return t('userSubscriptions.resetIn', {
     time: formatResetTime(subscription.daily_window_start, 24)
   })
+}
+
+function formatTokenCount(tokens?: number | null): string {
+  return (tokens || 0).toLocaleString()
 }
 
 function formatResetTime(windowStart: string | null, windowHours: number): string {

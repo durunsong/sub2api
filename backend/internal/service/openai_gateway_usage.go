@@ -343,6 +343,7 @@ func (s *OpenAIGatewayService) RecordUsage(ctx context.Context, input *OpenAIRec
 			AccountRateMultiplier: accountRateMultiplier,
 			APIKeyService:         input.APIKeyService,
 			Platform:              quotaPlatform,
+			Tokens:                int64(usageLog.TotalTokens()),
 		}, s.billingDeps(), s.usageBillingRepo)
 		return err
 	}()

@@ -370,13 +370,13 @@ func (r *userSubscriptionRepository) ResetUsageWindows(ctx context.Context, id i
 	client := clientFromContext(ctx, r.client)
 	update := client.UserSubscription.UpdateOneID(id)
 	if resetDaily {
-		update.SetDailyUsageUsd(0).SetDailyWindowStart(newWindowStart)
+		update.SetDailyUsageUsd(0).SetDailyUsageTokens(0).SetDailyWindowStart(newWindowStart)
 	}
 	if resetWeekly {
-		update.SetWeeklyUsageUsd(0).SetWeeklyWindowStart(newWindowStart)
+		update.SetWeeklyUsageUsd(0).SetWeeklyUsageTokens(0).SetWeeklyWindowStart(newWindowStart)
 	}
 	if resetMonthly {
-		update.SetMonthlyUsageUsd(0).SetMonthlyWindowStart(newWindowStart)
+		update.SetMonthlyUsageUsd(0).SetMonthlyUsageTokens(0).SetMonthlyWindowStart(newWindowStart)
 	}
 	_, err := update.Save(ctx)
 	return translatePersistenceError(err, service.ErrSubscriptionNotFound, nil)
@@ -392,6 +392,7 @@ func (r *userSubscriptionRepository) ResetDailyUsage(ctx context.Context, id int
 	}
 	n, err := query.
 		SetDailyUsageUsd(0).
+		SetDailyUsageTokens(0).
 		SetDailyWindowStart(newWindowStart).
 		Save(ctx)
 	return r.translateConditionalWindowReset(ctx, client, id, n, err)
@@ -407,6 +408,7 @@ func (r *userSubscriptionRepository) ResetWeeklyUsage(ctx context.Context, id in
 	}
 	n, err := query.
 		SetWeeklyUsageUsd(0).
+		SetWeeklyUsageTokens(0).
 		SetWeeklyWindowStart(newWindowStart).
 		Save(ctx)
 	return r.translateConditionalWindowReset(ctx, client, id, n, err)
@@ -422,6 +424,7 @@ func (r *userSubscriptionRepository) ResetMonthlyUsage(ctx context.Context, id i
 	}
 	n, err := query.
 		SetMonthlyUsageUsd(0).
+		SetMonthlyUsageTokens(0).
 		SetMonthlyWindowStart(newWindowStart).
 		Save(ctx)
 	return r.translateConditionalWindowReset(ctx, client, id, n, err)
@@ -447,26 +450,30 @@ func (r *userSubscriptionRepository) translateConditionalWindowReset(ctx context
 	return nil
 }
 
-// IncrementUsage 原子性地累加订阅用量。
+// IncrementUsage 原子性地累加订阅用量（USD + 原始 token）。
 // 限额检查已在请求前由 BillingCacheService.CheckBillingEligibility 完成，
 // 此处仅负责记录实际消费，确保消费数据的完整性。
-func (r *userSubscriptionRepository) IncrementUsage(ctx context.Context, id int64, costUSD float64) error {
+// tokens 使用请求原始 token 数，不受分组倍率影响。
+func (r *userSubscriptionRepository) IncrementUsage(ctx context.Context, id int64, costUSD float64, tokens int64) error {
 	const updateSQL = `
 		UPDATE user_subscriptions us
 		SET
 			daily_usage_usd = us.daily_usage_usd + $1,
 			weekly_usage_usd = us.weekly_usage_usd + $1,
 			monthly_usage_usd = us.monthly_usage_usd + $1,
+			daily_usage_tokens = us.daily_usage_tokens + $2,
+			weekly_usage_tokens = us.weekly_usage_tokens + $2,
+			monthly_usage_tokens = us.monthly_usage_tokens + $2,
 			updated_at = NOW()
 		FROM groups g
-		WHERE us.id = $2
+		WHERE us.id = $3
 			AND us.deleted_at IS NULL
 			AND us.group_id = g.id
 			AND g.deleted_at IS NULL
 	`
 
 	client := clientFromContext(ctx, r.client)
-	result, err := client.ExecContext(ctx, updateSQL, costUSD, id)
+	result, err := client.ExecContext(ctx, updateSQL, costUSD, tokens, id)
 	if err != nil {
 		return err
 	}
@@ -635,6 +642,9 @@ func userSubscriptionEntityToServiceWithStatusMapping(m *dbent.UserSubscription,
 		DailyUsageUSD:      m.DailyUsageUsd,
 		WeeklyUsageUSD:     m.WeeklyUsageUsd,
 		MonthlyUsageUSD:    m.MonthlyUsageUsd,
+		DailyUsageTokens:   m.DailyUsageTokens,
+		WeeklyUsageTokens:  m.WeeklyUsageTokens,
+		MonthlyUsageTokens: m.MonthlyUsageTokens,
 		AssignedBy:         m.AssignedBy,
 		AssignedAt:         m.AssignedAt,
 		Notes:              derefString(m.Notes),

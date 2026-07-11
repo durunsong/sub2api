@@ -790,16 +790,19 @@ func normalizeExpiredWindows(subs []UserSubscription) {
 		if sub.NeedsDailyReset() {
 			sub.DailyWindowStart = nil
 			sub.DailyUsageUSD = 0
+			sub.DailyUsageTokens = 0
 		}
 		// 周窗口过期：清零展示数据
 		if sub.NeedsWeeklyReset() {
 			sub.WeeklyWindowStart = nil
 			sub.WeeklyUsageUSD = 0
+			sub.WeeklyUsageTokens = 0
 		}
 		// 月窗口过期：清零展示数据
 		if sub.NeedsMonthlyReset() {
 			sub.MonthlyWindowStart = nil
 			sub.MonthlyUsageUSD = 0
+			sub.MonthlyUsageTokens = 0
 		}
 	}
 }
@@ -1037,9 +1040,9 @@ func (s *SubscriptionService) doWindowMaintenance(sub *UserSubscription) {
 	s.InvalidateSubCache(sub.UserID, sub.GroupID)
 }
 
-// RecordUsage 记录使用量到订阅
-func (s *SubscriptionService) RecordUsage(ctx context.Context, subscriptionID int64, costUSD float64) error {
-	return s.userSubRepo.IncrementUsage(ctx, subscriptionID, costUSD)
+// RecordUsage 记录使用量到订阅（USD + 原始 token）
+func (s *SubscriptionService) RecordUsage(ctx context.Context, subscriptionID int64, costUSD float64, tokens int64) error {
+	return s.userSubRepo.IncrementUsage(ctx, subscriptionID, costUSD, tokens)
 }
 
 // SubscriptionProgress 订阅进度

@@ -69,6 +69,16 @@ func (UserSubscription) Fields() []ent.Field {
 			SchemaType(map[string]string{dialect.Postgres: "decimal(20,10)"}).
 			Default(0),
 
+		// Raw token counters for this subscription instance. Incremented from
+		// usage_logs token fields (not USD / rate_multiplier), so admin multiplier
+		// changes do not rewrite historical consumption.
+		field.Int64("daily_usage_tokens").
+			Default(0),
+		field.Int64("weekly_usage_tokens").
+			Default(0),
+		field.Int64("monthly_usage_tokens").
+			Default(0),
+
 		field.Int64("assigned_by").
 			Optional().
 			Nillable(),

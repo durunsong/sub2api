@@ -127,6 +127,7 @@ export default {
     daily: '每日',
     weekly: '每周',
     monthly: '每月',
+    tokenConsumed: '消耗: {tokens} token',
     daysRemaining: '剩余 {days} 天',
     expiresOn: '{date} 到期',
     resetIn: '{time} 后重置',
