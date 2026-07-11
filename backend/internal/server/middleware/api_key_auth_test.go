@@ -1401,7 +1401,7 @@ func (r *stubUserSubscriptionRepo) AddManualResetCredits(ctx context.Context, su
 	return errors.New("not implemented")
 }
 
-func (r *stubUserSubscriptionRepo) ConsumeManualResetCreditAndResetDaily(ctx context.Context, id, userID int64, newWindowStart time.Time) error {
+func (r *stubUserSubscriptionRepo) ConsumeManualResetCreditAndResetDaily(ctx context.Context, id, userID int64, newWindowStart time.Time, restartTerm bool, newStartsAt, newExpiresAt time.Time) error {
 	return errors.New("not implemented")
 }
 

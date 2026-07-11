@@ -248,14 +248,14 @@ func (s *SubscriptionService) assignOrExtendSubscription(ctx context.Context, in
 		var newExpiresAt time.Time
 
 		isExpired := !existingSub.ExpiresAt.After(now)
-		// 未过期再买 1 日卡：从购买时刻重新起算有效期（10:00 买→14:30 再买→到期明天 14:30），
-		// 并赠送一次手动重置机会；用量不清零，需用户主动点「重置日额度」。
-		restartOneTimeDaily := !isExpired && validityDays == 1
+		// 未过期再买 1 日卡：只发放 1 次付费重置机会，不清零用量、不改到期时间。
+		// 新的 24h 从用户点击「重置日额度」时起算（见 UserResetDailyQuota）。
+		grantPendingDailyReset := !isExpired && validityDays == 1
 		if !isExpired {
-			if restartOneTimeDaily {
-				newExpiresAt = now.AddDate(0, 0, validityDays)
+			if grantPendingDailyReset {
+				newExpiresAt = existingSub.ExpiresAt // 占位，实际不改期
 			} else {
-				// 未过期多日卡：从当前过期时间累加，并赠送一次手动重置
+				// 未过期多日卡：从当前过期时间累加，并发放一次手动重置
 				newExpiresAt = existingSub.ExpiresAt.AddDate(0, 0, validityDays)
 			}
 		} else {
@@ -268,7 +268,7 @@ func (s *SubscriptionService) assignOrExtendSubscription(ctx context.Context, in
 			newExpiresAt = MaxExpiresAt
 		}
 
-		if err := s.updateExistingSubscriptionTerm(ctx, existingSub, input.Notes, now, newExpiresAt, isExpired, restartOneTimeDaily); err != nil {
+		if err := s.updateExistingSubscriptionTerm(ctx, existingSub, input.Notes, now, newExpiresAt, isExpired, grantPendingDailyReset); err != nil {
 			return nil, false, err
 		}
 
@@ -317,7 +317,7 @@ func (s *SubscriptionService) updateExistingSubscriptionTerm(
 	startsAt time.Time,
 	newExpiresAt time.Time,
 	isExpired bool,
-	restartOneTimeDaily bool,
+	grantPendingDailyReset bool,
 ) error {
 	return s.withSubscriptionUpdateTx(ctx, func(txCtx context.Context) error {
 		if isExpired {
@@ -328,10 +328,20 @@ func (s *SubscriptionService) updateExistingSubscriptionTerm(
 			return nil
 		}
 
-		if restartOneTimeDaily {
-			restarted := restartActiveOneTimeDailyTerm(existingSub, notes, startsAt, newExpiresAt)
-			if err := s.userSubRepo.Update(txCtx, restarted); err != nil {
-				return fmt.Errorf("restart active daily-card subscription: %w", err)
+		if grantPendingDailyReset {
+			// 再买日卡 = 买到一次待激活重置；点重置后才清零并起算 24h
+			if err := s.userSubRepo.AddManualResetCredits(txCtx, existingSub.ID, 1); err != nil {
+				return fmt.Errorf("grant manual reset credit: %w", err)
+			}
+			if existingSub.Status != SubscriptionStatusActive {
+				if err := s.userSubRepo.UpdateStatus(txCtx, existingSub.ID, SubscriptionStatusActive); err != nil {
+					return fmt.Errorf("update subscription status: %w", err)
+				}
+			}
+			if notes != "" {
+				if err := s.userSubRepo.UpdateNotes(txCtx, existingSub.ID, appendSubscriptionNotes(existingSub.Notes, notes)); err != nil {
+					return fmt.Errorf("update subscription notes: %w", err)
+				}
 			}
 			return nil
 		}
@@ -341,7 +351,7 @@ func (s *SubscriptionService) updateExistingSubscriptionTerm(
 			return fmt.Errorf("extend subscription: %w", err)
 		}
 
-		// 未过期再买多日卡：赠送一次手动重置机会（用量不清零）
+		// 未过期再买多日卡：发放一次手动重置机会（用量不清零）
 		if err := s.userSubRepo.AddManualResetCredits(txCtx, existingSub.ID, 1); err != nil {
 			return fmt.Errorf("grant manual reset credit: %w", err)
 		}
@@ -409,20 +419,12 @@ func renewedSubscriptionTerm(existingSub *UserSubscription, notes string, starts
 	return &renewed
 }
 
-// restartActiveOneTimeDailyTerm restarts a still-active 1-day card from the repurchase
-// moment and grants one manual reset credit without clearing usage.
-func restartActiveOneTimeDailyTerm(existingSub *UserSubscription, notes string, startsAt, expiresAt time.Time) *UserSubscription {
-	restarted := *existingSub
-	restarted.StartsAt = startsAt
-	restarted.ExpiresAt = expiresAt
-	restarted.Status = SubscriptionStatusActive
-	restarted.ManualResetCredits = existingSub.ManualResetCredits + 1
-	restarted.Notes = appendSubscriptionNotes(existingSub.Notes, notes)
-	return &restarted
-}
+// restartActiveOneTimeDailyTerm removed: pending daily reset credits are granted on
+// repurchase; the 24h term starts when the user clicks reset (UserResetDailyQuota).
 
-// UserResetDailyQuota consumes one manual reset credit and clears daily usage.
-// Credits are enforced server-side; frontend button state cannot bypass this.
+// UserResetDailyQuota consumes one paid manual reset credit and clears daily usage.
+// For one-time daily cards the new 24h window starts at click time. Unused credits
+// from repurchase remain redeemable even after the previous term expired.
 func (s *SubscriptionService) UserResetDailyQuota(ctx context.Context, userID, subscriptionID int64) (*UserSubscription, error) {
 	sub, err := s.userSubRepo.GetByID(ctx, subscriptionID)
 	if err != nil {
@@ -431,15 +433,28 @@ func (s *SubscriptionService) UserResetDailyQuota(ctx context.Context, userID, s
 	if sub.UserID != userID {
 		return nil, ErrSubscriptionNotFound
 	}
-	if !sub.IsActive() {
-		return nil, ErrManualResetNotAllowed
-	}
 	if sub.ManualResetCredits <= 0 {
 		return nil, ErrManualResetNoCredits
 	}
 
-	windowStart := startOfDay(time.Now())
-	if err := s.userSubRepo.ConsumeManualResetCreditAndResetDaily(ctx, subscriptionID, userID, windowStart); err != nil {
+	isOneTimeDaily := sub.HasOneTimeDailyQuota()
+	if !sub.IsActive() && !isOneTimeDaily {
+		// 多日卡过期后不再允许仅靠重置次数复活整段订阅
+		return nil, ErrManualResetNotAllowed
+	}
+
+	now := time.Now()
+	windowStart := startOfDay(now)
+	restartTerm := isOneTimeDaily
+	newStartsAt := now
+	newExpiresAt := now.AddDate(0, 0, 1)
+	if newExpiresAt.After(MaxExpiresAt) {
+		newExpiresAt = MaxExpiresAt
+	}
+
+	if err := s.userSubRepo.ConsumeManualResetCreditAndResetDaily(
+		ctx, subscriptionID, userID, windowStart, restartTerm, newStartsAt, newExpiresAt,
+	); err != nil {
 		return nil, err
 	}
 

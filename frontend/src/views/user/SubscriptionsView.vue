@@ -362,22 +362,29 @@ async function loadSubscriptions() {
 }
 
 function canManualReset(subscription: UserSubscription): boolean {
+  const credits = subscription.manual_reset_credits || 0
+  if (credits <= 0) return false
+  // 日卡：有付费待激活次数时，即使展示已过期也可点重置起算新 24h
+  if (isOneTimeDailyQuota(subscription)) return true
   return (
     subscription.status === 'active' &&
     !!subscription.expires_at &&
-    new Date(subscription.expires_at).getTime() > Date.now() &&
-    (subscription.manual_reset_credits || 0) > 0
+    new Date(subscription.expires_at).getTime() > Date.now()
   )
 }
 
 function manualResetHint(subscription: UserSubscription): string {
+  const credits = subscription.manual_reset_credits || 0
+  if (credits > 0 && isOneTimeDailyQuota(subscription)) {
+    return t('userSubscriptions.manualReset.pendingActivate')
+  }
   if (subscription.status !== 'active') {
     return t('userSubscriptions.manualReset.inactive')
   }
   if (!subscription.expires_at || new Date(subscription.expires_at).getTime() <= Date.now()) {
     return t('userSubscriptions.manualReset.inactive')
   }
-  if ((subscription.manual_reset_credits || 0) <= 0) {
+  if (credits <= 0) {
     return t('userSubscriptions.manualReset.noCredits')
   }
   return ''

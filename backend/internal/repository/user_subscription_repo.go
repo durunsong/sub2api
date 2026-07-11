@@ -373,22 +373,41 @@ func (r *userSubscriptionRepository) AddManualResetCredits(ctx context.Context, 
 }
 
 // ConsumeManualResetCreditAndResetDaily decrements one credit and clears daily usage
-// in a single conditional UPDATE. Frontend cannot bypass the credit check.
-func (r *userSubscriptionRepository) ConsumeManualResetCreditAndResetDaily(ctx context.Context, id, userID int64, newWindowStart time.Time) error {
+// in a single conditional UPDATE. When restartTerm is true (one-time daily card),
+// also reactivates starts_at/expires_at from the reset click. Frontend cannot bypass credits.
+func (r *userSubscriptionRepository) ConsumeManualResetCreditAndResetDaily(
+	ctx context.Context,
+	id, userID int64,
+	newWindowStart time.Time,
+	restartTerm bool,
+	newStartsAt, newExpiresAt time.Time,
+) error {
 	client := clientFromContext(ctx, r.client)
-	n, err := client.UserSubscription.Update().
+	update := client.UserSubscription.Update().
 		Where(
 			usersubscription.IDEQ(id),
 			usersubscription.UserIDEQ(userID),
-			usersubscription.StatusEQ(service.SubscriptionStatusActive),
-			usersubscription.ExpiresAtGT(time.Now()),
 			usersubscription.ManualResetCreditsGT(0),
 		).
 		AddManualResetCredits(-1).
 		SetDailyUsageUsd(0).
 		SetDailyUsageTokens(0).
 		SetDailyWindowStart(newWindowStart).
-		Save(ctx)
+		SetStatus(service.SubscriptionStatusActive)
+
+	if restartTerm {
+		update = update.
+			SetStartsAt(newStartsAt).
+			SetExpiresAt(newExpiresAt).
+			SetWeeklyWindowStart(newWindowStart).
+			SetMonthlyWindowStart(newWindowStart).
+			SetWeeklyUsageUsd(0).
+			SetMonthlyUsageUsd(0).
+			SetWeeklyUsageTokens(0).
+			SetMonthlyUsageTokens(0)
+	}
+
+	n, err := update.Save(ctx)
 	if err != nil {
 		return err
 	}

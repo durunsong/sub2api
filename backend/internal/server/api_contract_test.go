@@ -2132,7 +2132,7 @@ func (stubUserSubscriptionRepo) UpdateNotes(ctx context.Context, subscriptionID 
 func (stubUserSubscriptionRepo) AddManualResetCredits(ctx context.Context, subscriptionID int64, delta int) error {
 	return errors.New("not implemented")
 }
-func (stubUserSubscriptionRepo) ConsumeManualResetCreditAndResetDaily(ctx context.Context, id, userID int64, newWindowStart time.Time) error {
+func (stubUserSubscriptionRepo) ConsumeManualResetCreditAndResetDaily(ctx context.Context, id, userID int64, newWindowStart time.Time, restartTerm bool, newStartsAt, newExpiresAt time.Time) error {
 	return errors.New("not implemented")
 }
 func (stubUserSubscriptionRepo) ActivateWindows(ctx context.Context, id int64, start time.Time) error {

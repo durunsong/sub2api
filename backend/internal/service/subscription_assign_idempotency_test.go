@@ -157,7 +157,7 @@ func (userSubRepoNoop) UpdateNotes(context.Context, int64, string) error {
 func (userSubRepoNoop) AddManualResetCredits(context.Context, int64, int) error {
 	panic("unexpected AddManualResetCredits call")
 }
-func (userSubRepoNoop) ConsumeManualResetCreditAndResetDaily(context.Context, int64, int64, time.Time) error {
+func (userSubRepoNoop) ConsumeManualResetCreditAndResetDaily(context.Context, int64, int64, time.Time, bool, time.Time, time.Time) error {
 	panic("unexpected ConsumeManualResetCreditAndResetDaily call")
 }
 func (userSubRepoNoop) ActivateWindows(context.Context, int64, time.Time) error {
@@ -291,18 +291,29 @@ func (s *subscriptionUserSubRepoStub) AddManualResetCredits(_ context.Context, s
 	return nil
 }
 
-func (s *subscriptionUserSubRepoStub) ConsumeManualResetCreditAndResetDaily(_ context.Context, id, userID int64, newWindowStart time.Time) error {
+func (s *subscriptionUserSubRepoStub) ConsumeManualResetCreditAndResetDaily(_ context.Context, id, userID int64, newWindowStart time.Time, restartTerm bool, newStartsAt, newExpiresAt time.Time) error {
 	sub := s.byID[id]
 	if sub == nil || sub.UserID != userID {
 		return ErrSubscriptionNotFound
 	}
-	if !sub.IsActive() || sub.ManualResetCredits <= 0 {
+	if sub.ManualResetCredits <= 0 {
 		return ErrManualResetNoCredits
 	}
 	sub.ManualResetCredits--
 	sub.DailyUsageUSD = 0
 	sub.DailyUsageTokens = 0
 	sub.DailyWindowStart = &newWindowStart
+	sub.Status = SubscriptionStatusActive
+	if restartTerm {
+		sub.StartsAt = newStartsAt
+		sub.ExpiresAt = newExpiresAt
+		sub.WeeklyWindowStart = &newWindowStart
+		sub.MonthlyWindowStart = &newWindowStart
+		sub.WeeklyUsageUSD = 0
+		sub.MonthlyUsageUSD = 0
+		sub.WeeklyUsageTokens = 0
+		sub.MonthlyUsageTokens = 0
+	}
 	return nil
 }
 

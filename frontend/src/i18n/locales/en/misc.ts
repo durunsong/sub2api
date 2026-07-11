@@ -136,15 +136,16 @@ export default {
     resetIn: 'Resets in {time}',
     quotaEndsIn: 'Quota ends in {time}',
     windowNotActive: 'Awaiting first use',
-    oneTimeDailyHint: 'Valid for 24 hours; daily cards do not auto-reset',
+    oneTimeDailyHint: 'Valid for 24 hours; daily cards do not auto-reset. After repurchase, click reset to start a new period',
     usageOf: '{used} of {limit}',
     manualReset: {
       remaining: '{count} manual reset(s) remaining',
       inactive: 'Subscription is not active; cannot reset',
       noCredits: 'No reset credits; repurchase the same plan to earn one',
+      pendingActivate: 'Paid reset pending: click reset to clear daily usage and start a fresh 24 hours from now',
       button: 'Reset daily quota',
-      confirm: 'Use 1 reset credit to clear daily usage?',
-      success: 'Daily quota reset',
+      confirm: 'Use 1 reset credit? This clears daily usage and starts a new 24-hour period from now.',
+      success: 'Daily quota reset; new 24-hour period started',
       failed: 'Reset failed'
     }
   },

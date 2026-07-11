@@ -87,7 +87,7 @@ func (r *subscriptionExpiryRepoStub) AddManualResetCredits(context.Context, int6
 	return nil
 }
 
-func (r *subscriptionExpiryRepoStub) ConsumeManualResetCreditAndResetDaily(context.Context, int64, int64, time.Time) error {
+func (r *subscriptionExpiryRepoStub) ConsumeManualResetCreditAndResetDaily(context.Context, int64, int64, time.Time, bool, time.Time, time.Time) error {
 	return nil
 }
 
