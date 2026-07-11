@@ -79,6 +79,12 @@ func (UserSubscription) Fields() []ent.Field {
 		field.Int64("monthly_usage_tokens").
 			Default(0),
 
+		// Manual reset credits granted when an active subscription is repurchased
+		// before expiry. Consumed atomically by the user "reset daily quota" action.
+		field.Int("manual_reset_credits").
+			Default(0).
+			NonNegative(),
+
 		field.Int64("assigned_by").
 			Optional().
 			Nillable(),

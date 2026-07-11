@@ -136,6 +136,51 @@
               >
                 {{ formatDailyUsageWindow(subscription) }}
               </p>
+              <p
+                v-if="isOneTimeDailyQuota(subscription)"
+                class="text-xs text-gray-500 dark:text-dark-400"
+              >
+                {{ t('userSubscriptions.oneTimeDailyHint') }}
+              </p>
+            </div>
+
+            <!-- Manual daily reset (credits granted on active repurchase) -->
+            <div
+              v-if="subscription.group?.daily_limit_usd"
+              class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200/80 bg-emerald-50/80 px-3 py-2.5 dark:border-emerald-800/60 dark:bg-emerald-950/30"
+            >
+              <div class="min-w-0 space-y-0.5 text-xs leading-relaxed">
+                <p class="font-medium text-emerald-800 dark:text-emerald-200">
+                  {{
+                    t('userSubscriptions.manualReset.remaining', {
+                      count: subscription.manual_reset_credits || 0
+                    })
+                  }}
+                </p>
+                <p
+                  v-if="manualResetHint(subscription)"
+                  class="text-emerald-700/80 dark:text-emerald-300/80"
+                >
+                  {{ manualResetHint(subscription) }}
+                </p>
+              </div>
+              <button
+                type="button"
+                class="shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                :class="
+                  canManualReset(subscription)
+                    ? 'bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400'
+                    : 'bg-gray-200 text-gray-500 dark:bg-dark-600 dark:text-dark-300'
+                "
+                :disabled="!canManualReset(subscription) || resettingId === subscription.id"
+                @click="handleResetDaily(subscription)"
+              >
+                {{
+                  resettingId === subscription.id
+                    ? '...'
+                    : t('userSubscriptions.manualReset.button')
+                }}
+              </button>
             </div>
 
             <!-- Weekly Usage -->
@@ -302,6 +347,7 @@ const appStore = useAppStore()
 
 const subscriptions = ref<UserSubscription[]>([])
 const loading = ref(true)
+const resettingId = ref<number | null>(null)
 
 async function loadSubscriptions() {
   try {
@@ -312,6 +358,50 @@ async function loadSubscriptions() {
     appStore.showError(t('userSubscriptions.failedToLoad'))
   } finally {
     loading.value = false
+  }
+}
+
+function canManualReset(subscription: UserSubscription): boolean {
+  return (
+    subscription.status === 'active' &&
+    !!subscription.expires_at &&
+    new Date(subscription.expires_at).getTime() > Date.now() &&
+    (subscription.manual_reset_credits || 0) > 0
+  )
+}
+
+function manualResetHint(subscription: UserSubscription): string {
+  if (subscription.status !== 'active') {
+    return t('userSubscriptions.manualReset.inactive')
+  }
+  if (!subscription.expires_at || new Date(subscription.expires_at).getTime() <= Date.now()) {
+    return t('userSubscriptions.manualReset.inactive')
+  }
+  if ((subscription.manual_reset_credits || 0) <= 0) {
+    return t('userSubscriptions.manualReset.noCredits')
+  }
+  return ''
+}
+
+async function handleResetDaily(subscription: UserSubscription) {
+  if (!canManualReset(subscription) || resettingId.value != null) return
+  if (!window.confirm(t('userSubscriptions.manualReset.confirm'))) return
+
+  resettingId.value = subscription.id
+  try {
+    const updated = await subscriptionsAPI.resetDailyQuota(subscription.id)
+    const idx = subscriptions.value.findIndex((s) => s.id === subscription.id)
+    if (idx >= 0) {
+      subscriptions.value[idx] = { ...subscriptions.value[idx], ...updated }
+    }
+    appStore.showSuccess(t('userSubscriptions.manualReset.success'))
+  } catch (error) {
+    console.error('Failed to reset daily quota:', error)
+    // Refresh from server so button/credits cannot drift after a rejected attempt
+    await loadSubscriptions()
+    appStore.showError(t('userSubscriptions.manualReset.failed'))
+  } finally {
+    resettingId.value = null
   }
 }
 

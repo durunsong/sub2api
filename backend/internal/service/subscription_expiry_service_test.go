@@ -83,6 +83,14 @@ func (r *subscriptionExpiryRepoStub) UpdateNotes(context.Context, int64, string)
 	return nil
 }
 
+func (r *subscriptionExpiryRepoStub) AddManualResetCredits(context.Context, int64, int) error {
+	return nil
+}
+
+func (r *subscriptionExpiryRepoStub) ConsumeManualResetCreditAndResetDaily(context.Context, int64, int64, time.Time) error {
+	return nil
+}
+
 func (r *subscriptionExpiryRepoStub) ActivateWindows(context.Context, int64, time.Time) error {
 	return nil
 }

@@ -136,7 +136,17 @@ export default {
     resetIn: 'Resets in {time}',
     quotaEndsIn: 'Quota ends in {time}',
     windowNotActive: 'Awaiting first use',
-    usageOf: '{used} of {limit}'
+    oneTimeDailyHint: 'Valid for 24 hours; daily cards do not auto-reset',
+    usageOf: '{used} of {limit}',
+    manualReset: {
+      remaining: '{count} manual reset(s) remaining',
+      inactive: 'Subscription is not active; cannot reset',
+      noCredits: 'No reset credits; repurchase the same plan to earn one',
+      button: 'Reset daily quota',
+      confirm: 'Use 1 reset credit to clear daily usage?',
+      success: 'Daily quota reset',
+      failed: 'Reset failed'
+    }
   },
 
   // Onboarding Tour

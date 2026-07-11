@@ -439,6 +439,7 @@ func TestAPIContracts(t *testing.T) {
 						"daily_usage_tokens": 0,
 						"weekly_usage_tokens": 0,
 						"monthly_usage_tokens": 0,
+						"manual_reset_credits": 0,
 						"created_at": "2025-01-02T03:04:05Z",
 						"updated_at": "2025-01-02T03:04:05Z"
 					}
@@ -2126,6 +2127,12 @@ func (stubUserSubscriptionRepo) UpdateStatus(ctx context.Context, subscriptionID
 	return errors.New("not implemented")
 }
 func (stubUserSubscriptionRepo) UpdateNotes(ctx context.Context, subscriptionID int64, notes string) error {
+	return errors.New("not implemented")
+}
+func (stubUserSubscriptionRepo) AddManualResetCredits(ctx context.Context, subscriptionID int64, delta int) error {
+	return errors.New("not implemented")
+}
+func (stubUserSubscriptionRepo) ConsumeManualResetCreditAndResetDaily(ctx context.Context, id, userID int64, newWindowStart time.Time) error {
 	return errors.New("not implemented")
 }
 func (stubUserSubscriptionRepo) ActivateWindows(ctx context.Context, id int64, start time.Time) error {

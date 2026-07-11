@@ -56,6 +56,17 @@ export async function getSubscriptionSummary(): Promise<SubscriptionSummary> {
 }
 
 /**
+ * Consume one manual reset credit and clear daily usage.
+ * Enforced server-side; frontend button state cannot bypass credit checks.
+ */
+export async function resetDailyQuota(subscriptionId: number): Promise<UserSubscription> {
+  const response = await apiClient.post<UserSubscription>(
+    `/subscriptions/${subscriptionId}/reset-daily`
+  )
+  return response.data
+}
+
+/**
  * Get progress for a specific subscription
  */
 export async function getSubscriptionProgress(
@@ -72,5 +83,6 @@ export default {
   getActiveSubscriptions,
   getSubscriptionsProgress,
   getSubscriptionSummary,
+  resetDailyQuota,
   getSubscriptionProgress
 }

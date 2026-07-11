@@ -140,6 +140,11 @@ func MonthlyUsageTokens(v int64) predicate.UserSubscription {
 	return predicate.UserSubscription(sql.FieldEQ(FieldMonthlyUsageTokens, v))
 }
 
+// ManualResetCredits applies equality check predicate on the "manual_reset_credits" field. It's identical to ManualResetCreditsEQ.
+func ManualResetCredits(v int) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldEQ(FieldManualResetCredits, v))
+}
+
 // AssignedBy applies equality check predicate on the "assigned_by" field. It's identical to AssignedByEQ.
 func AssignedBy(v int64) predicate.UserSubscription {
 	return predicate.UserSubscription(sql.FieldEQ(FieldAssignedBy, v))
@@ -858,6 +863,46 @@ func MonthlyUsageTokensLT(v int64) predicate.UserSubscription {
 // MonthlyUsageTokensLTE applies the LTE predicate on the "monthly_usage_tokens" field.
 func MonthlyUsageTokensLTE(v int64) predicate.UserSubscription {
 	return predicate.UserSubscription(sql.FieldLTE(FieldMonthlyUsageTokens, v))
+}
+
+// ManualResetCreditsEQ applies the EQ predicate on the "manual_reset_credits" field.
+func ManualResetCreditsEQ(v int) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldEQ(FieldManualResetCredits, v))
+}
+
+// ManualResetCreditsNEQ applies the NEQ predicate on the "manual_reset_credits" field.
+func ManualResetCreditsNEQ(v int) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldNEQ(FieldManualResetCredits, v))
+}
+
+// ManualResetCreditsIn applies the In predicate on the "manual_reset_credits" field.
+func ManualResetCreditsIn(vs ...int) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldIn(FieldManualResetCredits, vs...))
+}
+
+// ManualResetCreditsNotIn applies the NotIn predicate on the "manual_reset_credits" field.
+func ManualResetCreditsNotIn(vs ...int) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldNotIn(FieldManualResetCredits, vs...))
+}
+
+// ManualResetCreditsGT applies the GT predicate on the "manual_reset_credits" field.
+func ManualResetCreditsGT(v int) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldGT(FieldManualResetCredits, v))
+}
+
+// ManualResetCreditsGTE applies the GTE predicate on the "manual_reset_credits" field.
+func ManualResetCreditsGTE(v int) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldGTE(FieldManualResetCredits, v))
+}
+
+// ManualResetCreditsLT applies the LT predicate on the "manual_reset_credits" field.
+func ManualResetCreditsLT(v int) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldLT(FieldManualResetCredits, v))
+}
+
+// ManualResetCreditsLTE applies the LTE predicate on the "manual_reset_credits" field.
+func ManualResetCreditsLTE(v int) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldLTE(FieldManualResetCredits, v))
 }
 
 // AssignedByEQ applies the EQ predicate on the "assigned_by" field.

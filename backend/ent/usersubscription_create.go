@@ -231,6 +231,20 @@ func (_c *UserSubscriptionCreate) SetNillableMonthlyUsageTokens(v *int64) *UserS
 	return _c
 }
 
+// SetManualResetCredits sets the "manual_reset_credits" field.
+func (_c *UserSubscriptionCreate) SetManualResetCredits(v int) *UserSubscriptionCreate {
+	_c.mutation.SetManualResetCredits(v)
+	return _c
+}
+
+// SetNillableManualResetCredits sets the "manual_reset_credits" field if the given value is not nil.
+func (_c *UserSubscriptionCreate) SetNillableManualResetCredits(v *int) *UserSubscriptionCreate {
+	if v != nil {
+		_c.SetManualResetCredits(*v)
+	}
+	return _c
+}
+
 // SetAssignedBy sets the "assigned_by" field.
 func (_c *UserSubscriptionCreate) SetAssignedBy(v int64) *UserSubscriptionCreate {
 	_c.mutation.SetAssignedBy(v)
@@ -396,6 +410,10 @@ func (_c *UserSubscriptionCreate) defaults() error {
 		v := usersubscription.DefaultMonthlyUsageTokens
 		_c.mutation.SetMonthlyUsageTokens(v)
 	}
+	if _, ok := _c.mutation.ManualResetCredits(); !ok {
+		v := usersubscription.DefaultManualResetCredits
+		_c.mutation.SetManualResetCredits(v)
+	}
 	if _, ok := _c.mutation.AssignedAt(); !ok {
 		if usersubscription.DefaultAssignedAt == nil {
 			return fmt.Errorf("ent: uninitialized usersubscription.DefaultAssignedAt (forgotten import ent/runtime?)")
@@ -451,6 +469,14 @@ func (_c *UserSubscriptionCreate) check() error {
 	}
 	if _, ok := _c.mutation.MonthlyUsageTokens(); !ok {
 		return &ValidationError{Name: "monthly_usage_tokens", err: errors.New(`ent: missing required field "UserSubscription.monthly_usage_tokens"`)}
+	}
+	if _, ok := _c.mutation.ManualResetCredits(); !ok {
+		return &ValidationError{Name: "manual_reset_credits", err: errors.New(`ent: missing required field "UserSubscription.manual_reset_credits"`)}
+	}
+	if v, ok := _c.mutation.ManualResetCredits(); ok {
+		if err := usersubscription.ManualResetCreditsValidator(v); err != nil {
+			return &ValidationError{Name: "manual_reset_credits", err: fmt.Errorf(`ent: validator failed for field "UserSubscription.manual_reset_credits": %w`, err)}
+		}
 	}
 	if _, ok := _c.mutation.AssignedAt(); !ok {
 		return &ValidationError{Name: "assigned_at", err: errors.New(`ent: missing required field "UserSubscription.assigned_at"`)}
@@ -547,6 +573,10 @@ func (_c *UserSubscriptionCreate) createSpec() (*UserSubscription, *sqlgraph.Cre
 	if value, ok := _c.mutation.MonthlyUsageTokens(); ok {
 		_spec.SetField(usersubscription.FieldMonthlyUsageTokens, field.TypeInt64, value)
 		_node.MonthlyUsageTokens = value
+	}
+	if value, ok := _c.mutation.ManualResetCredits(); ok {
+		_spec.SetField(usersubscription.FieldManualResetCredits, field.TypeInt, value)
+		_node.ManualResetCredits = value
 	}
 	if value, ok := _c.mutation.AssignedAt(); ok {
 		_spec.SetField(usersubscription.FieldAssignedAt, field.TypeTime, value)
@@ -924,6 +954,24 @@ func (u *UserSubscriptionUpsert) UpdateMonthlyUsageTokens() *UserSubscriptionUps
 // AddMonthlyUsageTokens adds v to the "monthly_usage_tokens" field.
 func (u *UserSubscriptionUpsert) AddMonthlyUsageTokens(v int64) *UserSubscriptionUpsert {
 	u.Add(usersubscription.FieldMonthlyUsageTokens, v)
+	return u
+}
+
+// SetManualResetCredits sets the "manual_reset_credits" field.
+func (u *UserSubscriptionUpsert) SetManualResetCredits(v int) *UserSubscriptionUpsert {
+	u.Set(usersubscription.FieldManualResetCredits, v)
+	return u
+}
+
+// UpdateManualResetCredits sets the "manual_reset_credits" field to the value that was provided on create.
+func (u *UserSubscriptionUpsert) UpdateManualResetCredits() *UserSubscriptionUpsert {
+	u.SetExcluded(usersubscription.FieldManualResetCredits)
+	return u
+}
+
+// AddManualResetCredits adds v to the "manual_reset_credits" field.
+func (u *UserSubscriptionUpsert) AddManualResetCredits(v int) *UserSubscriptionUpsert {
+	u.Add(usersubscription.FieldManualResetCredits, v)
 	return u
 }
 
@@ -1311,6 +1359,27 @@ func (u *UserSubscriptionUpsertOne) AddMonthlyUsageTokens(v int64) *UserSubscrip
 func (u *UserSubscriptionUpsertOne) UpdateMonthlyUsageTokens() *UserSubscriptionUpsertOne {
 	return u.Update(func(s *UserSubscriptionUpsert) {
 		s.UpdateMonthlyUsageTokens()
+	})
+}
+
+// SetManualResetCredits sets the "manual_reset_credits" field.
+func (u *UserSubscriptionUpsertOne) SetManualResetCredits(v int) *UserSubscriptionUpsertOne {
+	return u.Update(func(s *UserSubscriptionUpsert) {
+		s.SetManualResetCredits(v)
+	})
+}
+
+// AddManualResetCredits adds v to the "manual_reset_credits" field.
+func (u *UserSubscriptionUpsertOne) AddManualResetCredits(v int) *UserSubscriptionUpsertOne {
+	return u.Update(func(s *UserSubscriptionUpsert) {
+		s.AddManualResetCredits(v)
+	})
+}
+
+// UpdateManualResetCredits sets the "manual_reset_credits" field to the value that was provided on create.
+func (u *UserSubscriptionUpsertOne) UpdateManualResetCredits() *UserSubscriptionUpsertOne {
+	return u.Update(func(s *UserSubscriptionUpsert) {
+		s.UpdateManualResetCredits()
 	})
 }
 
@@ -1872,6 +1941,27 @@ func (u *UserSubscriptionUpsertBulk) AddMonthlyUsageTokens(v int64) *UserSubscri
 func (u *UserSubscriptionUpsertBulk) UpdateMonthlyUsageTokens() *UserSubscriptionUpsertBulk {
 	return u.Update(func(s *UserSubscriptionUpsert) {
 		s.UpdateMonthlyUsageTokens()
+	})
+}
+
+// SetManualResetCredits sets the "manual_reset_credits" field.
+func (u *UserSubscriptionUpsertBulk) SetManualResetCredits(v int) *UserSubscriptionUpsertBulk {
+	return u.Update(func(s *UserSubscriptionUpsert) {
+		s.SetManualResetCredits(v)
+	})
+}
+
+// AddManualResetCredits adds v to the "manual_reset_credits" field.
+func (u *UserSubscriptionUpsertBulk) AddManualResetCredits(v int) *UserSubscriptionUpsertBulk {
+	return u.Update(func(s *UserSubscriptionUpsert) {
+		s.AddManualResetCredits(v)
+	})
+}
+
+// UpdateManualResetCredits sets the "manual_reset_credits" field to the value that was provided on create.
+func (u *UserSubscriptionUpsertBulk) UpdateManualResetCredits() *UserSubscriptionUpsertBulk {
+	return u.Update(func(s *UserSubscriptionUpsert) {
+		s.UpdateManualResetCredits()
 	})
 }
 

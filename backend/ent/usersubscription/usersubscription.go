@@ -49,6 +49,8 @@ const (
 	FieldWeeklyUsageTokens = "weekly_usage_tokens"
 	// FieldMonthlyUsageTokens holds the string denoting the monthly_usage_tokens field in the database.
 	FieldMonthlyUsageTokens = "monthly_usage_tokens"
+	// FieldManualResetCredits holds the string denoting the manual_reset_credits field in the database.
+	FieldManualResetCredits = "manual_reset_credits"
 	// FieldAssignedBy holds the string denoting the assigned_by field in the database.
 	FieldAssignedBy = "assigned_by"
 	// FieldAssignedAt holds the string denoting the assigned_at field in the database.
@@ -115,6 +117,7 @@ var Columns = []string{
 	FieldDailyUsageTokens,
 	FieldWeeklyUsageTokens,
 	FieldMonthlyUsageTokens,
+	FieldManualResetCredits,
 	FieldAssignedBy,
 	FieldAssignedAt,
 	FieldNotes,
@@ -160,6 +163,10 @@ var (
 	DefaultWeeklyUsageTokens int64
 	// DefaultMonthlyUsageTokens holds the default value on creation for the "monthly_usage_tokens" field.
 	DefaultMonthlyUsageTokens int64
+	// DefaultManualResetCredits holds the default value on creation for the "manual_reset_credits" field.
+	DefaultManualResetCredits int
+	// ManualResetCreditsValidator is a validator for the "manual_reset_credits" field. It is called by the builders before save.
+	ManualResetCreditsValidator func(int) error
 	// DefaultAssignedAt holds the default value on creation for the "assigned_at" field.
 	DefaultAssignedAt func() time.Time
 )
@@ -255,6 +262,11 @@ func ByWeeklyUsageTokens(opts ...sql.OrderTermOption) OrderOption {
 // ByMonthlyUsageTokens orders the results by the monthly_usage_tokens field.
 func ByMonthlyUsageTokens(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldMonthlyUsageTokens, opts...).ToFunc()
+}
+
+// ByManualResetCredits orders the results by the manual_reset_credits field.
+func ByManualResetCredits(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldManualResetCredits, opts...).ToFunc()
 }
 
 // ByAssignedBy orders the results by the assigned_by field.

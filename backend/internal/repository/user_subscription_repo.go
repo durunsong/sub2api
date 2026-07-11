@@ -38,6 +38,7 @@ func (r *userSubscriptionRepository) Create(ctx context.Context, sub *service.Us
 		SetDailyUsageUsd(sub.DailyUsageUSD).
 		SetWeeklyUsageUsd(sub.WeeklyUsageUSD).
 		SetMonthlyUsageUsd(sub.MonthlyUsageUSD).
+		SetManualResetCredits(sub.ManualResetCredits).
 		SetNillableAssignedBy(sub.AssignedBy)
 
 	if sub.StartsAt.IsZero() {
@@ -137,6 +138,10 @@ func (r *userSubscriptionRepository) Update(ctx context.Context, sub *service.Us
 		SetDailyUsageUsd(sub.DailyUsageUSD).
 		SetWeeklyUsageUsd(sub.WeeklyUsageUSD).
 		SetMonthlyUsageUsd(sub.MonthlyUsageUSD).
+		SetDailyUsageTokens(sub.DailyUsageTokens).
+		SetWeeklyUsageTokens(sub.WeeklyUsageTokens).
+		SetMonthlyUsageTokens(sub.MonthlyUsageTokens).
+		SetManualResetCredits(sub.ManualResetCredits).
 		SetNillableAssignedBy(sub.AssignedBy).
 		SetAssignedAt(sub.AssignedAt).
 		SetNotes(sub.Notes)
@@ -354,6 +359,43 @@ func (r *userSubscriptionRepository) UpdateNotes(ctx context.Context, subscripti
 		SetNotes(notes).
 		Save(ctx)
 	return translatePersistenceError(err, service.ErrSubscriptionNotFound, nil)
+}
+
+func (r *userSubscriptionRepository) AddManualResetCredits(ctx context.Context, subscriptionID int64, delta int) error {
+	if delta == 0 {
+		return nil
+	}
+	client := clientFromContext(ctx, r.client)
+	_, err := client.UserSubscription.UpdateOneID(subscriptionID).
+		AddManualResetCredits(delta).
+		Save(ctx)
+	return translatePersistenceError(err, service.ErrSubscriptionNotFound, nil)
+}
+
+// ConsumeManualResetCreditAndResetDaily decrements one credit and clears daily usage
+// in a single conditional UPDATE. Frontend cannot bypass the credit check.
+func (r *userSubscriptionRepository) ConsumeManualResetCreditAndResetDaily(ctx context.Context, id, userID int64, newWindowStart time.Time) error {
+	client := clientFromContext(ctx, r.client)
+	n, err := client.UserSubscription.Update().
+		Where(
+			usersubscription.IDEQ(id),
+			usersubscription.UserIDEQ(userID),
+			usersubscription.StatusEQ(service.SubscriptionStatusActive),
+			usersubscription.ExpiresAtGT(time.Now()),
+			usersubscription.ManualResetCreditsGT(0),
+		).
+		AddManualResetCredits(-1).
+		SetDailyUsageUsd(0).
+		SetDailyUsageTokens(0).
+		SetDailyWindowStart(newWindowStart).
+		Save(ctx)
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return service.ErrManualResetNoCredits
+	}
+	return nil
 }
 
 func (r *userSubscriptionRepository) ActivateWindows(ctx context.Context, id int64, start time.Time) error {
@@ -645,6 +687,7 @@ func userSubscriptionEntityToServiceWithStatusMapping(m *dbent.UserSubscription,
 		DailyUsageTokens:   m.DailyUsageTokens,
 		WeeklyUsageTokens:  m.WeeklyUsageTokens,
 		MonthlyUsageTokens: m.MonthlyUsageTokens,
+		ManualResetCredits: m.ManualResetCredits,
 		AssignedBy:         m.AssignedBy,
 		AssignedAt:         m.AssignedAt,
 		Notes:              derefString(m.Notes),

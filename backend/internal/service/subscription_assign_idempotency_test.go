@@ -154,6 +154,12 @@ func (userSubRepoNoop) UpdateStatus(context.Context, int64, string) error {
 func (userSubRepoNoop) UpdateNotes(context.Context, int64, string) error {
 	panic("unexpected UpdateNotes call")
 }
+func (userSubRepoNoop) AddManualResetCredits(context.Context, int64, int) error {
+	panic("unexpected AddManualResetCredits call")
+}
+func (userSubRepoNoop) ConsumeManualResetCreditAndResetDaily(context.Context, int64, int64, time.Time) error {
+	panic("unexpected ConsumeManualResetCreditAndResetDaily call")
+}
 func (userSubRepoNoop) ActivateWindows(context.Context, int64, time.Time) error {
 	panic("unexpected ActivateWindows call")
 }
@@ -264,6 +270,57 @@ func (s *subscriptionUserSubRepoStub) Update(_ context.Context, sub *UserSubscri
 		delete(s.byUserGroup, oldKey)
 	}
 	s.byUserGroup[s.key(cp.UserID, cp.GroupID)] = &cp
+	return nil
+}
+
+func (s *subscriptionUserSubRepoStub) ExtendExpiry(_ context.Context, subscriptionID int64, newExpiresAt time.Time) error {
+	sub := s.byID[subscriptionID]
+	if sub == nil {
+		return ErrSubscriptionNotFound
+	}
+	sub.ExpiresAt = newExpiresAt
+	return nil
+}
+
+func (s *subscriptionUserSubRepoStub) AddManualResetCredits(_ context.Context, subscriptionID int64, delta int) error {
+	sub := s.byID[subscriptionID]
+	if sub == nil {
+		return ErrSubscriptionNotFound
+	}
+	sub.ManualResetCredits += delta
+	return nil
+}
+
+func (s *subscriptionUserSubRepoStub) ConsumeManualResetCreditAndResetDaily(_ context.Context, id, userID int64, newWindowStart time.Time) error {
+	sub := s.byID[id]
+	if sub == nil || sub.UserID != userID {
+		return ErrSubscriptionNotFound
+	}
+	if !sub.IsActive() || sub.ManualResetCredits <= 0 {
+		return ErrManualResetNoCredits
+	}
+	sub.ManualResetCredits--
+	sub.DailyUsageUSD = 0
+	sub.DailyUsageTokens = 0
+	sub.DailyWindowStart = &newWindowStart
+	return nil
+}
+
+func (s *subscriptionUserSubRepoStub) UpdateStatus(_ context.Context, subscriptionID int64, status string) error {
+	sub := s.byID[subscriptionID]
+	if sub == nil {
+		return ErrSubscriptionNotFound
+	}
+	sub.Status = status
+	return nil
+}
+
+func (s *subscriptionUserSubRepoStub) UpdateNotes(_ context.Context, subscriptionID int64, notes string) error {
+	sub := s.byID[subscriptionID]
+	if sub == nil {
+		return ErrSubscriptionNotFound
+	}
+	sub.Notes = notes
 	return nil
 }
 

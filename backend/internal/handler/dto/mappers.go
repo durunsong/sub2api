@@ -782,6 +782,7 @@ func userSubscriptionFromServiceBase(sub *service.UserSubscription) UserSubscrip
 		DailyUsageTokens:   sub.DailyUsageTokens,
 		WeeklyUsageTokens:  sub.WeeklyUsageTokens,
 		MonthlyUsageTokens: sub.MonthlyUsageTokens,
+		ManualResetCredits: sub.ManualResetCredits,
 		CreatedAt:          sub.CreatedAt,
 		UpdatedAt:          sub.UpdatedAt,
 		RevokedAt:          sub.DeletedAt,

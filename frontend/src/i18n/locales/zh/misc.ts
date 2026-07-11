@@ -133,7 +133,17 @@ export default {
     resetIn: '{time} 后重置',
     quotaEndsIn: '额度将在 {time} 后结束',
     windowNotActive: '等待首次使用',
-    usageOf: '已用 {used} / {limit}'
+    oneTimeDailyHint: '24小时有效，日卡不自动重置',
+    usageOf: '已用 {used} / {limit}',
+    manualReset: {
+      remaining: '剩余 {count} 次手动重置机会',
+      inactive: '订阅未生效，暂不可重置',
+      noCredits: '暂无重置机会，再次购买同套餐可获得',
+      button: '重置日额度',
+      confirm: '确认消耗 1 次重置机会，将日额度清零？',
+      success: '日额度已重置',
+      failed: '重置失败'
+    }
   },
 
   // Onboarding Tour

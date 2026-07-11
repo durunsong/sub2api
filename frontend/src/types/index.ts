@@ -1726,6 +1726,7 @@ export interface UserSubscription {
   daily_usage_tokens?: number
   weekly_usage_tokens?: number
   monthly_usage_tokens?: number
+  manual_reset_credits?: number
   daily_window_start: string | null
   weekly_window_start: string | null
   monthly_window_start: string | null

@@ -53763,6 +53763,8 @@ type UserSubscriptionMutation struct {
 	addweekly_usage_tokens  *int64
 	monthly_usage_tokens    *int64
 	addmonthly_usage_tokens *int64
+	manual_reset_credits    *int
+	addmanual_reset_credits *int
 	assigned_at             *time.Time
 	notes                   *string
 	clearedFields           map[string]struct{}
@@ -54662,6 +54664,62 @@ func (m *UserSubscriptionMutation) ResetMonthlyUsageTokens() {
 	m.addmonthly_usage_tokens = nil
 }
 
+// SetManualResetCredits sets the "manual_reset_credits" field.
+func (m *UserSubscriptionMutation) SetManualResetCredits(i int) {
+	m.manual_reset_credits = &i
+	m.addmanual_reset_credits = nil
+}
+
+// ManualResetCredits returns the value of the "manual_reset_credits" field in the mutation.
+func (m *UserSubscriptionMutation) ManualResetCredits() (r int, exists bool) {
+	v := m.manual_reset_credits
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldManualResetCredits returns the old "manual_reset_credits" field's value of the UserSubscription entity.
+// If the UserSubscription object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserSubscriptionMutation) OldManualResetCredits(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldManualResetCredits is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldManualResetCredits requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldManualResetCredits: %w", err)
+	}
+	return oldValue.ManualResetCredits, nil
+}
+
+// AddManualResetCredits adds i to the "manual_reset_credits" field.
+func (m *UserSubscriptionMutation) AddManualResetCredits(i int) {
+	if m.addmanual_reset_credits != nil {
+		*m.addmanual_reset_credits += i
+	} else {
+		m.addmanual_reset_credits = &i
+	}
+}
+
+// AddedManualResetCredits returns the value that was added to the "manual_reset_credits" field in this mutation.
+func (m *UserSubscriptionMutation) AddedManualResetCredits() (r int, exists bool) {
+	v := m.addmanual_reset_credits
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetManualResetCredits resets all changes to the "manual_reset_credits" field.
+func (m *UserSubscriptionMutation) ResetManualResetCredits() {
+	m.manual_reset_credits = nil
+	m.addmanual_reset_credits = nil
+}
+
 // SetAssignedBy sets the "assigned_by" field.
 func (m *UserSubscriptionMutation) SetAssignedBy(i int64) {
 	m.assigned_by_user = &i
@@ -54978,7 +55036,7 @@ func (m *UserSubscriptionMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UserSubscriptionMutation) Fields() []string {
-	fields := make([]string, 0, 20)
+	fields := make([]string, 0, 21)
 	if m.created_at != nil {
 		fields = append(fields, usersubscription.FieldCreatedAt)
 	}
@@ -55029,6 +55087,9 @@ func (m *UserSubscriptionMutation) Fields() []string {
 	}
 	if m.monthly_usage_tokens != nil {
 		fields = append(fields, usersubscription.FieldMonthlyUsageTokens)
+	}
+	if m.manual_reset_credits != nil {
+		fields = append(fields, usersubscription.FieldManualResetCredits)
 	}
 	if m.assigned_by_user != nil {
 		fields = append(fields, usersubscription.FieldAssignedBy)
@@ -55081,6 +55142,8 @@ func (m *UserSubscriptionMutation) Field(name string) (ent.Value, bool) {
 		return m.WeeklyUsageTokens()
 	case usersubscription.FieldMonthlyUsageTokens:
 		return m.MonthlyUsageTokens()
+	case usersubscription.FieldManualResetCredits:
+		return m.ManualResetCredits()
 	case usersubscription.FieldAssignedBy:
 		return m.AssignedBy()
 	case usersubscription.FieldAssignedAt:
@@ -55130,6 +55193,8 @@ func (m *UserSubscriptionMutation) OldField(ctx context.Context, name string) (e
 		return m.OldWeeklyUsageTokens(ctx)
 	case usersubscription.FieldMonthlyUsageTokens:
 		return m.OldMonthlyUsageTokens(ctx)
+	case usersubscription.FieldManualResetCredits:
+		return m.OldManualResetCredits(ctx)
 	case usersubscription.FieldAssignedBy:
 		return m.OldAssignedBy(ctx)
 	case usersubscription.FieldAssignedAt:
@@ -55264,6 +55329,13 @@ func (m *UserSubscriptionMutation) SetField(name string, value ent.Value) error 
 		}
 		m.SetMonthlyUsageTokens(v)
 		return nil
+	case usersubscription.FieldManualResetCredits:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetManualResetCredits(v)
+		return nil
 	case usersubscription.FieldAssignedBy:
 		v, ok := value.(int64)
 		if !ok {
@@ -55311,6 +55383,9 @@ func (m *UserSubscriptionMutation) AddedFields() []string {
 	if m.addmonthly_usage_tokens != nil {
 		fields = append(fields, usersubscription.FieldMonthlyUsageTokens)
 	}
+	if m.addmanual_reset_credits != nil {
+		fields = append(fields, usersubscription.FieldManualResetCredits)
+	}
 	return fields
 }
 
@@ -55331,6 +55406,8 @@ func (m *UserSubscriptionMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedWeeklyUsageTokens()
 	case usersubscription.FieldMonthlyUsageTokens:
 		return m.AddedMonthlyUsageTokens()
+	case usersubscription.FieldManualResetCredits:
+		return m.AddedManualResetCredits()
 	}
 	return nil, false
 }
@@ -55381,6 +55458,13 @@ func (m *UserSubscriptionMutation) AddField(name string, value ent.Value) error 
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddMonthlyUsageTokens(v)
+		return nil
+	case usersubscription.FieldManualResetCredits:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddManualResetCredits(v)
 		return nil
 	}
 	return fmt.Errorf("unknown UserSubscription numeric field %s", name)
@@ -55498,6 +55582,9 @@ func (m *UserSubscriptionMutation) ResetField(name string) error {
 		return nil
 	case usersubscription.FieldMonthlyUsageTokens:
 		m.ResetMonthlyUsageTokens()
+		return nil
+	case usersubscription.FieldManualResetCredits:
+		m.ResetManualResetCredits()
 		return nil
 	case usersubscription.FieldAssignedBy:
 		m.ResetAssignedBy()

@@ -2428,8 +2428,14 @@ func init() {
 	usersubscriptionDescMonthlyUsageTokens := usersubscriptionFields[13].Descriptor()
 	// usersubscription.DefaultMonthlyUsageTokens holds the default value on creation for the monthly_usage_tokens field.
 	usersubscription.DefaultMonthlyUsageTokens = usersubscriptionDescMonthlyUsageTokens.Default.(int64)
+	// usersubscriptionDescManualResetCredits is the schema descriptor for manual_reset_credits field.
+	usersubscriptionDescManualResetCredits := usersubscriptionFields[14].Descriptor()
+	// usersubscription.DefaultManualResetCredits holds the default value on creation for the manual_reset_credits field.
+	usersubscription.DefaultManualResetCredits = usersubscriptionDescManualResetCredits.Default.(int)
+	// usersubscription.ManualResetCreditsValidator is a validator for the "manual_reset_credits" field. It is called by the builders before save.
+	usersubscription.ManualResetCreditsValidator = usersubscriptionDescManualResetCredits.Validators[0].(func(int) error)
 	// usersubscriptionDescAssignedAt is the schema descriptor for assigned_at field.
-	usersubscriptionDescAssignedAt := usersubscriptionFields[15].Descriptor()
+	usersubscriptionDescAssignedAt := usersubscriptionFields[16].Descriptor()
 	// usersubscription.DefaultAssignedAt holds the default value on creation for the assigned_at field.
 	usersubscription.DefaultAssignedAt = usersubscriptionDescAssignedAt.Default.(func() time.Time)
 }

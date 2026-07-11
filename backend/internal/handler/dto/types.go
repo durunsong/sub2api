@@ -628,6 +628,8 @@ type UserSubscription struct {
 	WeeklyUsageTokens  int64 `json:"weekly_usage_tokens"`
 	MonthlyUsageTokens int64 `json:"monthly_usage_tokens"`
 
+	ManualResetCredits int `json:"manual_reset_credits"`
+
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`
 	RevokedAt *time.Time `json:"revoked_at,omitempty"`
