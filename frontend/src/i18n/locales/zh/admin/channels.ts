@@ -646,7 +646,7 @@ export default {
       selectUser: '选择用户',
       selectGroup: '选择订阅分组',
       groupHint: '仅显示订阅计费类型的分组',
-      validityHint: '订阅的有效天数',
+      validityHint: '订阅的有效天数（天卡请填 1；对已过期用户再次分配会重新开通并清零用量）',
       adjustingFor: '为以下用户调整订阅',
       currentExpiration: '当前到期时间',
       adjustDaysPlaceholder: '正数延长，负数缩短',

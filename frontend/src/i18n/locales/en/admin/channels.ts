@@ -646,7 +646,7 @@ export default {
       selectUser: 'Select a user',
       selectGroup: 'Select a subscription group',
       groupHint: 'Only groups with subscription billing type are shown',
-      validityHint: 'Number of days the subscription will be valid',
+      validityHint: 'Number of validity days (use 1 for daily cards; re-assigning an expired user renews and clears usage)',
       adjustingFor: 'Adjusting subscription for',
       currentExpiration: 'Current expiration',
       adjustDaysPlaceholder: 'Positive to extend, negative to shorten',

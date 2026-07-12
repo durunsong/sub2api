@@ -198,9 +198,10 @@ type AssignSubscriptionInput struct {
 	Notes        string
 }
 
-// AssignSubscription 分配订阅给用户（不允许重复分配）
+// AssignSubscription 分配订阅给用户。
+// 已有同分组订阅时走续期/续订（与支付、兑换一致），不会把已过期记录当成功复用。
 func (s *SubscriptionService) AssignSubscription(ctx context.Context, input *AssignSubscriptionInput) (*UserSubscription, error) {
-	sub, _, err := s.assignSubscriptionWithReuse(ctx, input)
+	sub, _, err := s.assignOrExtendSubscription(ctx, input, false)
 	if err != nil {
 		return nil, err
 	}
@@ -544,13 +545,13 @@ func (s *SubscriptionService) BulkAssignSubscription(ctx context.Context, input 
 	}
 
 	for _, userID := range input.UserIDs {
-		sub, reused, err := s.assignSubscriptionWithReuse(ctx, &AssignSubscriptionInput{
+		sub, reused, err := s.assignOrExtendSubscription(ctx, &AssignSubscriptionInput{
 			UserID:       userID,
 			GroupID:      input.GroupID,
 			ValidityDays: input.ValidityDays,
 			AssignedBy:   input.AssignedBy,
 			Notes:        input.Notes,
-		})
+		}, false)
 		if err != nil {
 			result.FailedCount++
 			result.Errors = append(result.Errors, fmt.Sprintf("user %d: %v", userID, err))

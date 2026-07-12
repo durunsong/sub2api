@@ -361,16 +361,18 @@ async function loadSubscriptions() {
   }
 }
 
+function isSubscriptionExpired(subscription: UserSubscription): boolean {
+  if (subscription.status === 'expired') return true
+  if (!subscription.expires_at) return false
+  return new Date(subscription.expires_at).getTime() <= Date.now()
+}
+
 function canManualReset(subscription: UserSubscription): boolean {
   const credits = subscription.manual_reset_credits || 0
   if (credits <= 0) return false
   // 日卡：有付费待激活次数时，即使展示已过期也可点重置起算新 24h
   if (isOneTimeDailyQuota(subscription)) return true
-  return (
-    subscription.status === 'active' &&
-    !!subscription.expires_at &&
-    new Date(subscription.expires_at).getTime() > Date.now()
-  )
+  return subscription.status === 'active' && !isSubscriptionExpired(subscription)
 }
 
 function manualResetHint(subscription: UserSubscription): string {
@@ -378,14 +380,20 @@ function manualResetHint(subscription: UserSubscription): string {
   if (credits > 0 && isOneTimeDailyQuota(subscription)) {
     return t('userSubscriptions.manualReset.pendingActivate')
   }
-  if (subscription.status !== 'active') {
-    return t('userSubscriptions.manualReset.inactive')
-  }
-  if (!subscription.expires_at || new Date(subscription.expires_at).getTime() <= Date.now()) {
-    return t('userSubscriptions.manualReset.inactive')
-  }
   if (credits <= 0) {
+    if (isSubscriptionExpired(subscription) || subscription.status === 'expired') {
+      return t('userSubscriptions.manualReset.expiredNoCredits')
+    }
+    if (subscription.status === 'revoked') {
+      return t('userSubscriptions.manualReset.revoked')
+    }
     return t('userSubscriptions.manualReset.noCredits')
+  }
+  if (subscription.status === 'revoked') {
+    return t('userSubscriptions.manualReset.revoked')
+  }
+  if (isSubscriptionExpired(subscription)) {
+    return t('userSubscriptions.manualReset.expired')
   }
   return ''
 }
@@ -474,8 +482,11 @@ function formatDurationParts(parts: RemainingDurationParts): string {
 
 function formatDailyUsageWindow(subscription: UserSubscription): string {
   if (isOneTimeDailyQuota(subscription) && subscription.expires_at) {
+    if (isSubscriptionExpired(subscription)) {
+      return t('userSubscriptions.quotaEnded')
+    }
     const parts = getRemainingDurationParts(subscription.expires_at)
-    if (!parts) return t('userSubscriptions.windowNotActive')
+    if (!parts) return t('userSubscriptions.quotaEnded')
     return t('userSubscriptions.quotaEndsIn', { time: formatDurationParts(parts) })
   }
 
