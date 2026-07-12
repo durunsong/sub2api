@@ -510,51 +510,6 @@ func TestAssignSubscriptionKeepsWorkingWhenIdempotencyStoreUnavailable(t *testin
 	require.Equal(t, 1, subRepo.createCalls, "semantic idempotent endpoint should not depend on idempotency store availability")
 }
 
-func TestNormalizeAssignValidityDays(t *testing.T) {
-	require.Equal(t, 30, normalizeAssignValidityDays(0))
-	require.Equal(t, 30, normalizeAssignValidityDays(-5))
-	require.Equal(t, MaxValidityDays, normalizeAssignValidityDays(MaxValidityDays+100))
-	require.Equal(t, 7, normalizeAssignValidityDays(7))
-}
-
-func TestDetectAssignSemanticConflictCases(t *testing.T) {
-	start := time.Date(2026, 2, 20, 10, 0, 0, 0, time.UTC)
-	base := &UserSubscription{
-		UserID:    1,
-		GroupID:   1,
-		StartsAt:  start,
-		ExpiresAt: start.AddDate(0, 0, 30),
-		Notes:     "same",
-	}
-
-	reason, conflict := detectAssignSemanticConflict(base, &AssignSubscriptionInput{
-		UserID:       1,
-		GroupID:      1,
-		ValidityDays: 30,
-		Notes:        "same",
-	})
-	require.False(t, conflict)
-	require.Equal(t, "", reason)
-
-	reason, conflict = detectAssignSemanticConflict(base, &AssignSubscriptionInput{
-		UserID:       1,
-		GroupID:      1,
-		ValidityDays: 60,
-		Notes:        "same",
-	})
-	require.True(t, conflict)
-	require.Equal(t, "validity_days_mismatch", reason)
-
-	reason, conflict = detectAssignSemanticConflict(base, &AssignSubscriptionInput{
-		UserID:       1,
-		GroupID:      1,
-		ValidityDays: 30,
-		Notes:        "other",
-	})
-	require.True(t, conflict)
-	require.Equal(t, "notes_mismatch", reason)
-}
-
 func TestAssignSubscriptionGroupTypeValidation(t *testing.T) {
 	groupRepo := &subscriptionGroupRepoStub{
 		group: &Group{ID: 1, SubscriptionType: SubscriptionTypeStandard},
@@ -573,8 +528,4 @@ func TestAssignSubscriptionGroupTypeValidation(t *testing.T) {
 
 func strconvFormatInt(v int64) string {
 	return strconv.FormatInt(v, 10)
-}
-
-func infraerrorsReason(err error) string {
-	return infraerrors.Reason(err)
 }
