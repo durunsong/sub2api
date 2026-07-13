@@ -17,7 +17,7 @@
     v-else
     ref="pageRef"
     @mousemove="onPointerMove"
-    class="page-root relative flex min-h-screen flex-col overflow-hidden bg-[#eef3ff] text-slate-950 dark:bg-[#07111f] dark:text-white"
+    class="page-root relative flex min-h-screen flex-col overflow-hidden bg-[#f7fbff] text-slate-950 dark:bg-[#07111f] dark:text-white"
   >
     <!-- Background Decorations -->
     <div class="pointer-events-none absolute inset-0 overflow-hidden">
@@ -54,7 +54,11 @@
         <!-- Nav Actions -->
         <div class="flex items-center gap-3">
           <!-- Language Switcher -->
-          <LocaleSwitcher />
+          <div
+            class="rounded-full border border-slate-200/80 bg-white/90 px-1 shadow-sm shadow-slate-900/5 backdrop-blur-xl dark:border-white/10 dark:bg-white/10"
+          >
+            <LocaleSwitcher />
+          </div>
 
           <!-- Doc Link -->
           <a
@@ -62,7 +66,7 @@
             :href="docUrl"
             target="_blank"
             rel="noopener noreferrer"
-            class="hover-pop rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-dark-400 dark:hover:bg-dark-800 dark:hover:text-white"
+            class="hover-pop rounded-full border border-slate-200/80 bg-white/90 p-2 text-slate-700 shadow-sm shadow-slate-900/5 backdrop-blur-xl transition-colors hover:bg-white hover:text-cyan-700 dark:border-white/10 dark:bg-white/10 dark:text-slate-100 dark:hover:bg-white/15 dark:hover:text-cyan-200"
             :title="t('home.viewDocs')"
           >
             <Icon name="book" size="md" />
@@ -71,7 +75,7 @@
           <!-- Theme Toggle -->
           <button
             @click="toggleTheme"
-            class="hover-pop rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-dark-400 dark:hover:bg-dark-800 dark:hover:text-white"
+            class="hover-pop rounded-full border border-slate-200/80 bg-white/90 p-2 text-slate-700 shadow-sm shadow-slate-900/5 backdrop-blur-xl transition-colors hover:bg-white hover:text-cyan-700 dark:border-white/10 dark:bg-white/10 dark:text-slate-100 dark:hover:bg-white/15 dark:hover:text-cyan-200"
             :title="isDark ? t('home.switchToLight') : t('home.switchToDark')"
           >
             <Icon v-if="isDark" name="sun" size="md" />
@@ -163,51 +167,72 @@
             </div>
           </div>
 
-          <!-- Right: Terminal Animation -->
+          <!-- Right: Product Cockpit -->
           <div v-reveal="{ delay: 220 }" class="flex justify-center lg:justify-end">
-            <div class="terminal-container">
-              <div class="terminal-window">
-                <!-- Window header -->
-                <div class="terminal-header">
-                  <div class="terminal-buttons">
-                    <span class="btn-close"></span>
-                    <span class="btn-minimize"></span>
-                    <span class="btn-maximize"></span>
+            <div class="product-cockpit">
+              <div class="cockpit-frame">
+                <div class="cockpit-header">
+                  <div>
+                    <span class="cockpit-dot"></span>
+                    AI API 控制台
                   </div>
-                  <span class="terminal-title">service dashboard</span>
+                  <span>实时可用</span>
                 </div>
-                <!-- Terminal content -->
-                <div class="terminal-body">
-                  <div class="console-kpis">
-                    <div>
-                      <span>ACCESS</span>
-                      <strong>多模型</strong>
-                    </div>
-                    <div>
-                      <span>RESPONSE</span>
-                      <strong>快速</strong>
-                    </div>
-                    <div>
-                      <span>STATUS</span>
-                      <strong>可用</strong>
-                    </div>
+
+                <div class="credit-panel">
+                  <div>
+                    <p>当前可用额度</p>
+                    <strong>Token 余额清晰可查</strong>
                   </div>
-                  <div class="code-line line-1">
-                    <span class="code-prompt">$</span>
-                    <span class="code-cmd">curl</span>
-                    <span class="code-flag">-X POST</span>
-                    <span class="code-url">/v1/smart-route</span>
+                  <span>按量扣费</span>
+                </div>
+
+                <div class="cockpit-grid">
+                  <div class="cockpit-card primary-card">
+                    <span>接入状态</span>
+                    <strong>开箱即用</strong>
+                    <p>登录后查看 API Key 与接入说明</p>
                   </div>
-                  <div class="code-line line-2">
-                    <span class="code-comment"># balance checked · token usage tracked · ready to work</span>
+                  <div class="cockpit-card">
+                    <span>价格体验</span>
+                    <strong>用多少付多少</strong>
+                    <p>余额、消耗、账单统一展示</p>
                   </div>
-                  <div class="code-line line-3">
-                    <span class="code-success">200 OK</span>
-                    <span class="code-response">{ "status": "ready", "billing": "metered" }</span>
+                  <div class="cockpit-card">
+                    <span>稳定服务</span>
+                    <strong>长期可用</strong>
+                    <p>适合编码、脚本和团队协作</p>
                   </div>
-                  <div class="code-line line-4">
-                    <span class="code-prompt">$</span>
-                    <span class="cursor"></span>
+                </div>
+
+                <div class="flow-card">
+                  <div class="flow-step is-active">
+                    <span>01</span>
+                    <strong>购买额度</strong>
+                  </div>
+                  <div class="flow-line"></div>
+                  <div class="flow-step">
+                    <span>02</span>
+                    <strong>复制接入</strong>
+                  </div>
+                  <div class="flow-line"></div>
+                  <div class="flow-step">
+                    <span>03</span>
+                    <strong>查看用量</strong>
+                  </div>
+                </div>
+
+                <div class="insight-card">
+                  <div>
+                    <span class="insight-label">今日概览</span>
+                    <strong>费用透明，续费安心</strong>
+                  </div>
+                  <div class="mini-bars" aria-hidden="true">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
                   </div>
                 </div>
               </div>
@@ -219,7 +244,7 @@
         <div class="mb-12 flex flex-wrap items-center justify-center gap-3 md:gap-4">
           <div
             v-reveal="{ delay: 0 }"
-            class="feature-tag inline-flex items-center gap-2.5 rounded-full border border-white/70 bg-white/70 px-5 py-2.5 shadow-sm shadow-cyan-950/5 backdrop-blur-xl dark:border-white/10 dark:bg-white/10"
+            class="feature-tag inline-flex items-center gap-2.5 rounded-full border border-slate-200/80 bg-white/90 px-5 py-2.5 shadow-sm shadow-cyan-950/5 backdrop-blur-xl dark:border-white/10 dark:bg-white/10"
           >
             <Icon name="swap" size="sm" class="text-cyan-600 dark:text-cyan-300" />
             <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">
@@ -228,7 +253,7 @@
           </div>
           <div
             v-reveal="{ delay: 100 }"
-            class="feature-tag inline-flex items-center gap-2.5 rounded-full border border-white/70 bg-white/70 px-5 py-2.5 shadow-sm shadow-emerald-950/5 backdrop-blur-xl dark:border-white/10 dark:bg-white/10"
+            class="feature-tag inline-flex items-center gap-2.5 rounded-full border border-slate-200/80 bg-white/90 px-5 py-2.5 shadow-sm shadow-emerald-950/5 backdrop-blur-xl dark:border-white/10 dark:bg-white/10"
           >
             <Icon name="shield" size="sm" class="text-emerald-600 dark:text-emerald-300" />
             <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">
@@ -237,7 +262,7 @@
           </div>
           <div
             v-reveal="{ delay: 200 }"
-            class="feature-tag inline-flex items-center gap-2.5 rounded-full border border-white/70 bg-white/70 px-5 py-2.5 shadow-sm shadow-amber-950/5 backdrop-blur-xl dark:border-white/10 dark:bg-white/10"
+            class="feature-tag inline-flex items-center gap-2.5 rounded-full border border-slate-200/80 bg-white/90 px-5 py-2.5 shadow-sm shadow-amber-950/5 backdrop-blur-xl dark:border-white/10 dark:bg-white/10"
           >
             <Icon name="chart" size="sm" class="text-amber-600 dark:text-amber-300" />
             <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">
@@ -251,7 +276,7 @@
           <!-- Feature 1: Unified Gateway -->
           <div
             v-reveal="{ delay: 0 }"
-            class="feature-card group rounded-[2rem] border border-white/70 bg-white/70 p-7 shadow-[0_24px_80px_-48px_rgba(8,47,73,0.6)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1.5 dark:border-white/10 dark:bg-white/[0.07]"
+            class="feature-card group rounded-[2rem] border border-slate-200/80 bg-white/95 p-7 shadow-[0_24px_80px_-48px_rgba(8,47,73,0.6)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1.5 dark:border-white/10 dark:bg-white/[0.07]"
           >
             <div
               class="feature-icon mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-300 to-cyan-600 shadow-lg shadow-cyan-500/25 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6"
@@ -269,7 +294,7 @@
           <!-- Feature 2: Account Pool -->
           <div
             v-reveal="{ delay: 120 }"
-            class="feature-card group rounded-[2rem] border border-white/70 bg-white/70 p-7 shadow-[0_24px_80px_-48px_rgba(6,78,59,0.6)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1.5 dark:border-white/10 dark:bg-white/[0.07]"
+            class="feature-card group rounded-[2rem] border border-slate-200/80 bg-white/95 p-7 shadow-[0_24px_80px_-48px_rgba(6,78,59,0.6)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1.5 dark:border-white/10 dark:bg-white/[0.07]"
           >
             <div
               class="feature-icon mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-300 to-teal-600 shadow-lg shadow-emerald-500/25 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6"
@@ -299,7 +324,7 @@
           <!-- Feature 3: Billing & Quota -->
           <div
             v-reveal="{ delay: 240 }"
-            class="feature-card group rounded-[2rem] border border-white/70 bg-white/70 p-7 shadow-[0_24px_80px_-48px_rgba(146,64,14,0.6)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1.5 dark:border-white/10 dark:bg-white/[0.07]"
+            class="feature-card group rounded-[2rem] border border-slate-200/80 bg-white/95 p-7 shadow-[0_24px_80px_-48px_rgba(146,64,14,0.6)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1.5 dark:border-white/10 dark:bg-white/[0.07]"
           >
             <div
               class="feature-icon mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-200 to-orange-500 shadow-lg shadow-amber-500/25 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6"
@@ -696,214 +721,315 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Terminal Container */
-.terminal-container {
+/* Product Cockpit */
+.product-cockpit {
   position: relative;
-  display: inline-block;
+  width: min(560px, calc(100vw - 48px));
 }
 
-.terminal-container::before {
+.product-cockpit::before {
   content: '';
   position: absolute;
-  inset: -18px;
-  border-radius: 34px;
-  background:
-    linear-gradient(135deg, rgba(34, 211, 238, 0.3), rgba(16, 185, 129, 0.18), transparent 70%),
-    radial-gradient(circle at 30% 10%, rgba(251, 191, 36, 0.2), transparent 34%);
-  filter: blur(10px);
-  opacity: 0.9;
+  inset: 20px -16px -18px 28px;
+  border-radius: 42px;
+  background: linear-gradient(135deg, rgba(20, 184, 166, 0.32), rgba(56, 189, 248, 0.28));
+  filter: blur(32px);
 }
 
-/* Terminal Window */
-.terminal-window {
+.cockpit-frame {
   position: relative;
-  width: min(520px, calc(100vw - 48px));
-  background:
-    linear-gradient(145deg, rgba(4, 13, 27, 0.98) 0%, rgba(8, 31, 49, 0.96) 54%, rgba(2, 6, 23, 0.98) 100%);
-  border-radius: 24px;
-  box-shadow:
-    0 30px 80px -30px rgba(8, 47, 73, 0.75),
-    0 0 0 1px rgba(125, 211, 252, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
   overflow: hidden;
-  transform: perspective(1100px) rotateX(3deg) rotateY(-5deg);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 34px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(236, 254, 255, 0.74)),
+    radial-gradient(circle at 15% 0%, rgba(34, 211, 238, 0.22), transparent 36%);
+  box-shadow:
+    0 28px 90px -48px rgba(15, 23, 42, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  padding: 22px;
+  transform: perspective(1200px) rotateX(2deg) rotateY(-4deg);
   transition:
     transform 0.3s ease,
     box-shadow 0.3s ease;
 }
 
-.terminal-window:hover {
+.cockpit-frame:hover {
   box-shadow:
-    0 36px 100px -36px rgba(8, 145, 178, 0.72),
-    0 0 0 1px rgba(125, 211, 252, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.16);
-  transform: perspective(1100px) rotateX(0deg) rotateY(0deg) translateY(-6px);
+    0 34px 110px -54px rgba(8, 145, 178, 0.78),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  transform: perspective(1200px) rotateX(0deg) rotateY(0deg) translateY(-4px);
 }
 
-/* Terminal Header */
-.terminal-header {
+:deep(.dark) .cockpit-frame {
+  border-color: rgba(255, 255, 255, 0.1);
+  background:
+    linear-gradient(145deg, rgba(8, 19, 36, 0.98), rgba(10, 34, 53, 0.96)),
+    radial-gradient(circle at 15% 0%, rgba(34, 211, 238, 0.22), transparent 36%);
+  box-shadow:
+    0 35px 90px -38px rgba(34, 211, 238, 0.48),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.cockpit-header {
   display: flex;
   align-items: center;
-  padding: 14px 18px;
-  background: linear-gradient(90deg, rgba(15, 23, 42, 0.8), rgba(8, 47, 73, 0.38));
-  border-bottom: 1px solid rgba(125, 211, 252, 0.12);
+  justify-content: space-between;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
 }
 
-.terminal-buttons {
+:deep(.dark) .cockpit-header {
+  color: #e2e8f0;
+}
+
+.cockpit-header > div {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: 9px;
 }
 
-.terminal-buttons span {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
+.cockpit-header > span {
+  border: 1px solid rgba(14, 165, 233, 0.2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 6px 10px;
+  color: #0369a1;
+  font-size: 11px;
+  letter-spacing: 0.12em;
 }
 
-.btn-close {
-  background: #ef4444;
-}
-.btn-minimize {
-  background: #eab308;
-}
-.btn-maximize {
-  background: #22c55e;
-}
-
-.terminal-title {
-  flex: 1;
-  text-align: center;
-  font-size: 12px;
-  font-family: ui-monospace, monospace;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: #7dd3fc;
-  margin-right: 52px;
-}
-
-/* Terminal Body */
-.terminal-body {
-  padding: 22px 26px 26px;
-  font-family: ui-monospace, 'Fira Code', monospace;
-  font-size: 14px;
-  line-height: 2.05;
-}
-
-.console-kpis {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  margin-bottom: 18px;
-}
-
-.console-kpis div {
-  border: 1px solid rgba(125, 211, 252, 0.13);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.045);
-  padding: 10px 12px;
-}
-
-.console-kpis span {
-  display: block;
-  margin-bottom: 2px;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.2em;
+:deep(.dark) .cockpit-header > span {
+  border-color: rgba(125, 211, 252, 0.18);
+  background: rgba(255, 255, 255, 0.07);
   color: #67e8f9;
 }
 
-.console-kpis strong {
-  font-size: 16px;
+.cockpit-dot {
+  height: 10px;
+  width: 10px;
+  border-radius: 999px;
+  background: #10b981;
+  box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.12), 0 0 24px rgba(16, 185, 129, 0.7);
+}
+
+.credit-panel {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 22px;
+  border-radius: 28px;
+  background:
+    linear-gradient(135deg, #0f172a, #0e7490 62%, #5eead4),
+    radial-gradient(circle at 80% 10%, rgba(250, 204, 21, 0.35), transparent 26%);
+  padding: 24px;
+  color: white;
+  box-shadow: 0 22px 60px -36px rgba(8, 47, 73, 0.9);
+}
+
+.credit-panel p {
+  margin: 0 0 8px;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.credit-panel strong {
+  display: block;
+  font-size: clamp(22px, 3vw, 32px);
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+.credit-panel > span {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  padding: 8px 12px;
+  color: #ecfeff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.cockpit-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.cockpit-card,
+.insight-card,
+.flow-card {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(18px);
+}
+
+:deep(.dark) .cockpit-card,
+:deep(.dark) .insight-card,
+:deep(.dark) .flow-card {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.065);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.cockpit-card {
+  min-height: 132px;
+  border-radius: 24px;
+  padding: 18px;
+}
+
+.cockpit-card span,
+.insight-label,
+.flow-step span {
+  display: block;
+  color: #0891b2;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+:deep(.dark) .cockpit-card span,
+:deep(.dark) .insight-label,
+:deep(.dark) .flow-step span {
+  color: #67e8f9;
+}
+
+.cockpit-card strong {
+  display: block;
+  margin-top: 12px;
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 950;
+  letter-spacing: -0.03em;
+}
+
+:deep(.dark) .cockpit-card strong {
   color: #f8fafc;
 }
 
-.code-line {
+.cockpit-card p {
+  margin: 10px 0 0;
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+:deep(.dark) .cockpit-card p {
+  color: #94a3b8;
+}
+
+.primary-card {
+  background: linear-gradient(160deg, rgba(236, 254, 255, 0.96), rgba(255, 255, 255, 0.72));
+}
+
+:deep(.dark) .primary-card {
+  background: linear-gradient(160deg, rgba(8, 145, 178, 0.16), rgba(255, 255, 255, 0.07));
+}
+
+.flow-card {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  opacity: 0;
-  animation: line-appear 0.5s ease forwards;
+  gap: 10px;
+  margin-top: 14px;
+  border-radius: 24px;
+  padding: 16px;
 }
 
-.line-1 {
-  animation-delay: 0.3s;
-}
-.line-2 {
-  animation-delay: 1s;
-}
-.line-3 {
-  animation-delay: 1.8s;
-}
-.line-4 {
-  animation-delay: 2.5s;
+.flow-step {
+  flex: 0 0 auto;
+  border-radius: 18px;
+  padding: 10px 12px;
 }
 
-@keyframes line-appear {
-  from {
-    opacity: 0;
-    transform: translateY(5px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.flow-step.is-active {
+  background: rgba(34, 211, 238, 0.13);
 }
 
-.code-prompt {
-  color: #34d399;
-  font-weight: bold;
+.flow-step strong {
+  display: block;
+  margin-top: 4px;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 900;
 }
-.code-cmd {
-  color: #67e8f9;
+
+:deep(.dark) .flow-step strong {
+  color: #f8fafc;
 }
-.code-flag {
-  color: #fbbf24;
+
+.flow-line {
+  height: 1px;
+  flex: 1;
+  min-width: 18px;
+  background: linear-gradient(90deg, rgba(8, 145, 178, 0.45), rgba(8, 145, 178, 0.04));
 }
-.code-url {
-  color: #93c5fd;
+
+.insight-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 14px;
+  border-radius: 24px;
+  padding: 18px;
 }
-.code-comment {
-  color: #94a3b8;
-  font-style: italic;
+
+.insight-card strong {
+  display: block;
+  margin-top: 6px;
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 950;
 }
-.code-success {
-  color: #022c22;
-  background: linear-gradient(135deg, #6ee7b7, #22d3ee);
-  padding: 2px 8px;
+
+:deep(.dark) .insight-card strong {
+  color: #f8fafc;
+}
+
+.mini-bars {
+  display: flex;
+  align-items: end;
+  gap: 6px;
+  height: 44px;
+}
+
+.mini-bars span {
+  display: block;
+  width: 10px;
   border-radius: 999px;
-  font-weight: 800;
-}
-.code-response {
-  color: #fde68a;
+  background: linear-gradient(180deg, #67e8f9, #10b981);
 }
 
-/* Blinking Cursor */
-.cursor {
-  display: inline-block;
-  width: 8px;
-  height: 16px;
-  background: #34d399;
-  animation: blink 1s step-end infinite;
-}
+.mini-bars span:nth-child(1) { height: 28px; }
+.mini-bars span:nth-child(2) { height: 38px; }
+.mini-bars span:nth-child(3) { height: 22px; }
+.mini-bars span:nth-child(4) { height: 44px; }
+.mini-bars span:nth-child(5) { height: 32px; }
 
-@keyframes blink {
-  0%,
-  50% {
-    opacity: 1;
+@media (max-width: 640px) {
+  .cockpit-grid {
+    grid-template-columns: 1fr;
   }
-  51%,
-  100% {
-    opacity: 0;
-  }
-}
 
-/* Dark mode adjustments */
-:deep(.dark) .terminal-window {
-  box-shadow:
-    0 35px 90px -35px rgba(34, 211, 238, 0.45),
-    0 0 0 1px rgba(125, 211, 252, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  .flow-card,
+  .credit-panel,
+  .insight-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .flow-line {
+    display: none;
+  }
 }
 
 /* ===== Scroll Reveal ===== */
@@ -923,10 +1049,10 @@ onMounted(() => {
 /* ===== Atmospheric Background ===== */
 .color-wash {
   background:
-    radial-gradient(circle at 12% 16%, rgba(34, 211, 238, 0.16), transparent 30%),
-    radial-gradient(circle at 82% 18%, rgba(16, 185, 129, 0.18), transparent 28%),
-    radial-gradient(circle at 70% 72%, rgba(245, 158, 11, 0.14), transparent 34%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.66), rgba(219, 234, 254, 0.62));
+    radial-gradient(circle at 10% 18%, rgba(34, 211, 238, 0.11), transparent 28%),
+    radial-gradient(circle at 86% 18%, rgba(20, 184, 166, 0.12), transparent 30%),
+    radial-gradient(circle at 70% 72%, rgba(245, 158, 11, 0.08), transparent 34%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(235, 248, 255, 0.9));
 }
 :deep(.dark) .color-wash {
   background:
@@ -937,7 +1063,7 @@ onMounted(() => {
 }
 
 .noise-layer {
-  opacity: 0.28;
+  opacity: 0.18;
   background-image:
     radial-gradient(rgba(15, 23, 42, 0.18) 0.7px, transparent 0.7px);
   background-size: 12px 12px;
@@ -946,8 +1072,11 @@ onMounted(() => {
 
 .orb {
   filter: blur(46px);
-  opacity: 0.55;
+  opacity: 0.26;
   will-change: transform;
+}
+:deep(.dark) .orb {
+  opacity: 0.55;
 }
 .orb-1 {
   background: #22d3ee;
@@ -1151,9 +1280,7 @@ onMounted(() => {
 @media (prefers-reduced-motion: reduce) {
   .orb,
   .grid-overlay,
-  .cta-orbit::after,
-  .code-line,
-  .cursor {
+  .cta-orbit::after {
     animation: none !important;
   }
   .cursor-glow {
