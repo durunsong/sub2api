@@ -106,7 +106,7 @@ const isOpen = ref(false)
 const containerRef = ref<HTMLElement | null>(null)
 const localStartDate = ref(props.startDate)
 const localEndDate = ref(props.endDate)
-const activePreset = ref<string | null>('last24Hours')
+const activePreset = ref<string | null>(null)
 
 const today = computed(() => {
   // Use local timezone to avoid UTC timezone issues
@@ -217,6 +217,15 @@ const presets: DatePreset[] = [
     }
   }
 ]
+
+// Detect active preset from initial props so display matches parent default (e.g. today)
+for (const preset of presets) {
+  const range = preset.getRange()
+  if (range.start === localStartDate.value && range.end === localEndDate.value) {
+    activePreset.value = preset.value
+    break
+  }
+}
 
 const displayValue = computed(() => {
   if (activePreset.value) {
