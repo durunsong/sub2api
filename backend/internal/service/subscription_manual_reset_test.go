@@ -16,8 +16,9 @@ func TestAssignOrExtendSubscription_ActiveDailyCardGrantsPendingResetWithoutRest
 		group: &Group{ID: 1, SubscriptionType: SubscriptionTypeSubscription},
 	}
 	subRepo := newSubscriptionUserSubRepoStub()
-	boughtAt := time.Date(2026, 7, 12, 10, 0, 0, 0, time.UTC)
-	oldExpires := boughtAt.AddDate(0, 0, 1) // tomorrow 10:00
+	// ponytail: 用相对时间，避免硬编码日期过期后把「未过期再买」误判成续订清零
+	boughtAt := time.Now().UTC().Add(-6 * time.Hour)
+	oldExpires := boughtAt.AddDate(0, 0, 1)
 	windowStart := startOfDay(boughtAt)
 	subRepo.seed(&UserSubscription{
 		ID:               100,
@@ -86,7 +87,7 @@ func TestUserResetDailyQuota_StartsFresh24hFromClick(t *testing.T) {
 		group: &Group{ID: 1, SubscriptionType: SubscriptionTypeSubscription},
 	}
 	subRepo := newSubscriptionUserSubRepoStub()
-	boughtAt := time.Date(2026, 7, 12, 10, 0, 0, 0, time.UTC)
+	boughtAt := time.Now().UTC().Add(-6 * time.Hour)
 	windowStart := startOfDay(boughtAt)
 	subRepo.seed(&UserSubscription{
 		ID:                 102,
