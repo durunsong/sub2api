@@ -129,16 +129,17 @@
         <div class="mb-12 grid items-center gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
           <!-- Left: Text Content -->
           <div class="text-center lg:text-left">
-            <div
-              v-reveal="{ delay: 0 }"
-              class="mb-5 inline-flex items-center gap-2 rounded-full border border-cyan-300/40 bg-white/70 px-3 py-1.5 text-xs font-semibold tracking-[0.22em] text-cyan-800 shadow-sm shadow-cyan-900/5 backdrop-blur dark:border-cyan-300/20 dark:bg-white/10 dark:text-cyan-200"
-            >
-              <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_16px_rgba(52,211,153,0.8)]"></span>
-              {{ t('home.showcase.kicker') }}
+            <div v-reveal="{ delay: 0 }" class="mb-5">
+              <div
+                class="inline-flex items-center gap-2 rounded-full border border-cyan-300/40 bg-white/70 px-3 py-1.5 text-xs font-semibold tracking-[0.22em] text-cyan-800 shadow-sm shadow-cyan-900/5 backdrop-blur dark:border-cyan-300/20 dark:bg-white/10 dark:text-cyan-200"
+              >
+                <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_16px_rgba(52,211,153,0.8)]"></span>
+                {{ t('home.showcase.kicker') }}
+              </div>
             </div>
             <h1
               v-reveal="{ delay: 80 }"
-              class="brand-shine mb-5 text-5xl font-black leading-[0.95] tracking-[-0.06em] text-slate-950 dark:text-white md:text-6xl lg:text-7xl"
+              class="brand-shine mx-auto mb-5 block w-fit max-w-full text-5xl font-black leading-[0.95] tracking-[-0.06em] text-slate-950 dark:text-white md:text-6xl lg:mx-0 lg:text-7xl"
               :data-text="siteName"
             >
               {{ siteName }}
@@ -1394,7 +1395,9 @@ onMounted(() => {
 /* ===== Brand text shine ===== */
 .brand-shine {
   position: relative;
-  display: inline-block;
+  display: block;
+  width: fit-content;
+  max-width: 100%;
 }
 
 .brand-shine::after {

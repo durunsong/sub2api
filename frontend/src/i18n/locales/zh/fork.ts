@@ -124,7 +124,7 @@ export default {
       headerService: 'AI API 服务',
       kicker: '稳定 AI API · Token 按量使用',
       titleLine1: '稳定使用 AI',
-      titleLine2: '从一个清晰入口开始。',
+      titleLine2: '从一个清晰入口开始',
       accessReady: '服务就绪',
       passTitle: '用量清晰，账单一目了然，低价稳定',
       defaultSubtitle: '稳定好用的 AI API 与 Token 服务',
