@@ -290,7 +290,7 @@ describe('PaymentView subscription filters', () => {
     const wrapper = await mountSubscriptionList(plans)
 
     expect(wrapper.text()).toContain('Claude(Kiro)')
-    expect(wrapper.text()).toContain('Anthropic(Claude)')
+    expect(wrapper.text()).toContain('Claude(GLM)')
     expect(wrapper.text()).toContain('OpenAI(GPT)')
     expect(wrapper.text()).toContain('天卡')
     expect(wrapper.text()).toContain('周卡')
