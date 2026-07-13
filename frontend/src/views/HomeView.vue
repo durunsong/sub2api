@@ -17,24 +17,17 @@
     v-else
     ref="pageRef"
     @mousemove="onPointerMove"
-    class="page-root relative flex min-h-screen flex-col overflow-hidden bg-gradient-to-br from-gray-50 via-indigo-50/40 to-gray-100 dark:from-dark-950 dark:via-dark-900 dark:to-dark-950"
+    class="page-root relative flex min-h-screen flex-col overflow-hidden bg-[#eef3ff] text-slate-950 dark:bg-[#07111f] dark:text-white"
   >
     <!-- Background Decorations -->
     <div class="pointer-events-none absolute inset-0 overflow-hidden">
+      <div class="color-wash absolute inset-0"></div>
+      <div class="noise-layer absolute inset-0"></div>
+      <div class="orb orb-1 absolute -right-24 top-10 h-[34rem] w-[34rem] rounded-full"></div>
+      <div class="orb orb-2 absolute -left-28 top-[34rem] h-[28rem] w-[28rem] rounded-full"></div>
+      <div class="orb orb-3 absolute bottom-20 right-1/4 h-72 w-72 rounded-full"></div>
       <div
-        class="blob blob-1 absolute -right-40 -top-40 h-96 w-96 rounded-full bg-indigo-400/20 blur-3xl"
-      ></div>
-      <div
-        class="blob blob-2 absolute -bottom-40 -left-40 h-96 w-96 rounded-full bg-violet-500/15 blur-3xl"
-      ></div>
-      <div
-        class="blob blob-3 absolute left-1/3 top-1/4 h-72 w-72 rounded-full bg-indigo-300/10 blur-3xl"
-      ></div>
-      <div
-        class="blob blob-4 absolute bottom-1/4 right-1/4 h-64 w-64 rounded-full bg-violet-400/10 blur-3xl"
-      ></div>
-      <div
-        class="grid-overlay absolute inset-0 bg-[linear-gradient(rgba(99,102,241,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(99,102,241,0.04)_1px,transparent_1px)] bg-[size:64px_64px]"
+        class="grid-overlay absolute inset-0 bg-[linear-gradient(rgba(15,23,42,0.055)_1px,transparent_1px),linear-gradient(90deg,rgba(15,23,42,0.045)_1px,transparent_1px)] bg-[size:56px_56px] dark:bg-[linear-gradient(rgba(148,163,184,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.045)_1px,transparent_1px)]"
       ></div>
       <!-- Cursor-following spotlight -->
       <div class="cursor-glow" :class="{ 'cursor-glow-active': pointerActive }"></div>
@@ -44,9 +37,17 @@
     <header class="relative z-20 px-6 py-4">
       <nav class="mx-auto flex max-w-6xl items-center justify-between">
         <!-- Logo -->
-        <div class="flex items-center">
-          <div class="logo-box h-10 w-10 overflow-hidden rounded-xl shadow-md">
+        <div class="flex items-center gap-3">
+          <div class="logo-box h-11 w-11 overflow-hidden rounded-2xl border border-white/70 bg-white/70 p-1 shadow-lg shadow-cyan-900/10 backdrop-blur-md dark:border-white/10 dark:bg-white/10">
             <img :src="siteLogo || '/logo.png'" alt="Logo" class="h-full w-full object-contain" />
+          </div>
+          <div class="hidden leading-tight sm:block">
+            <div class="text-sm font-semibold tracking-[0.24em] text-slate-900 dark:text-white">
+              {{ siteName }}
+            </div>
+            <div class="text-[11px] uppercase tracking-[0.28em] text-cyan-700/80 dark:text-cyan-300/80">
+              model traffic fabric
+            </div>
           </div>
         </div>
 
@@ -81,14 +82,14 @@
           <router-link
             v-if="isAuthenticated"
             :to="dashboardPath"
-            class="hover-pop inline-flex items-center gap-1.5 rounded-full bg-gray-900 py-1 pl-1 pr-2.5 transition-colors hover:bg-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700"
+            class="hover-pop inline-flex items-center gap-1.5 rounded-full bg-slate-950 py-1 pl-1 pr-3 shadow-lg shadow-cyan-950/20 transition-colors hover:bg-slate-800 dark:bg-white dark:hover:bg-cyan-50"
           >
             <span
-              class="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-violet-600 text-[10px] font-semibold text-white"
+              class="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-emerald-400 text-[10px] font-semibold text-slate-950"
             >
               {{ userInitial }}
             </span>
-            <span class="text-xs font-medium text-white">{{ t('home.dashboard') }}</span>
+            <span class="text-xs font-medium text-white dark:text-slate-950">{{ t('home.dashboard') }}</span>
             <svg
               class="h-3 w-3 text-gray-400"
               fill="none"
@@ -106,7 +107,7 @@
           <router-link
             v-else
             to="/login"
-            class="hover-pop inline-flex items-center rounded-full bg-gray-900 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700"
+            class="hover-pop inline-flex items-center rounded-full bg-slate-950 px-4 py-2 text-xs font-medium text-white shadow-lg shadow-cyan-950/20 transition-colors hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-cyan-50"
           >
             {{ t('home.login') }}
           </router-link>
@@ -115,39 +116,55 @@
     </header>
 
     <!-- Main Content -->
-    <main class="relative z-10 flex-1 px-6 py-16">
+    <main class="relative z-10 flex-1 px-6 pb-16 pt-12 md:pt-16">
       <div class="mx-auto max-w-6xl">
         <!-- Hero Section - Left/Right Layout -->
-        <div class="mb-12 flex flex-col items-center justify-between gap-12 lg:flex-row lg:gap-16">
+        <div class="mb-12 grid items-center gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
           <!-- Left: Text Content -->
-          <div class="flex-1 text-center lg:text-left">
-            <h1
+          <div class="text-center lg:text-left">
+            <div
               v-reveal="{ delay: 0 }"
-              class="mb-4 text-4xl font-bold text-gray-900 dark:text-white md:text-5xl lg:text-6xl"
+              class="mb-5 inline-flex items-center gap-2 rounded-full border border-cyan-300/40 bg-white/70 px-3 py-1.5 text-xs font-semibold tracking-[0.22em] text-cyan-800 shadow-sm shadow-cyan-900/5 backdrop-blur dark:border-cyan-300/20 dark:bg-white/10 dark:text-cyan-200"
+            >
+              <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_16px_rgba(52,211,153,0.8)]"></span>
+              私有化 AI 流量中枢
+            </div>
+            <h1
+              v-reveal="{ delay: 80 }"
+              class="mb-5 text-5xl font-black leading-[0.95] tracking-[-0.06em] text-slate-950 dark:text-white md:text-6xl lg:text-7xl"
             >
               {{ siteName }}
             </h1>
             <p
-              v-reveal="{ delay: 120 }"
-              class="mb-8 text-lg text-gray-600 dark:text-dark-300 md:text-xl"
+              v-reveal="{ delay: 160 }"
+              class="mx-auto mb-4 max-w-xl text-lg font-medium leading-8 text-slate-700 dark:text-slate-200 md:text-xl lg:mx-0"
             >
               {{ siteSubtitle }}
             </p>
+            <p
+              v-reveal="{ delay: 220 }"
+              class="mx-auto mb-8 max-w-xl text-sm leading-7 text-slate-500 dark:text-slate-400 lg:mx-0"
+            >
+              把多模型订阅、账号池、限额与审计收拢成一条可治理的 API 通道，让团队调用像使用内部基础设施一样稳定、清晰、可控。
+            </p>
 
             <!-- CTA Button -->
-            <div v-reveal="{ delay: 240 }">
+            <div v-reveal="{ delay: 280 }" class="flex flex-col items-center gap-4 sm:flex-row lg:justify-start">
               <router-link
                 :to="isAuthenticated ? dashboardPath : '/login'"
-                class="btn cta-indigo cta-shine px-8 py-3 text-base text-white shadow-lg shadow-indigo-500/30"
+                class="cta-orbit inline-flex items-center rounded-full px-7 py-3 text-base font-semibold text-slate-950 shadow-xl shadow-cyan-950/20"
               >
                 {{ isAuthenticated ? t('home.goToDashboard') : t('home.getStarted') }}
                 <Icon name="arrowRight" size="md" class="cta-arrow ml-2" :stroke-width="2" />
               </router-link>
+              <div class="text-xs font-medium uppercase tracking-[0.26em] text-slate-500 dark:text-slate-400">
+                no vendor lock · usage governed
+              </div>
             </div>
           </div>
 
           <!-- Right: Terminal Animation -->
-          <div v-reveal="{ delay: 200 }" class="flex flex-1 justify-center lg:justify-end">
+          <div v-reveal="{ delay: 220 }" class="flex justify-center lg:justify-end">
             <div class="terminal-container">
               <div class="terminal-window">
                 <!-- Window header -->
@@ -157,22 +174,36 @@
                     <span class="btn-minimize"></span>
                     <span class="btn-maximize"></span>
                   </div>
-                  <span class="terminal-title">terminal</span>
+                  <span class="terminal-title">gateway live console</span>
                 </div>
                 <!-- Terminal content -->
                 <div class="terminal-body">
+                  <div class="console-kpis">
+                    <div>
+                      <span>UPSTREAM</span>
+                      <strong>6</strong>
+                    </div>
+                    <div>
+                      <span>LATENCY</span>
+                      <strong>84ms</strong>
+                    </div>
+                    <div>
+                      <span>FAILOVER</span>
+                      <strong>ON</strong>
+                    </div>
+                  </div>
                   <div class="code-line line-1">
                     <span class="code-prompt">$</span>
                     <span class="code-cmd">curl</span>
                     <span class="code-flag">-X POST</span>
-                    <span class="code-url">/v1/messages</span>
+                    <span class="code-url">/v1/smart-route</span>
                   </div>
                   <div class="code-line line-2">
-                    <span class="code-comment"># Routing to upstream...</span>
+                    <span class="code-comment"># policy matched · quota checked · sticky session kept</span>
                   </div>
                   <div class="code-line line-3">
                     <span class="code-success">200 OK</span>
-                    <span class="code-response">{ "content": "Hello!" }</span>
+                    <span class="code-response">{ "provider": "best-fit", "metered": true }</span>
                   </div>
                   <div class="code-line line-4">
                     <span class="code-prompt">$</span>
@@ -185,52 +216,52 @@
         </div>
 
         <!-- Feature Tags - Centered -->
-        <div class="mb-12 flex flex-wrap items-center justify-center gap-4 md:gap-6">
+        <div class="mb-12 flex flex-wrap items-center justify-center gap-3 md:gap-4">
           <div
             v-reveal="{ delay: 0 }"
-            class="feature-tag inline-flex items-center gap-2.5 rounded-full border border-gray-200/50 bg-white/80 px-5 py-2.5 shadow-sm backdrop-blur-sm dark:border-dark-700/50 dark:bg-dark-800/80"
+            class="feature-tag inline-flex items-center gap-2.5 rounded-full border border-white/70 bg-white/70 px-5 py-2.5 shadow-sm shadow-cyan-950/5 backdrop-blur-xl dark:border-white/10 dark:bg-white/10"
           >
-            <Icon name="swap" size="sm" class="text-indigo-500" />
-            <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{
+            <Icon name="swap" size="sm" class="text-cyan-600 dark:text-cyan-300" />
+            <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{
               t('home.tags.subscriptionToApi')
             }}</span>
           </div>
           <div
             v-reveal="{ delay: 100 }"
-            class="feature-tag inline-flex items-center gap-2.5 rounded-full border border-gray-200/50 bg-white/80 px-5 py-2.5 shadow-sm backdrop-blur-sm dark:border-dark-700/50 dark:bg-dark-800/80"
+            class="feature-tag inline-flex items-center gap-2.5 rounded-full border border-white/70 bg-white/70 px-5 py-2.5 shadow-sm shadow-emerald-950/5 backdrop-blur-xl dark:border-white/10 dark:bg-white/10"
           >
-            <Icon name="shield" size="sm" class="text-violet-500" />
-            <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{
+            <Icon name="shield" size="sm" class="text-emerald-600 dark:text-emerald-300" />
+            <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{
               t('home.tags.stickySession')
             }}</span>
           </div>
           <div
             v-reveal="{ delay: 200 }"
-            class="feature-tag inline-flex items-center gap-2.5 rounded-full border border-gray-200/50 bg-white/80 px-5 py-2.5 shadow-sm backdrop-blur-sm dark:border-dark-700/50 dark:bg-dark-800/80"
+            class="feature-tag inline-flex items-center gap-2.5 rounded-full border border-white/70 bg-white/70 px-5 py-2.5 shadow-sm shadow-amber-950/5 backdrop-blur-xl dark:border-white/10 dark:bg-white/10"
           >
-            <Icon name="chart" size="sm" class="text-indigo-500" />
-            <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{
+            <Icon name="chart" size="sm" class="text-amber-600 dark:text-amber-300" />
+            <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{
               t('home.tags.realtimeBilling')
             }}</span>
           </div>
         </div>
 
         <!-- Features Grid -->
-        <div class="mb-12 grid gap-6 md:grid-cols-3">
+        <div class="mb-16 grid gap-5 md:grid-cols-3">
           <!-- Feature 1: Unified Gateway -->
           <div
             v-reveal="{ delay: 0 }"
-            class="feature-card group rounded-2xl border border-gray-200/50 bg-white/60 p-6 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-indigo-500/10 dark:border-dark-700/50 dark:bg-dark-800/60"
+            class="feature-card group rounded-[2rem] border border-white/70 bg-white/70 p-7 shadow-[0_24px_80px_-48px_rgba(8,47,73,0.6)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1.5 dark:border-white/10 dark:bg-white/[0.07]"
           >
             <div
-              class="feature-icon mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-lg shadow-indigo-500/30 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6"
+              class="feature-icon mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-300 to-cyan-600 shadow-lg shadow-cyan-500/25 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6"
             >
-              <Icon name="server" size="lg" class="text-white" />
+              <Icon name="server" size="lg" class="text-slate-950" />
             </div>
-            <h3 class="mb-2 text-lg font-semibold text-gray-900 dark:text-white">
+            <h3 class="mb-3 text-xl font-black tracking-[-0.03em] text-slate-950 dark:text-white">
               {{ t('home.features.unifiedGateway') }}
             </h3>
-            <p class="text-sm leading-relaxed text-gray-600 dark:text-dark-400">
+            <p class="text-sm leading-7 text-slate-600 dark:text-slate-400">
               {{ t('home.features.unifiedGatewayDesc') }}
             </p>
           </div>
@@ -238,13 +269,13 @@
           <!-- Feature 2: Account Pool -->
           <div
             v-reveal="{ delay: 120 }"
-            class="feature-card group rounded-2xl border border-gray-200/50 bg-white/60 p-6 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-violet-500/10 dark:border-dark-700/50 dark:bg-dark-800/60"
+            class="feature-card group rounded-[2rem] border border-white/70 bg-white/70 p-7 shadow-[0_24px_80px_-48px_rgba(6,78,59,0.6)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1.5 dark:border-white/10 dark:bg-white/[0.07]"
           >
             <div
-              class="feature-icon mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 shadow-lg shadow-violet-500/30 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6"
+              class="feature-icon mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-300 to-teal-600 shadow-lg shadow-emerald-500/25 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6"
             >
               <svg
-                class="h-6 w-6 text-white"
+                class="h-6 w-6 text-slate-950"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -257,10 +288,10 @@
                 />
               </svg>
             </div>
-            <h3 class="mb-2 text-lg font-semibold text-gray-900 dark:text-white">
+            <h3 class="mb-3 text-xl font-black tracking-[-0.03em] text-slate-950 dark:text-white">
               {{ t('home.features.multiAccount') }}
             </h3>
-            <p class="text-sm leading-relaxed text-gray-600 dark:text-dark-400">
+            <p class="text-sm leading-7 text-slate-600 dark:text-slate-400">
               {{ t('home.features.multiAccountDesc') }}
             </p>
           </div>
@@ -268,13 +299,13 @@
           <!-- Feature 3: Billing & Quota -->
           <div
             v-reveal="{ delay: 240 }"
-            class="feature-card group rounded-2xl border border-gray-200/50 bg-white/60 p-6 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-purple-500/10 dark:border-dark-700/50 dark:bg-dark-800/60"
+            class="feature-card group rounded-[2rem] border border-white/70 bg-white/70 p-7 shadow-[0_24px_80px_-48px_rgba(146,64,14,0.6)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1.5 dark:border-white/10 dark:bg-white/[0.07]"
           >
             <div
-              class="feature-icon mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg shadow-purple-500/30 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6"
+              class="feature-icon mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-200 to-orange-500 shadow-lg shadow-amber-500/25 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6"
             >
               <svg
-                class="h-6 w-6 text-white"
+                class="h-6 w-6 text-slate-950"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -287,10 +318,10 @@
                 />
               </svg>
             </div>
-            <h3 class="mb-2 text-lg font-semibold text-gray-900 dark:text-white">
+            <h3 class="mb-3 text-xl font-black tracking-[-0.03em] text-slate-950 dark:text-white">
               {{ t('home.features.balanceQuota') }}
             </h3>
-            <p class="text-sm leading-relaxed text-gray-600 dark:text-dark-400">
+            <p class="text-sm leading-7 text-slate-600 dark:text-slate-400">
               {{ t('home.features.balanceQuotaDesc') }}
             </p>
           </div>
@@ -298,10 +329,13 @@
 
         <!-- Supported Providers -->
         <div v-reveal="{ delay: 0 }" class="mb-8 text-center">
-          <h2 class="mb-3 text-2xl font-bold text-gray-900 dark:text-white">
+          <div class="mb-3 text-xs font-bold uppercase tracking-[0.32em] text-cyan-700 dark:text-cyan-300">
+            model portfolio
+          </div>
+          <h2 class="mb-3 text-3xl font-black tracking-[-0.04em] text-slate-950 dark:text-white">
             {{ t('home.providers.title') }}
           </h2>
-          <p class="text-sm text-gray-600 dark:text-dark-400">
+          <p class="text-sm text-slate-500 dark:text-slate-400">
             {{ t('home.providers.description') }}
           </p>
         </div>
@@ -310,100 +344,153 @@
           <!-- Claude - Supported -->
           <div
             v-reveal="{ delay: 0 }"
-            class="provider-chip flex items-center gap-2 rounded-xl border border-indigo-200 bg-white/60 px-5 py-3 ring-1 ring-indigo-500/20 backdrop-blur-sm dark:border-indigo-800 dark:bg-dark-800/60"
+            class="provider-chip flex items-center gap-2 rounded-2xl border border-white/70 bg-white/65 px-5 py-3 ring-1 ring-cyan-900/10 backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.07] dark:ring-white/10"
           >
             <div
               class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-orange-400 to-orange-500"
             >
               <span class="text-xs font-bold text-white">C</span>
             </div>
-            <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{ t('home.providers.claude') }}</span>
+            <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ t('home.providers.claude') }}</span>
             <span
-              class="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400"
+              class="rounded-md bg-cyan-100 px-1.5 py-0.5 text-[10px] font-bold text-cyan-700 dark:bg-cyan-400/10 dark:text-cyan-300"
               >{{ t('home.providers.supported') }}</span
             >
           </div>
           <!-- GPT - Supported -->
           <div
             v-reveal="{ delay: 80 }"
-            class="provider-chip flex items-center gap-2 rounded-xl border border-indigo-200 bg-white/60 px-5 py-3 ring-1 ring-indigo-500/20 backdrop-blur-sm dark:border-indigo-800 dark:bg-dark-800/60"
+            class="provider-chip flex items-center gap-2 rounded-2xl border border-white/70 bg-white/65 px-5 py-3 ring-1 ring-cyan-900/10 backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.07] dark:ring-white/10"
           >
             <div
               class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-green-500 to-green-600"
             >
               <span class="text-xs font-bold text-white">G</span>
             </div>
-            <span class="text-sm font-medium text-gray-700 dark:text-dark-200">GPT</span>
+            <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">GPT</span>
             <span
-              class="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400"
+              class="rounded-md bg-cyan-100 px-1.5 py-0.5 text-[10px] font-bold text-cyan-700 dark:bg-cyan-400/10 dark:text-cyan-300"
               >{{ t('home.providers.supported') }}</span
             >
           </div>
           <!-- Gemini - Supported -->
           <div
             v-reveal="{ delay: 160 }"
-            class="provider-chip flex items-center gap-2 rounded-xl border border-indigo-200 bg-white/60 px-5 py-3 ring-1 ring-indigo-500/20 backdrop-blur-sm dark:border-indigo-800 dark:bg-dark-800/60"
+            class="provider-chip flex items-center gap-2 rounded-2xl border border-white/70 bg-white/65 px-5 py-3 ring-1 ring-cyan-900/10 backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.07] dark:ring-white/10"
           >
             <div
               class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-600"
             >
               <span class="text-xs font-bold text-white">G</span>
             </div>
-            <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{ t('home.providers.gemini') }}</span>
+            <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ t('home.providers.gemini') }}</span>
             <span
-              class="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400"
+              class="rounded-md bg-cyan-100 px-1.5 py-0.5 text-[10px] font-bold text-cyan-700 dark:bg-cyan-400/10 dark:text-cyan-300"
               >{{ t('home.providers.supported') }}</span
             >
           </div>
           <!-- Antigravity - Supported -->
           <div
             v-reveal="{ delay: 240 }"
-            class="provider-chip flex items-center gap-2 rounded-xl border border-indigo-200 bg-white/60 px-5 py-3 ring-1 ring-indigo-500/20 backdrop-blur-sm dark:border-indigo-800 dark:bg-dark-800/60"
+            class="provider-chip flex items-center gap-2 rounded-2xl border border-white/70 bg-white/65 px-5 py-3 ring-1 ring-cyan-900/10 backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.07] dark:ring-white/10"
           >
             <div
               class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-rose-500 to-pink-600"
             >
               <span class="text-xs font-bold text-white">A</span>
             </div>
-            <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{ t('home.providers.antigravity') }}</span>
+            <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ t('home.providers.antigravity') }}</span>
             <span
-              class="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400"
+              class="rounded-md bg-cyan-100 px-1.5 py-0.5 text-[10px] font-bold text-cyan-700 dark:bg-cyan-400/10 dark:text-cyan-300"
               >{{ t('home.providers.supported') }}</span
             >
           </div>
           <!-- Kiro - Supported -->
           <div
             v-reveal="{ delay: 320 }"
-            class="provider-chip flex items-center gap-2 rounded-xl border border-indigo-200 bg-white/60 px-5 py-3 ring-1 ring-indigo-500/20 backdrop-blur-sm dark:border-indigo-800 dark:bg-dark-800/60"
+            class="provider-chip flex items-center gap-2 rounded-2xl border border-white/70 bg-white/65 px-5 py-3 ring-1 ring-cyan-900/10 backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.07] dark:ring-white/10"
           >
             <div
               class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600"
             >
               <span class="text-xs font-bold text-white">K</span>
             </div>
-            <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{ t('home.providers.kiro') }}</span>
+            <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ t('home.providers.kiro') }}</span>
             <span
-              class="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400"
+              class="rounded-md bg-cyan-100 px-1.5 py-0.5 text-[10px] font-bold text-cyan-700 dark:bg-cyan-400/10 dark:text-cyan-300"
               >{{ t('home.providers.supported') }}</span
             >
           </div>
           <!-- More - Coming Soon -->
           <div
             v-reveal="{ delay: 400, opacity: 0.6 }"
-            class="provider-chip flex items-center gap-2 rounded-xl border border-gray-200/50 bg-white/40 px-5 py-3 backdrop-blur-sm dark:border-dark-700/50 dark:bg-dark-800/40"
+            class="provider-chip flex items-center gap-2 rounded-2xl border border-white/60 bg-white/40 px-5 py-3 backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.04]"
           >
             <div
               class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-gray-500 to-gray-600"
             >
               <span class="text-xs font-bold text-white">+</span>
             </div>
-            <span class="text-sm font-medium text-gray-700 dark:text-dark-200">{{ t('home.providers.more') }}</span>
+            <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ t('home.providers.more') }}</span>
             <span
-              class="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 dark:bg-dark-700 dark:text-dark-400"
+              class="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-500 dark:bg-white/10 dark:text-slate-400"
               >{{ t('home.providers.soon') }}</span
             >
           </div>
         </div>
+
+        <!-- Product Narrative -->
+        <section
+          v-reveal="{ delay: 0 }"
+          class="mb-16 overflow-hidden rounded-[2.5rem] border border-white/70 bg-slate-950 text-white shadow-[0_35px_120px_-60px_rgba(8,47,73,0.8)] dark:border-white/10"
+        >
+          <div class="relative grid gap-8 p-7 md:p-10 lg:grid-cols-[0.95fr_1.05fr]">
+            <div class="panel-aurora absolute inset-0"></div>
+            <div class="relative">
+              <div class="mb-4 text-xs font-bold uppercase tracking-[0.34em] text-cyan-200">
+                control plane
+              </div>
+              <h2 class="mb-4 text-3xl font-black leading-tight tracking-[-0.04em] md:text-4xl">
+                不只是转发请求，而是把 AI 调用变成可运营的基础设施。
+              </h2>
+              <p class="max-w-xl text-sm leading-7 text-slate-300">
+                {{ siteName }} 将账号调度、模型选择、用量归因、限额策略和异常降级放在同一个界面里，让个人和团队都能用更少心智掌控更复杂的模型组合。
+              </p>
+            </div>
+            <div class="relative grid gap-3 sm:grid-cols-2">
+              <div
+                v-for="item in operationCards"
+                :key="item.title"
+                class="rounded-3xl border border-white/10 bg-white/[0.07] p-5 backdrop-blur-xl"
+              >
+                <div class="mb-3 text-2xl">{{ item.badge }}</div>
+                <h3 class="mb-2 text-base font-bold text-white">{{ item.title }}</h3>
+                <p class="text-xs leading-6 text-slate-300">{{ item.desc }}</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Workflow Strip -->
+        <section class="grid gap-4 md:grid-cols-3">
+          <div
+            v-for="(item, index) in workflowItems"
+            :key="item.title"
+            v-reveal="{ delay: index * 90 }"
+            class="workflow-card rounded-[2rem] border border-white/70 bg-white/65 p-6 backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.06]"
+          >
+            <div class="mb-5 flex items-center justify-between">
+              <span class="text-xs font-black uppercase tracking-[0.26em] text-cyan-700 dark:text-cyan-300">
+                0{{ index + 1 }}
+              </span>
+              <span class="h-px flex-1 bg-gradient-to-r from-cyan-300/70 to-transparent ml-4"></span>
+            </div>
+            <h3 class="mb-3 text-xl font-black tracking-[-0.03em] text-slate-950 dark:text-white">
+              {{ item.title }}
+            </h3>
+            <p class="text-sm leading-7 text-slate-600 dark:text-slate-400">{{ item.desc }}</p>
+          </div>
+        </section>
       </div>
     </main>
 
@@ -488,6 +575,44 @@ const siteSubtitle = computed(() => appStore.cachedPublicSettings?.site_subtitle
 const docUrl = computed(() => sanitizeUrl(appStore.cachedPublicSettings?.doc_url || appStore.docUrl || ''))
 const homeContent = computed(() => appStore.cachedPublicSettings?.home_content || '')
 
+const operationCards = [
+  {
+    badge: '01',
+    title: '智能调度',
+    desc: '按模型、配额、冷却状态与可用性动态选择上游，减少单点账号波动。',
+  },
+  {
+    badge: '02',
+    title: '成本可见',
+    desc: '把请求、Token、余额与团队消耗汇总到同一视角，方便复盘和控费。',
+  },
+  {
+    badge: '03',
+    title: '权限清晰',
+    desc: '用统一 API Key、分组和限额策略管理调用边界，减少密钥外溢风险。',
+  },
+  {
+    badge: '04',
+    title: '体验连续',
+    desc: '会话粘性与失败切换降低上下文抖动，让业务侧少感知底层变化。',
+  },
+]
+
+const workflowItems = [
+  {
+    title: '接入',
+    desc: '保留原有 OpenAI / Anthropic 风格调用习惯，将不同订阅能力收束到统一入口。',
+  },
+  {
+    title: '治理',
+    desc: '用分组、限额、用量统计和风控能力承接团队协作，而不是散落在各平台后台。',
+  },
+  {
+    title: '扩展',
+    desc: '新增模型或账号时只更新平台侧配置，业务代码继续面向同一套 API 工作。',
+  },
+]
+
 // Check if homeContent is a URL (for iframe display)
 const isHomeContentUrl = computed(() => {
   const content = homeContent.value.trim()
@@ -570,31 +695,51 @@ onMounted(() => {
   display: inline-block;
 }
 
+.terminal-container::before {
+  content: '';
+  position: absolute;
+  inset: -18px;
+  border-radius: 34px;
+  background:
+    linear-gradient(135deg, rgba(34, 211, 238, 0.3), rgba(16, 185, 129, 0.18), transparent 70%),
+    radial-gradient(circle at 30% 10%, rgba(251, 191, 36, 0.2), transparent 34%);
+  filter: blur(10px);
+  opacity: 0.9;
+}
+
 /* Terminal Window */
 .terminal-window {
-  width: 420px;
-  background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
-  border-radius: 14px;
+  position: relative;
+  width: min(520px, calc(100vw - 48px));
+  background:
+    linear-gradient(145deg, rgba(4, 13, 27, 0.98) 0%, rgba(8, 31, 49, 0.96) 54%, rgba(2, 6, 23, 0.98) 100%);
+  border-radius: 24px;
   box-shadow:
-    0 25px 50px -12px rgba(0, 0, 0, 0.4),
-    0 0 0 1px rgba(255, 255, 255, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    0 30px 80px -30px rgba(8, 47, 73, 0.75),
+    0 0 0 1px rgba(125, 211, 252, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
   overflow: hidden;
-  transform: perspective(1000px) rotateX(2deg) rotateY(-2deg);
-  transition: transform 0.3s ease;
+  transform: perspective(1100px) rotateX(3deg) rotateY(-5deg);
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
 .terminal-window:hover {
-  transform: perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(-4px);
+  box-shadow:
+    0 36px 100px -36px rgba(8, 145, 178, 0.72),
+    0 0 0 1px rgba(125, 211, 252, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  transform: perspective(1100px) rotateX(0deg) rotateY(0deg) translateY(-6px);
 }
 
 /* Terminal Header */
 .terminal-header {
   display: flex;
   align-items: center;
-  padding: 12px 16px;
-  background: rgba(30, 41, 59, 0.8);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 14px 18px;
+  background: linear-gradient(90deg, rgba(15, 23, 42, 0.8), rgba(8, 47, 73, 0.38));
+  border-bottom: 1px solid rgba(125, 211, 252, 0.12);
 }
 
 .terminal-buttons {
@@ -623,16 +768,46 @@ onMounted(() => {
   text-align: center;
   font-size: 12px;
   font-family: ui-monospace, monospace;
-  color: #64748b;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #7dd3fc;
   margin-right: 52px;
 }
 
 /* Terminal Body */
 .terminal-body {
-  padding: 20px 24px;
+  padding: 22px 26px 26px;
   font-family: ui-monospace, 'Fira Code', monospace;
   font-size: 14px;
-  line-height: 2;
+  line-height: 2.05;
+}
+
+.console-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.console-kpis div {
+  border: 1px solid rgba(125, 211, 252, 0.13);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.045);
+  padding: 10px 12px;
+}
+
+.console-kpis span {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: #67e8f9;
+}
+
+.console-kpis strong {
+  font-size: 16px;
+  color: #f8fafc;
 }
 
 .code-line {
@@ -669,31 +844,31 @@ onMounted(() => {
 }
 
 .code-prompt {
-  color: #22c55e;
+  color: #34d399;
   font-weight: bold;
 }
 .code-cmd {
-  color: #38bdf8;
+  color: #67e8f9;
 }
 .code-flag {
-  color: #a78bfa;
+  color: #fbbf24;
 }
 .code-url {
-  color: #818cf8;
+  color: #93c5fd;
 }
 .code-comment {
-  color: #64748b;
+  color: #94a3b8;
   font-style: italic;
 }
 .code-success {
-  color: #22c55e;
-  background: rgba(34, 197, 94, 0.15);
+  color: #022c22;
+  background: linear-gradient(135deg, #6ee7b7, #22d3ee);
   padding: 2px 8px;
-  border-radius: 4px;
-  font-weight: 600;
+  border-radius: 999px;
+  font-weight: 800;
 }
 .code-response {
-  color: #fbbf24;
+  color: #fde68a;
 }
 
 /* Blinking Cursor */
@@ -701,7 +876,7 @@ onMounted(() => {
   display: inline-block;
   width: 8px;
   height: 16px;
-  background: #22c55e;
+  background: #34d399;
   animation: blink 1s step-end infinite;
 }
 
@@ -719,9 +894,8 @@ onMounted(() => {
 /* Dark mode adjustments */
 :deep(.dark) .terminal-window {
   box-shadow:
-    0 25px 50px -12px rgba(0, 0, 0, 0.6),
-    0 0 0 1px rgba(99, 102, 241, 0.25),
-    0 0 40px rgba(99, 102, 241, 0.12),
+    0 35px 90px -35px rgba(34, 211, 238, 0.45),
+    0 0 0 1px rgba(125, 211, 252, 0.22),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
@@ -739,21 +913,46 @@ onMounted(() => {
   transform: translateY(0);
 }
 
-/* ===== Floating Background Blobs ===== */
-.blob {
+/* ===== Atmospheric Background ===== */
+.color-wash {
+  background:
+    radial-gradient(circle at 12% 16%, rgba(34, 211, 238, 0.16), transparent 30%),
+    radial-gradient(circle at 82% 18%, rgba(16, 185, 129, 0.18), transparent 28%),
+    radial-gradient(circle at 70% 72%, rgba(245, 158, 11, 0.14), transparent 34%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.66), rgba(219, 234, 254, 0.62));
+}
+:deep(.dark) .color-wash {
+  background:
+    radial-gradient(circle at 12% 16%, rgba(34, 211, 238, 0.16), transparent 30%),
+    radial-gradient(circle at 82% 18%, rgba(16, 185, 129, 0.12), transparent 28%),
+    radial-gradient(circle at 70% 72%, rgba(245, 158, 11, 0.1), transparent 34%),
+    linear-gradient(135deg, rgba(2, 6, 23, 0.96), rgba(8, 47, 73, 0.82));
+}
+
+.noise-layer {
+  opacity: 0.28;
+  background-image:
+    radial-gradient(rgba(15, 23, 42, 0.18) 0.7px, transparent 0.7px);
+  background-size: 12px 12px;
+  mask-image: linear-gradient(to bottom, black, transparent 88%);
+}
+
+.orb {
+  filter: blur(46px);
+  opacity: 0.55;
   will-change: transform;
 }
-.blob-1 {
+.orb-1 {
+  background: #22d3ee;
   animation: float-1 16s ease-in-out infinite;
 }
-.blob-2 {
+.orb-2 {
+  background: #34d399;
   animation: float-2 20s ease-in-out infinite;
 }
-.blob-3 {
+.orb-3 {
+  background: #f59e0b;
   animation: float-3 18s ease-in-out infinite;
-}
-.blob-4 {
-  animation: float-4 22s ease-in-out infinite;
 }
 
 @keyframes float-1 {
@@ -783,16 +982,6 @@ onMounted(() => {
     transform: translate(30px, 40px) scale(0.92);
   }
 }
-@keyframes float-4 {
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
-  }
-  50% {
-    transform: translate(-30px, -40px) scale(1.08);
-  }
-}
-
 /* ===== Grid Drift ===== */
 .grid-overlay {
   animation: grid-pan 40s linear infinite;
@@ -814,7 +1003,7 @@ onMounted(() => {
 }
 .feature-tag:hover {
   transform: translateY(-3px);
-  box-shadow: 0 10px 25px -10px rgba(99, 102, 241, 0.35);
+  box-shadow: 0 14px 30px -18px rgba(8, 145, 178, 0.55);
 }
 
 /* ===== Feature Icon subtle float on card hover ===== */
@@ -832,29 +1021,24 @@ onMounted(() => {
 }
 .provider-chip:hover {
   transform: translateY(-3px) scale(1.03);
-  box-shadow: 0 12px 28px -12px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 18px 36px -22px rgba(8, 145, 178, 0.62);
 }
 
-/* ===== CTA Button (Indigo) ===== */
-.cta-indigo {
-  background-image: linear-gradient(to right, #6366f1, #7c3aed);
-  box-shadow: 0 10px 30px -8px rgba(99, 102, 241, 0.45);
+/* ===== CTA Button ===== */
+.cta-orbit {
+  position: relative;
+  overflow: hidden;
+  background-image: linear-gradient(135deg, #a7f3d0, #67e8f9 48%, #fcd34d);
   transition:
     background-image 0.25s ease,
     box-shadow 0.25s ease,
     transform 0.2s ease;
 }
-.cta-indigo:hover {
-  background-image: linear-gradient(to right, #4f46e5, #6d28d9);
-  box-shadow: 0 14px 36px -8px rgba(124, 58, 237, 0.55);
+.cta-orbit:hover {
+  box-shadow: 0 18px 42px -18px rgba(8, 145, 178, 0.8);
+  transform: translateY(-2px);
 }
-
-/* ===== CTA Button Shine ===== */
-.cta-shine {
-  position: relative;
-  overflow: hidden;
-}
-.cta-shine::after {
+.cta-orbit::after {
   content: '';
   position: absolute;
   top: 0;
@@ -882,7 +1066,7 @@ onMounted(() => {
 .cta-arrow {
   transition: transform 0.3s ease;
 }
-.cta-shine:hover .cta-arrow {
+.cta-orbit:hover .cta-arrow {
   transform: translateX(4px);
 }
 
@@ -896,9 +1080,9 @@ onMounted(() => {
   opacity: 0;
   transition: opacity 0.4s ease;
   background: radial-gradient(
-    280px circle at var(--mx, 50%) var(--my, 50%),
-    rgba(99, 102, 241, 0.18),
-    rgba(124, 58, 237, 0.07) 40%,
+    320px circle at var(--mx, 50%) var(--my, 50%),
+    rgba(34, 211, 238, 0.18),
+    rgba(16, 185, 129, 0.08) 40%,
     transparent 70%
   );
 }
@@ -908,10 +1092,27 @@ onMounted(() => {
 :deep(.dark) .cursor-glow {
   background: radial-gradient(
     300px circle at var(--mx, 50%) var(--my, 50%),
-    rgba(129, 140, 248, 0.2),
-    rgba(167, 139, 250, 0.08) 40%,
+    rgba(34, 211, 238, 0.2),
+    rgba(16, 185, 129, 0.08) 40%,
     transparent 70%
   );
+}
+
+.panel-aurora {
+  background:
+    radial-gradient(circle at 20% 20%, rgba(34, 211, 238, 0.22), transparent 28%),
+    radial-gradient(circle at 78% 0%, rgba(16, 185, 129, 0.18), transparent 34%),
+    radial-gradient(circle at 70% 82%, rgba(251, 191, 36, 0.12), transparent 38%);
+}
+
+.workflow-card {
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
+}
+.workflow-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 24px 70px -45px rgba(8, 47, 73, 0.72);
 }
 
 /* ===== Header Hover Pop ===== */
@@ -936,14 +1137,14 @@ onMounted(() => {
 }
 .logo-box:hover {
   transform: rotate(-6deg) scale(1.12);
-  box-shadow: 0 10px 24px -8px rgba(99, 102, 241, 0.5);
+  box-shadow: 0 16px 32px -18px rgba(8, 145, 178, 0.75);
 }
 
 /* ===== Reduced Motion ===== */
 @media (prefers-reduced-motion: reduce) {
-  .blob,
+  .orb,
   .grid-overlay,
-  .cta-shine::after,
+  .cta-orbit::after,
   .code-line,
   .cursor {
     animation: none !important;
