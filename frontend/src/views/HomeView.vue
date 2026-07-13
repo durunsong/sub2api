@@ -17,6 +17,7 @@
     v-else
     ref="pageRef"
     @mousemove="onPointerMove"
+    :class="{ 'is-dark': isDark }"
     class="page-root relative flex min-h-screen flex-col overflow-hidden bg-[#f7fbff] text-slate-950 dark:bg-[#07111f] dark:text-white"
   >
     <!-- Background Decorations -->
@@ -34,12 +35,12 @@
     </div>
 
     <!-- Header -->
-    <header class="relative z-20 px-6 py-4">
+    <header class="site-header relative z-20 px-6 py-4">
       <nav class="mx-auto flex max-w-6xl items-center justify-between">
         <!-- Logo -->
         <div class="flex items-center gap-3">
-          <div class="logo-box h-11 w-11 overflow-hidden rounded-2xl border border-white/70 bg-white/70 p-1 shadow-lg shadow-cyan-900/10 backdrop-blur-md dark:border-white/10 dark:bg-white/10">
-            <img :src="siteLogo || '/logo.png'" alt="Logo" class="h-full w-full object-contain" />
+          <div class="logo-box h-11 w-11 overflow-hidden rounded-[15px] shadow-lg shadow-cyan-900/10">
+            <img :src="siteLogo || '/logo.png'" alt="Logo" class="h-full w-full object-cover" />
           </div>
           <div class="hidden leading-tight sm:block">
             <div class="text-sm font-semibold tracking-[0.24em] text-slate-900 dark:text-white">
@@ -55,7 +56,7 @@
         <div class="flex items-center gap-3">
           <!-- Language Switcher -->
           <div
-            class="rounded-full border border-slate-200/80 bg-white/90 px-1 shadow-sm shadow-slate-900/5 backdrop-blur-xl dark:border-white/10 dark:bg-white/10"
+            class="nav-locale rounded-full border border-slate-200/80 bg-white/90 px-1 shadow-sm shadow-slate-900/5 backdrop-blur-xl dark:border-white/10 dark:bg-white/10"
           >
             <LocaleSwitcher />
           </div>
@@ -66,8 +67,9 @@
             :href="docUrl"
             target="_blank"
             rel="noopener noreferrer"
-            class="hover-pop rounded-full border border-slate-200/80 bg-white/90 p-2 text-slate-700 shadow-sm shadow-slate-900/5 backdrop-blur-xl transition-colors hover:bg-white hover:text-cyan-700 dark:border-white/10 dark:bg-white/10 dark:text-slate-100 dark:hover:bg-white/15 dark:hover:text-cyan-200"
+            class="nav-control hover-pop flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/80 bg-white/90 text-slate-700 shadow-sm shadow-slate-900/5 backdrop-blur-xl transition-colors hover:bg-white hover:text-cyan-700 dark:border-white/10 dark:bg-white/10 dark:text-slate-100 dark:hover:bg-white/15 dark:hover:text-cyan-200"
             :title="t('home.viewDocs')"
+            :aria-label="t('home.viewDocs')"
           >
             <Icon name="book" size="md" />
           </a>
@@ -75,8 +77,9 @@
           <!-- Theme Toggle -->
           <button
             @click="toggleTheme"
-            class="hover-pop rounded-full border border-slate-200/80 bg-white/90 p-2 text-slate-700 shadow-sm shadow-slate-900/5 backdrop-blur-xl transition-colors hover:bg-white hover:text-cyan-700 dark:border-white/10 dark:bg-white/10 dark:text-slate-100 dark:hover:bg-white/15 dark:hover:text-cyan-200"
+            class="nav-control hover-pop flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/80 bg-white/90 text-slate-700 shadow-sm shadow-slate-900/5 backdrop-blur-xl transition-colors hover:bg-white hover:text-cyan-700 dark:border-white/10 dark:bg-white/10 dark:text-slate-100 dark:hover:bg-white/15 dark:hover:text-cyan-200"
             :title="isDark ? t('home.switchToLight') : t('home.switchToDark')"
+            :aria-label="isDark ? t('home.switchToLight') : t('home.switchToDark')"
           >
             <Icon v-if="isDark" name="sun" size="md" />
             <Icon v-else name="moon" size="md" />
@@ -167,73 +170,81 @@
             </div>
           </div>
 
-          <!-- Right: Product Cockpit -->
+          <!-- Right: AI Access Pass -->
           <div v-reveal="{ delay: 220 }" class="flex justify-center lg:justify-end">
             <div class="product-cockpit">
               <div class="cockpit-frame">
                 <div class="cockpit-header">
-                  <div>
-                    <span class="cockpit-dot"></span>
-                    AI API 控制台
+                  <div class="cockpit-brand">
+                    <div class="cockpit-logo">
+                      <img :src="siteLogo || '/logo.png'" alt="" />
+                    </div>
+                    <div>
+                      <strong>{{ siteName }}</strong>
+                      <span>AI ACCESS NETWORK</span>
+                    </div>
                   </div>
-                  <span>实时可用</span>
+                  <span class="cockpit-live"><i></i> 服务在线</span>
                 </div>
 
-                <div class="credit-panel">
-                  <div>
-                    <p>当前可用额度</p>
-                    <strong>Token 余额清晰可查</strong>
+                <div class="access-pass">
+                  <div class="pass-grid" aria-hidden="true"></div>
+                  <div class="pass-glow" aria-hidden="true"></div>
+                  <div class="pass-topline">
+                    <span>UNIFIED AI ACCESS</span>
+                    <span>01 / READY</span>
                   </div>
-                  <span>按量扣费</span>
-                </div>
-
-                <div class="cockpit-grid">
-                  <div class="cockpit-card primary-card">
-                    <span>接入状态</span>
-                    <strong>开箱即用</strong>
-                    <p>登录后查看 API Key 与接入说明</p>
-                  </div>
-                  <div class="cockpit-card">
-                    <span>价格体验</span>
-                    <strong>用多少付多少</strong>
-                    <p>余额、消耗、账单统一展示</p>
-                  </div>
-                  <div class="cockpit-card">
-                    <span>稳定服务</span>
-                    <strong>长期可用</strong>
-                    <p>适合编码、脚本和团队协作</p>
-                  </div>
-                </div>
-
-                <div class="flow-card">
-                  <div class="flow-step is-active">
-                    <span>01</span>
-                    <strong>购买额度</strong>
-                  </div>
-                  <div class="flow-line"></div>
-                  <div class="flow-step">
-                    <span>02</span>
-                    <strong>复制接入</strong>
-                  </div>
-                  <div class="flow-line"></div>
-                  <div class="flow-step">
-                    <span>03</span>
-                    <strong>查看用量</strong>
+                  <h2>一份额度，连接多种 AI 能力</h2>
+                  <p>按量使用，余额、消耗与账单随时可查。</p>
+                  <div class="pass-metrics">
+                    <div>
+                      <span>接入</span>
+                      <strong>快速开始</strong>
+                    </div>
+                    <div>
+                      <span>计费</span>
+                      <strong>按量透明</strong>
+                    </div>
+                    <div>
+                      <span>服务</span>
+                      <strong>长期可用</strong>
+                    </div>
                   </div>
                 </div>
 
-                <div class="insight-card">
-                  <div>
-                    <span class="insight-label">今日概览</span>
-                    <strong>费用透明，续费安心</strong>
+                <div class="service-rail">
+                  <div class="service-row">
+                    <span class="service-index">01</span>
+                    <div>
+                      <strong>登录即用</strong>
+                      <span>查看 API Key 与接入说明</span>
+                    </div>
+                    <i>READY</i>
                   </div>
-                  <div class="mini-bars" aria-hidden="true">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                    <span></span>
+                  <div class="service-row">
+                    <span class="service-index">02</span>
+                    <div>
+                      <strong>余额清晰</strong>
+                      <span>用量与账单统一查看</span>
+                    </div>
+                    <i>LIVE</i>
                   </div>
+                  <div class="service-row">
+                    <span class="service-index">03</span>
+                    <div>
+                      <strong>稳定服务</strong>
+                      <span>适合编码、脚本与团队协作</span>
+                    </div>
+                    <i>STABLE</i>
+                  </div>
+                </div>
+
+                <div class="access-footer">
+                  <span>购买额度</span>
+                  <i></i>
+                  <span>复制接入</span>
+                  <i></i>
+                  <span>查看用量</span>
                 </div>
               </div>
             </div>
@@ -467,7 +478,7 @@
         <!-- Product Narrative -->
         <section
           v-reveal="{ delay: 0 }"
-          class="mb-16 overflow-hidden rounded-[2.5rem] border border-white/70 bg-slate-950 text-white shadow-[0_35px_120px_-60px_rgba(8,47,73,0.8)] dark:border-white/10"
+          class="narrative-panel mb-16 overflow-hidden rounded-[2.5rem] border border-white/70 bg-slate-950 text-white shadow-[0_35px_120px_-60px_rgba(8,47,73,0.8)] dark:border-white/10"
         >
           <div class="relative grid gap-8 p-7 md:p-10 lg:grid-cols-[0.95fr_1.05fr]">
             <div class="panel-aurora absolute inset-0"></div>
@@ -520,7 +531,7 @@
     </main>
 
     <!-- Footer -->
-    <footer class="relative z-10 border-t border-gray-200/50 px-6 py-8 dark:border-dark-800/50">
+    <footer class="site-footer relative z-10 border-t border-gray-200/50 px-6 py-8 dark:border-dark-800/50">
       <div
         class="mx-auto flex max-w-6xl flex-col items-center justify-center gap-4 text-center sm:flex-row sm:text-left"
       >
@@ -721,314 +732,437 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Product Cockpit */
+/* AI Access Pass */
 .product-cockpit {
   position: relative;
-  width: min(560px, calc(100vw - 48px));
+  isolation: isolate;
+  width: min(570px, calc(100vw - 48px));
+}
+
+.product-cockpit::before,
+.product-cockpit::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  z-index: -1;
 }
 
 .product-cockpit::before {
-  content: '';
-  position: absolute;
-  inset: 20px -16px -18px 28px;
-  border-radius: 42px;
-  background: linear-gradient(135deg, rgba(20, 184, 166, 0.32), rgba(56, 189, 248, 0.28));
-  filter: blur(32px);
+  inset: 12% -4% -8% 18%;
+  border-radius: 46px;
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.32), rgba(16, 185, 129, 0.26));
+  filter: blur(42px);
+}
+
+.product-cockpit::after {
+  top: -18px;
+  right: 26px;
+  height: 72px;
+  width: 72px;
+  border: 1px solid rgba(8, 145, 178, 0.18);
+  border-radius: 22px;
+  transform: rotate(14deg);
 }
 
 .cockpit-frame {
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  border: 1px solid rgba(15, 23, 42, 0.09);
   border-radius: 34px;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(236, 254, 255, 0.74)),
-    radial-gradient(circle at 15% 0%, rgba(34, 211, 238, 0.22), transparent 36%);
+  background: rgba(255, 255, 255, 0.86);
   box-shadow:
-    0 28px 90px -48px rgba(15, 23, 42, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    0 40px 100px -54px rgba(8, 47, 73, 0.62),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92);
   padding: 22px;
-  transform: perspective(1200px) rotateX(2deg) rotateY(-4deg);
+  backdrop-filter: blur(28px);
+  transform: perspective(1400px) rotateX(1.5deg) rotateY(-3deg);
   transition:
-    transform 0.3s ease,
-    box-shadow 0.3s ease;
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.35s ease;
 }
 
 .cockpit-frame:hover {
   box-shadow:
-    0 34px 110px -54px rgba(8, 145, 178, 0.78),
-    inset 0 1px 0 rgba(255, 255, 255, 0.95);
-  transform: perspective(1200px) rotateX(0deg) rotateY(0deg) translateY(-4px);
+    0 46px 120px -58px rgba(8, 145, 178, 0.75),
+    inset 0 1px 0 rgba(255, 255, 255, 0.94);
+  transform: perspective(1400px) rotateX(0deg) rotateY(0deg) translateY(-4px);
 }
 
-:deep(.dark) .cockpit-frame {
-  border-color: rgba(255, 255, 255, 0.1);
+.page-root.is-dark .cockpit-frame {
+  border-color: rgba(103, 232, 249, 0.14);
   background:
-    linear-gradient(145deg, rgba(8, 19, 36, 0.98), rgba(10, 34, 53, 0.96)),
-    radial-gradient(circle at 15% 0%, rgba(34, 211, 238, 0.22), transparent 36%);
+    linear-gradient(145deg, rgba(8, 18, 31, 0.98), rgba(5, 14, 25, 0.96)),
+    radial-gradient(circle at 18% 0%, rgba(34, 211, 238, 0.12), transparent 38%);
   box-shadow:
-    0 35px 90px -38px rgba(34, 211, 238, 0.48),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    0 42px 110px -48px rgba(6, 182, 212, 0.36),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.page-root.is-dark .cockpit-frame:hover {
+  box-shadow:
+    0 48px 130px -52px rgba(34, 211, 238, 0.52),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.cockpit-header,
+.cockpit-brand,
+.cockpit-brand > div:last-child,
+.cockpit-live,
+.pass-topline,
+.pass-metrics,
+.service-row,
+.access-footer {
+  display: flex;
+  align-items: center;
 }
 
 .cockpit-header {
-  display: flex;
-  align-items: center;
   justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.cockpit-brand {
+  gap: 11px;
+  min-width: 0;
+}
+
+.cockpit-logo {
+  display: grid;
+  flex: 0 0 auto;
+  height: 38px;
+  width: 38px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 13px;
+  background: white;
+  padding: 4px;
+  box-shadow: 0 10px 28px -18px rgba(8, 47, 73, 0.8);
+}
+
+.cockpit-logo img {
+  height: 100%;
+  width: 100%;
+  object-fit: contain;
+}
+
+.cockpit-brand > div:last-child {
+  align-items: flex-start;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.cockpit-brand strong {
+  max-width: 230px;
+  overflow: hidden;
   color: #0f172a;
   font-size: 13px;
   font-weight: 900;
   letter-spacing: 0.08em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-:deep(.dark) .cockpit-header {
-  color: #e2e8f0;
-}
-
-.cockpit-header > div {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-}
-
-.cockpit-header > span {
-  border: 1px solid rgba(14, 165, 233, 0.2);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.7);
-  padding: 6px 10px;
-  color: #0369a1;
-  font-size: 11px;
-  letter-spacing: 0.12em;
-}
-
-:deep(.dark) .cockpit-header > span {
-  border-color: rgba(125, 211, 252, 0.18);
-  background: rgba(255, 255, 255, 0.07);
-  color: #67e8f9;
-}
-
-.cockpit-dot {
-  height: 10px;
-  width: 10px;
-  border-radius: 999px;
-  background: #10b981;
-  box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.12), 0 0 24px rgba(16, 185, 129, 0.7);
-}
-
-.credit-panel {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  margin-top: 22px;
-  border-radius: 28px;
-  background:
-    linear-gradient(135deg, #0f172a, #0e7490 62%, #5eead4),
-    radial-gradient(circle at 80% 10%, rgba(250, 204, 21, 0.35), transparent 26%);
-  padding: 24px;
-  color: white;
-  box-shadow: 0 22px 60px -36px rgba(8, 47, 73, 0.9);
-}
-
-.credit-panel p {
-  margin: 0 0 8px;
-  color: rgba(255, 255, 255, 0.68);
-  font-size: 12px;
+.cockpit-brand span {
+  margin-top: 2px;
+  color: #64748b;
+  font-size: 9px;
   font-weight: 800;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
+  letter-spacing: 0.2em;
 }
 
-.credit-panel strong {
-  display: block;
-  font-size: clamp(22px, 3vw, 32px);
-  font-weight: 950;
-  letter-spacing: -0.04em;
-}
-
-.credit-panel > span {
-  flex: 0 0 auto;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.18);
-  padding: 8px 12px;
-  color: #ecfeff;
-  font-size: 12px;
-  font-weight: 900;
-}
-
-.cockpit-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 14px;
-}
-
-.cockpit-card,
-.insight-card,
-.flow-card {
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  background: rgba(255, 255, 255, 0.72);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(18px);
-}
-
-:deep(.dark) .cockpit-card,
-:deep(.dark) .insight-card,
-:deep(.dark) .flow-card {
-  border-color: rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.065);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
-
-.cockpit-card {
-  min-height: 132px;
-  border-radius: 24px;
-  padding: 18px;
-}
-
-.cockpit-card span,
-.insight-label,
-.flow-step span {
-  display: block;
-  color: #0891b2;
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-:deep(.dark) .cockpit-card span,
-:deep(.dark) .insight-label,
-:deep(.dark) .flow-step span {
-  color: #67e8f9;
-}
-
-.cockpit-card strong {
-  display: block;
-  margin-top: 12px;
-  color: #0f172a;
-  font-size: 18px;
-  font-weight: 950;
-  letter-spacing: -0.03em;
-}
-
-:deep(.dark) .cockpit-card strong {
+.page-root.is-dark .cockpit-brand strong {
   color: #f8fafc;
 }
 
-.cockpit-card p {
-  margin: 10px 0 0;
-  color: #475569;
-  font-size: 12px;
+.page-root.is-dark .cockpit-brand span {
+  color: #64748b;
+}
+
+.cockpit-live {
+  flex: 0 0 auto;
+  gap: 7px;
+  border: 1px solid rgba(16, 185, 129, 0.18);
+  border-radius: 999px;
+  background: rgba(236, 253, 245, 0.86);
+  padding: 7px 10px;
+  color: #047857;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.cockpit-live i {
+  height: 6px;
+  width: 6px;
+  border-radius: 999px;
+  background: #10b981;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.12), 0 0 16px rgba(16, 185, 129, 0.65);
+}
+
+.page-root.is-dark .cockpit-live {
+  border-color: rgba(52, 211, 153, 0.18);
+  background: rgba(16, 185, 129, 0.08);
+  color: #6ee7b7;
+}
+
+.access-pass {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 246px;
+  border: 1px solid rgba(125, 211, 252, 0.16);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 84% 22%, rgba(45, 212, 191, 0.3), transparent 27%),
+    linear-gradient(135deg, #07111f 0%, #0a2434 58%, #0d3a42 100%);
+  padding: 26px;
+  color: white;
+  box-shadow:
+    0 28px 70px -40px rgba(8, 47, 73, 0.95),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.pass-grid,
+.pass-glow {
+  position: absolute;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.pass-grid {
+  inset: 0;
+  opacity: 0.34;
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: linear-gradient(115deg, transparent 8%, black 42%, transparent 94%);
+}
+
+.pass-glow {
+  right: -48px;
+  bottom: -72px;
+  height: 230px;
+  width: 230px;
+  border-radius: 50%;
+  background: rgba(45, 212, 191, 0.18);
+  filter: blur(16px);
+}
+
+.pass-topline {
+  justify-content: space-between;
+  gap: 16px;
+  color: #67e8f9;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+}
+
+.access-pass h2 {
+  margin: 36px 0 10px;
+  font-size: clamp(26px, 2.65vw, 34px);
+  font-weight: 950;
+  letter-spacing: -0.05em;
+  line-height: 1.12;
+  white-space: nowrap;
+}
+
+.access-pass > p {
+  margin: 0;
+  color: #a5f3fc;
+  font-size: 13px;
   line-height: 1.8;
 }
 
-:deep(.dark) .cockpit-card p {
-  color: #94a3b8;
+.pass-metrics {
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 30px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.primary-card {
-  background: linear-gradient(160deg, rgba(236, 254, 255, 0.96), rgba(255, 255, 255, 0.72));
+.pass-metrics > div {
+  min-width: 0;
 }
 
-:deep(.dark) .primary-card {
-  background: linear-gradient(160deg, rgba(8, 145, 178, 0.16), rgba(255, 255, 255, 0.07));
-}
-
-.flow-card {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 14px;
-  border-radius: 24px;
-  padding: 16px;
-}
-
-.flow-step {
-  flex: 0 0 auto;
-  border-radius: 18px;
-  padding: 10px 12px;
-}
-
-.flow-step.is-active {
-  background: rgba(34, 211, 238, 0.13);
-}
-
-.flow-step strong {
+.pass-metrics span,
+.pass-metrics strong {
   display: block;
-  margin-top: 4px;
+}
+
+.pass-metrics span {
+  color: #64748b;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+}
+
+.pass-metrics strong {
+  margin-top: 5px;
+  color: #f8fafc;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.service-rail {
+  margin-top: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.page-root.is-dark .service-rail {
+  border-color: rgba(148, 163, 184, 0.13);
+  background: rgba(15, 30, 46, 0.72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.service-row {
+  gap: 13px;
+  min-height: 62px;
+  padding: 12px 15px;
+}
+
+.service-row + .service-row {
+  border-top: 1px solid rgba(15, 23, 42, 0.07);
+}
+
+.page-root.is-dark .service-row + .service-row {
+  border-top-color: rgba(148, 163, 184, 0.1);
+}
+
+.service-index {
+  display: grid;
+  flex: 0 0 auto;
+  height: 32px;
+  width: 32px;
+  place-items: center;
+  border-radius: 11px;
+  background: #ecfeff;
+  color: #0891b2;
+  font-size: 10px;
+  font-weight: 950;
+}
+
+.page-root.is-dark .service-index {
+  background: rgba(34, 211, 238, 0.1);
+  color: #67e8f9;
+}
+
+.service-row > div {
+  min-width: 0;
+  flex: 1;
+}
+
+.service-row strong,
+.service-row > div span {
+  display: block;
+}
+
+.service-row strong {
   color: #0f172a;
   font-size: 13px;
   font-weight: 900;
 }
 
-:deep(.dark) .flow-step strong {
-  color: #f8fafc;
+.service-row > div span {
+  margin-top: 3px;
+  overflow: hidden;
+  color: #64748b;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.flow-line {
+.service-row > i {
+  color: #0f766e;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.page-root.is-dark .service-row strong {
+  color: #f1f5f9;
+}
+
+.page-root.is-dark .service-row > div span {
+  color: #94a3b8;
+}
+
+.page-root.is-dark .service-row > i {
+  color: #5eead4;
+}
+
+.access-footer {
+  justify-content: center;
+  gap: 12px;
+  margin-top: 16px;
+  color: #475569;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.access-footer i {
+  position: relative;
   height: 1px;
-  flex: 1;
-  min-width: 18px;
-  background: linear-gradient(90deg, rgba(8, 145, 178, 0.45), rgba(8, 145, 178, 0.04));
+  width: 32px;
+  background: linear-gradient(90deg, rgba(8, 145, 178, 0.18), rgba(8, 145, 178, 0.72));
 }
 
-.insight-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  margin-top: 14px;
-  border-radius: 24px;
-  padding: 18px;
+.access-footer i::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: -2px;
+  height: 5px;
+  width: 5px;
+  border-top: 1px solid #0891b2;
+  border-right: 1px solid #0891b2;
+  transform: rotate(45deg);
 }
 
-.insight-card strong {
-  display: block;
-  margin-top: 6px;
-  color: #0f172a;
-  font-size: 16px;
-  font-weight: 950;
+.page-root.is-dark .access-footer {
+  color: #94a3b8;
 }
-
-:deep(.dark) .insight-card strong {
-  color: #f8fafc;
-}
-
-.mini-bars {
-  display: flex;
-  align-items: end;
-  gap: 6px;
-  height: 44px;
-}
-
-.mini-bars span {
-  display: block;
-  width: 10px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #67e8f9, #10b981);
-}
-
-.mini-bars span:nth-child(1) { height: 28px; }
-.mini-bars span:nth-child(2) { height: 38px; }
-.mini-bars span:nth-child(3) { height: 22px; }
-.mini-bars span:nth-child(4) { height: 44px; }
-.mini-bars span:nth-child(5) { height: 32px; }
 
 @media (max-width: 640px) {
-  .cockpit-grid {
-    grid-template-columns: 1fr;
+  .cockpit-frame {
+    padding: 16px;
+    transform: none;
   }
 
-  .flow-card,
-  .credit-panel,
-  .insight-card {
-    align-items: stretch;
+  .cockpit-brand strong {
+    max-width: 140px;
+  }
+
+  .access-pass {
+    padding: 22px;
+  }
+
+  .access-pass h2 {
+    font-size: clamp(24px, 8vw, 30px);
+    white-space: normal;
+  }
+
+  .pass-metrics {
+    align-items: flex-start;
     flex-direction: column;
   }
 
-  .flow-line {
-    display: none;
+  .access-footer {
+    gap: 7px;
+  }
+
+  .access-footer i {
+    width: 18px;
   }
 }
 
@@ -1054,12 +1188,12 @@ onMounted(() => {
     radial-gradient(circle at 70% 72%, rgba(245, 158, 11, 0.08), transparent 34%),
     linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(235, 248, 255, 0.9));
 }
-:deep(.dark) .color-wash {
+.page-root.is-dark .color-wash {
   background:
-    radial-gradient(circle at 12% 16%, rgba(34, 211, 238, 0.16), transparent 30%),
-    radial-gradient(circle at 82% 18%, rgba(16, 185, 129, 0.12), transparent 28%),
-    radial-gradient(circle at 70% 72%, rgba(245, 158, 11, 0.1), transparent 34%),
-    linear-gradient(135deg, rgba(2, 6, 23, 0.96), rgba(8, 47, 73, 0.82));
+    radial-gradient(circle at 14% 12%, rgba(34, 211, 238, 0.12), transparent 27%),
+    radial-gradient(circle at 86% 16%, rgba(16, 185, 129, 0.1), transparent 24%),
+    radial-gradient(circle at 66% 70%, rgba(14, 116, 144, 0.1), transparent 30%),
+    linear-gradient(145deg, #050a12 0%, #071421 48%, #05101b 100%);
 }
 
 .noise-layer {
@@ -1070,13 +1204,18 @@ onMounted(() => {
   mask-image: linear-gradient(to bottom, black, transparent 88%);
 }
 
+.page-root.is-dark .noise-layer {
+  opacity: 0.24;
+  background-image: radial-gradient(rgba(148, 163, 184, 0.14) 0.65px, transparent 0.65px);
+}
+
 .orb {
   filter: blur(46px);
   opacity: 0.26;
   will-change: transform;
 }
-:deep(.dark) .orb {
-  opacity: 0.55;
+.page-root.is-dark .orb {
+  opacity: 0.3;
 }
 .orb-1 {
   background: #22d3ee;
@@ -1122,6 +1261,10 @@ onMounted(() => {
 .grid-overlay {
   animation: grid-pan 40s linear infinite;
 }
+
+.page-root.is-dark .grid-overlay {
+  opacity: 0.72;
+}
 @keyframes grid-pan {
   from {
     background-position: 0 0;
@@ -1129,6 +1272,93 @@ onMounted(() => {
   to {
     background-position: 64px 64px;
   }
+}
+
+/* ===== Theme Surfaces ===== */
+.site-header {
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease;
+}
+
+.nav-control,
+.nav-locale {
+  min-height: 40px;
+}
+
+.nav-control :deep(svg) {
+  height: 19px;
+  width: 19px;
+  stroke-width: 1.8;
+}
+
+.nav-control:focus-visible,
+.nav-locale:focus-within,
+.cta-orbit:focus-visible {
+  outline: 3px solid rgba(6, 182, 212, 0.22);
+  outline-offset: 3px;
+}
+
+.page-root.is-dark .site-header {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.07);
+  background: linear-gradient(180deg, rgba(5, 10, 18, 0.82), rgba(5, 10, 18, 0.24));
+  backdrop-filter: blur(18px);
+}
+
+.page-root.is-dark .nav-control,
+.page-root.is-dark .nav-locale {
+  border-color: rgba(125, 211, 252, 0.13);
+  background: rgba(8, 22, 36, 0.84);
+  box-shadow:
+    0 16px 40px -28px rgba(34, 211, 238, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.055);
+}
+
+.page-root.is-dark .nav-control {
+  color: #cbd5e1;
+}
+
+.page-root.is-dark .nav-control:hover {
+  border-color: rgba(103, 232, 249, 0.3);
+  background: rgba(11, 34, 52, 0.96);
+  color: #67e8f9;
+}
+
+.page-root.is-dark .feature-tag,
+.page-root.is-dark .feature-card,
+.page-root.is-dark .provider-chip,
+.page-root.is-dark .workflow-card {
+  border-color: rgba(125, 211, 252, 0.11);
+  background: linear-gradient(145deg, rgba(13, 29, 45, 0.9), rgba(7, 18, 31, 0.86));
+  box-shadow:
+    0 28px 70px -48px rgba(0, 0, 0, 0.9),
+    inset 0 1px 0 rgba(255, 255, 255, 0.045);
+}
+
+.page-root.is-dark .feature-tag {
+  background: rgba(9, 25, 40, 0.82);
+}
+
+.page-root.is-dark .feature-card:hover,
+.page-root.is-dark .provider-chip:hover,
+.page-root.is-dark .workflow-card:hover {
+  border-color: rgba(103, 232, 249, 0.25);
+  box-shadow:
+    0 32px 82px -46px rgba(6, 182, 212, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.page-root.is-dark .narrative-panel {
+  border-color: rgba(103, 232, 249, 0.13);
+  background:
+    radial-gradient(circle at 8% 0%, rgba(34, 211, 238, 0.12), transparent 28%),
+    linear-gradient(135deg, #07111f, #081827 62%, #07121e);
+  box-shadow: 0 38px 110px -62px rgba(34, 211, 238, 0.42);
+}
+
+.page-root.is-dark .site-footer {
+  border-top-color: rgba(148, 163, 184, 0.08);
+  background: rgba(3, 8, 15, 0.32);
 }
 
 /* ===== Feature Tags ===== */
@@ -1225,11 +1455,11 @@ onMounted(() => {
 .cursor-glow-active {
   opacity: 1;
 }
-:deep(.dark) .cursor-glow {
+.page-root.is-dark .cursor-glow {
   background: radial-gradient(
     300px circle at var(--mx, 50%) var(--my, 50%),
-    rgba(34, 211, 238, 0.2),
-    rgba(16, 185, 129, 0.08) 40%,
+    rgba(34, 211, 238, 0.12),
+    rgba(16, 185, 129, 0.05) 40%,
     transparent 70%
   );
 }
