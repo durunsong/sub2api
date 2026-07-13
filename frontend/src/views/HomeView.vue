@@ -46,7 +46,7 @@
               {{ siteName }}
             </div>
             <div class="text-[11px] uppercase tracking-[0.28em] text-cyan-700/80 dark:text-cyan-300/80">
-              model traffic fabric
+              AI API 服务
             </div>
           </div>
         </div>
@@ -127,7 +127,7 @@
               class="mb-5 inline-flex items-center gap-2 rounded-full border border-cyan-300/40 bg-white/70 px-3 py-1.5 text-xs font-semibold tracking-[0.22em] text-cyan-800 shadow-sm shadow-cyan-900/5 backdrop-blur dark:border-cyan-300/20 dark:bg-white/10 dark:text-cyan-200"
             >
               <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_16px_rgba(52,211,153,0.8)]"></span>
-              私有化 AI 流量中枢
+              稳定 AI API · Token 按量使用
             </div>
             <h1
               v-reveal="{ delay: 80 }"
@@ -145,7 +145,7 @@
               v-reveal="{ delay: 220 }"
               class="mx-auto mb-8 max-w-xl text-sm leading-7 text-slate-500 dark:text-slate-400 lg:mx-0"
             >
-              把多模型订阅、账号池、限额与审计收拢成一条可治理的 API 通道，让团队调用像使用内部基础设施一样稳定、清晰、可控。
+              无需自己维护账号和复杂配置，登录后即可查看额度、用量与账单。适合日常编码、自动化脚本和团队协作场景，重点就是稳定、透明、好用。
             </p>
 
             <!-- CTA Button -->
@@ -158,7 +158,7 @@
                 <Icon name="arrowRight" size="md" class="cta-arrow ml-2" :stroke-width="2" />
               </router-link>
               <div class="text-xs font-medium uppercase tracking-[0.26em] text-slate-500 dark:text-slate-400">
-                no vendor lock · usage governed
+                按量使用 · 余额清晰 · 长期可用
               </div>
             </div>
           </div>
@@ -174,22 +174,22 @@
                     <span class="btn-minimize"></span>
                     <span class="btn-maximize"></span>
                   </div>
-                  <span class="terminal-title">gateway live console</span>
+                  <span class="terminal-title">service dashboard</span>
                 </div>
                 <!-- Terminal content -->
                 <div class="terminal-body">
                   <div class="console-kpis">
                     <div>
-                      <span>UPSTREAM</span>
-                      <strong>6</strong>
+                      <span>ACCESS</span>
+                      <strong>多模型</strong>
                     </div>
                     <div>
-                      <span>LATENCY</span>
-                      <strong>84ms</strong>
+                      <span>RESPONSE</span>
+                      <strong>快速</strong>
                     </div>
                     <div>
-                      <span>FAILOVER</span>
-                      <strong>ON</strong>
+                      <span>STATUS</span>
+                      <strong>可用</strong>
                     </div>
                   </div>
                   <div class="code-line line-1">
@@ -199,11 +199,11 @@
                     <span class="code-url">/v1/smart-route</span>
                   </div>
                   <div class="code-line line-2">
-                    <span class="code-comment"># policy matched · quota checked · sticky session kept</span>
+                    <span class="code-comment"># balance checked · token usage tracked · ready to work</span>
                   </div>
                   <div class="code-line line-3">
                     <span class="code-success">200 OK</span>
-                    <span class="code-response">{ "provider": "best-fit", "metered": true }</span>
+                    <span class="code-response">{ "status": "ready", "billing": "metered" }</span>
                   </div>
                   <div class="code-line line-4">
                     <span class="code-prompt">$</span>
@@ -222,27 +222,27 @@
             class="feature-tag inline-flex items-center gap-2.5 rounded-full border border-white/70 bg-white/70 px-5 py-2.5 shadow-sm shadow-cyan-950/5 backdrop-blur-xl dark:border-white/10 dark:bg-white/10"
           >
             <Icon name="swap" size="sm" class="text-cyan-600 dark:text-cyan-300" />
-            <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{
-              t('home.tags.subscriptionToApi')
-            }}</span>
+            <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">
+              API 现成可用
+            </span>
           </div>
           <div
             v-reveal="{ delay: 100 }"
             class="feature-tag inline-flex items-center gap-2.5 rounded-full border border-white/70 bg-white/70 px-5 py-2.5 shadow-sm shadow-emerald-950/5 backdrop-blur-xl dark:border-white/10 dark:bg-white/10"
           >
             <Icon name="shield" size="sm" class="text-emerald-600 dark:text-emerald-300" />
-            <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{
-              t('home.tags.stickySession')
-            }}</span>
+            <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">
+              Token 用量清晰
+            </span>
           </div>
           <div
             v-reveal="{ delay: 200 }"
             class="feature-tag inline-flex items-center gap-2.5 rounded-full border border-white/70 bg-white/70 px-5 py-2.5 shadow-sm shadow-amber-950/5 backdrop-blur-xl dark:border-white/10 dark:bg-white/10"
           >
             <Icon name="chart" size="sm" class="text-amber-600 dark:text-amber-300" />
-            <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{
-              t('home.tags.realtimeBilling')
-            }}</span>
+            <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">
+              按量更省心
+            </span>
           </div>
         </div>
 
@@ -259,10 +259,10 @@
               <Icon name="server" size="lg" class="text-slate-950" />
             </div>
             <h3 class="mb-3 text-xl font-black tracking-[-0.03em] text-slate-950 dark:text-white">
-              {{ t('home.features.unifiedGateway') }}
+              一键使用
             </h3>
             <p class="text-sm leading-7 text-slate-600 dark:text-slate-400">
-              {{ t('home.features.unifiedGatewayDesc') }}
+              登录后即可获取接入信息，适合编码工具、自动化脚本和业务项目快速开始。
             </p>
           </div>
 
@@ -289,10 +289,10 @@
               </svg>
             </div>
             <h3 class="mb-3 text-xl font-black tracking-[-0.03em] text-slate-950 dark:text-white">
-              {{ t('home.features.multiAccount') }}
+              长期可用
             </h3>
             <p class="text-sm leading-7 text-slate-600 dark:text-slate-400">
-              {{ t('home.features.multiAccountDesc') }}
+              面向日常高频使用场景，减少账号、额度和配置问题带来的中断。
             </p>
           </div>
 
@@ -319,10 +319,10 @@
               </svg>
             </div>
             <h3 class="mb-3 text-xl font-black tracking-[-0.03em] text-slate-950 dark:text-white">
-              {{ t('home.features.balanceQuota') }}
+              账单透明
             </h3>
             <p class="text-sm leading-7 text-slate-600 dark:text-slate-400">
-              {{ t('home.features.balanceQuotaDesc') }}
+              Token、余额和明细统一展示，个人和团队都能看清每一次消耗。
             </p>
           </div>
         </div>
@@ -330,13 +330,13 @@
         <!-- Supported Providers -->
         <div v-reveal="{ delay: 0 }" class="mb-8 text-center">
           <div class="mb-3 text-xs font-bold uppercase tracking-[0.32em] text-cyan-700 dark:text-cyan-300">
-            model portfolio
+            available access
           </div>
           <h2 class="mb-3 text-3xl font-black tracking-[-0.04em] text-slate-950 dark:text-white">
-            {{ t('home.providers.title') }}
+            可用 API 与 Token 服务
           </h2>
           <p class="text-sm text-slate-500 dark:text-slate-400">
-            {{ t('home.providers.description') }}
+            一份余额，多种选择，按需调用。
           </p>
         </div>
 
@@ -448,13 +448,13 @@
             <div class="panel-aurora absolute inset-0"></div>
             <div class="relative">
               <div class="mb-4 text-xs font-bold uppercase tracking-[0.34em] text-cyan-200">
-                control plane
+                why customers choose it
               </div>
               <h2 class="mb-4 text-3xl font-black leading-tight tracking-[-0.04em] md:text-4xl">
-                不只是转发请求，而是把 AI 调用变成可运营的基础设施。
+                买到的不只是接口，而是一套省心的 AI 使用体验。
               </h2>
               <p class="max-w-xl text-sm leading-7 text-slate-300">
-                {{ siteName }} 将账号调度、模型选择、用量归因、限额策略和异常降级放在同一个界面里，让个人和团队都能用更少心智掌控更复杂的模型组合。
+                {{ siteName }} 面向需要长期使用 AI API 和 Token 的用户，把接入、充值、用量查看、额度管理放在同一个入口里。少折腾配置，多把时间花在真正的工作上。
               </p>
             </div>
             <div class="relative grid gap-3 sm:grid-cols-2">
@@ -569,47 +569,54 @@ const vReveal = {
 }
 
 // Site settings - directly from appStore (already initialized from injected config)
-const siteName = computed(() => appStore.cachedPublicSettings?.site_name || appStore.siteName || 'Sub2API')
+const siteName = computed(() => appStore.cachedPublicSettings?.site_name || appStore.siteName || 'AI API')
 const siteLogo = computed(() => sanitizeUrl(appStore.cachedPublicSettings?.site_logo || appStore.siteLogo || '', { allowRelative: true, allowDataUrl: true }))
-const siteSubtitle = computed(() => appStore.cachedPublicSettings?.site_subtitle || 'AI API Gateway Platform')
+const rawSiteSubtitle = computed(() => appStore.cachedPublicSettings?.site_subtitle || '稳定好用的 AI API 与 Token 服务')
+const siteSubtitle = computed(() => {
+  const subtitle = rawSiteSubtitle.value.trim()
+  if (!subtitle || /subscription api conversion|ai api gateway|sub2api/i.test(subtitle)) {
+    return '稳定好用的 AI API 与 Token 服务'
+  }
+  return subtitle
+})
 const docUrl = computed(() => sanitizeUrl(appStore.cachedPublicSettings?.doc_url || appStore.docUrl || ''))
 const homeContent = computed(() => appStore.cachedPublicSettings?.home_content || '')
 
 const operationCards = [
   {
     badge: '01',
-    title: '智能调度',
-    desc: '按模型、配额、冷却状态与可用性动态选择上游，减少单点账号波动。',
+    title: '一键开始',
+    desc: '登录后即可查看接入信息和可用额度，新手也能快速用起来。',
   },
   {
     badge: '02',
-    title: '成本可见',
-    desc: '把请求、Token、余额与团队消耗汇总到同一视角，方便复盘和控费。',
+    title: '按量更划算',
+    desc: '用多少扣多少，余额、消耗和明细都能看清楚，不怕糊涂账。',
   },
   {
     badge: '03',
-    title: '权限清晰',
-    desc: '用统一 API Key、分组和限额策略管理调用边界，减少密钥外溢风险。',
+    title: '额度好管理',
+    desc: '个人或团队都能集中查看 Token 用量，避免无感超支。',
   },
   {
     badge: '04',
-    title: '体验连续',
-    desc: '会话粘性与失败切换降低上下文抖动，让业务侧少感知底层变化。',
+    title: '长期稳定',
+    desc: '面向日常高频使用场景，重点保障可用性和持续服务体验。',
   },
 ]
 
 const workflowItems = [
   {
-    title: '接入',
-    desc: '保留原有 OpenAI / Anthropic 风格调用习惯，将不同订阅能力收束到统一入口。',
+    title: '购买额度',
+    desc: '按需充值或开通可用额度，费用透明，适合个人开发者和小团队。',
   },
   {
-    title: '治理',
-    desc: '用分组、限额、用量统计和风控能力承接团队协作，而不是散落在各平台后台。',
+    title: '复制接入',
+    desc: '在控制台获取 API Key 和接入说明，直接用于编码工具、脚本或业务项目。',
   },
   {
-    title: '扩展',
-    desc: '新增模型或账号时只更新平台侧配置，业务代码继续面向同一套 API 工作。',
+    title: '查看用量',
+    desc: '随时查看 Token 消耗、余额和账单记录，用得明白，续费也更安心。',
   },
 ]
 
