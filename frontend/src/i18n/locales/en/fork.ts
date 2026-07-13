@@ -6,6 +6,148 @@ export default {
     providers: {
       kiro: 'Kiro',
     },
+    showcase: {
+      headerService: 'AI API Service',
+      kicker: 'Reliable AI API · Pay-As-You-Go Tokens',
+      defaultSubtitle: 'Reliable AI API and Token services',
+      description: 'Skip account upkeep and complicated setup. Sign in to check your balance, usage, and bills in one place. Built for coding, automation, and team workflows, with reliability, transparency, and ease at the core.',
+      ctaMeta: 'Pay as you go · Clear balance · Built to last',
+      cockpit: {
+        brandNetwork: 'AI ACCESS NETWORK',
+        online: 'SERVICE ONLINE',
+        unifiedAccess: 'UNIFIED AI ACCESS',
+        readyStatus: '01 / READY',
+        passTitle: 'One balance. Multiple AI capabilities.',
+        passDescription: 'Pay as you go with balance, usage, and bills always visible.',
+        metrics: {
+          access: {
+            label: 'ACCESS',
+            value: 'QUICK START',
+          },
+          billing: {
+            label: 'BILLING',
+            value: 'PAY AS YOU GO',
+          },
+          service: {
+            label: 'SERVICE',
+            value: 'BUILT TO LAST',
+          },
+        },
+        services: {
+          ready: {
+            title: 'Ready at Sign-In',
+            description: 'View your API Key and setup guide',
+            status: 'READY',
+          },
+          balance: {
+            title: 'Clear Balance',
+            description: 'Usage and billing in one place',
+            status: 'LIVE',
+          },
+          stable: {
+            title: 'Reliable Service',
+            description: 'Built for coding, automation, and teams',
+            status: 'STABLE',
+          },
+        },
+        footer: {
+          addCredits: 'Add Credits',
+          copySetup: 'Copy Setup',
+          viewUsage: 'View Usage',
+        },
+      },
+      tags: {
+        ready: 'API Ready to Use',
+        usage: 'Token Usage at a Glance',
+        value: 'Pay As You Go',
+      },
+      features: {
+        access: {
+          title: 'Ready in One Step',
+          description: 'Sign in to get your setup details and start using coding tools, automation scripts, or business applications right away.',
+        },
+        availability: {
+          title: 'Built for Daily Use',
+          description: 'Designed for frequent use with fewer interruptions from account, balance, or configuration issues.',
+        },
+        billing: {
+          title: 'Transparent Billing',
+          description: 'Tokens, balance, and usage details stay together so individuals and teams can understand every charge.',
+        },
+      },
+      providers: {
+        eyebrow: 'AVAILABLE ACCESS',
+        title: 'Available API and Token Services',
+        description: 'One balance, more choices, use what you need.',
+      },
+      narrative: {
+        eyebrow: 'WHY CUSTOMERS CHOOSE US',
+        title: 'More than an API—a simpler way to use AI.',
+        description: '{siteName} brings setup, credits, usage, and balance management into one place for people who rely on AI APIs and Tokens every day. Spend less time on configuration and more time on real work.',
+      },
+      operationCards: {
+        start: {
+          title: 'One-Step Start',
+          description: 'Sign in to view setup details and available credits. Even first-time users can get started quickly.',
+        },
+        value: {
+          title: 'Better Value',
+          description: 'Pay only for what you use, with balance, usage, and itemized details always clear.',
+        },
+        balance: {
+          title: 'Easy Credit Management',
+          description: 'Individuals and teams can track Token usage in one place and avoid unnoticed overspending.',
+        },
+        stability: {
+          title: 'Reliable Long-Term',
+          description: 'Designed for frequent everyday use with dependable availability and ongoing service.',
+        },
+      },
+      workflow: {
+        addCredits: {
+          title: 'Add Credits',
+          description: 'Top up only when needed with transparent pricing for individual developers and small teams.',
+        },
+        copySetup: {
+          title: 'Copy Setup',
+          description: 'Get your API Key and setup guide from the dashboard, then use them in coding tools, scripts, or applications.',
+        },
+        viewUsage: {
+          title: 'Track Usage',
+          description: 'Review Token usage, balance, and billing records anytime so every renewal stays informed.',
+        },
+      },
+    },
+  },
+  auth: {
+    showcase: {
+      headerService: 'AI API Service',
+      kicker: 'Reliable AI API · Pay-As-You-Go Tokens',
+      titleLine1: 'AI, Made Reliable',
+      titleLine2: 'Everything Starts Here.',
+      accessReady: 'ACCESS READY',
+      passTitle: 'Clear usage, fair pricing, built to last',
+      defaultSubtitle: 'Reliable AI API and Token services',
+      metrics: {
+        access: {
+          label: 'ACCESS',
+          value: 'READY TO USE',
+        },
+        billing: {
+          label: 'BILLING',
+          value: 'PAY AS YOU GO',
+        },
+        service: {
+          label: 'SERVICE',
+          value: 'BUILT TO LAST',
+        },
+      },
+      trust: {
+        ready: 'API ready to use',
+        usage: 'Token usage at a glance',
+        billing: 'Bills available anytime',
+      },
+    },
   },
   admin: {
     users: {

@@ -6,6 +6,148 @@ export default {
     providers: {
       kiro: 'Kiro',
     },
+    showcase: {
+      headerService: 'AI API 服务',
+      kicker: '稳定 AI API · Token 按量使用',
+      defaultSubtitle: '稳定好用的 AI API 与 Token 服务',
+      description: '无需自己维护账号和复杂配置，登录后即可查看额度、用量与账单。适合日常编码、自动化脚本和团队协作场景，重点就是稳定、透明、好用。',
+      ctaMeta: '按量使用 · 余额清晰 · 长期可用',
+      cockpit: {
+        brandNetwork: 'AI 服务网络',
+        online: '服务在线',
+        unifiedAccess: '统一 AI 服务',
+        readyStatus: '01 / 已就绪',
+        passTitle: '一份额度，连接多种 AI 能力',
+        passDescription: '按量使用，余额、消耗与账单随时可查。',
+        metrics: {
+          access: {
+            label: '接入',
+            value: '快速开始',
+          },
+          billing: {
+            label: '计费',
+            value: '按量透明',
+          },
+          service: {
+            label: '服务',
+            value: '长期可用',
+          },
+        },
+        services: {
+          ready: {
+            title: '登录即用',
+            description: '查看 API Key 与接入说明',
+            status: '就绪',
+          },
+          balance: {
+            title: '余额清晰',
+            description: '用量与账单统一查看',
+            status: '在线',
+          },
+          stable: {
+            title: '稳定服务',
+            description: '适合编码、脚本与团队协作',
+            status: '稳定',
+          },
+        },
+        footer: {
+          addCredits: '购买额度',
+          copySetup: '复制接入',
+          viewUsage: '查看用量',
+        },
+      },
+      tags: {
+        ready: 'API 现成可用',
+        usage: 'Token 用量清晰',
+        value: '按量更省心',
+      },
+      features: {
+        access: {
+          title: '一键使用',
+          description: '登录后即可获取接入信息，适合编码工具、自动化脚本和业务项目快速开始。',
+        },
+        availability: {
+          title: '长期可用',
+          description: '面向日常高频使用场景，减少账号、额度和配置问题带来的中断。',
+        },
+        billing: {
+          title: '账单透明',
+          description: 'Token、余额和明细统一展示，个人和团队都能看清每一次消耗。',
+        },
+      },
+      providers: {
+        eyebrow: '可用服务',
+        title: '可用 API 与 Token 服务',
+        description: '一份余额，多种选择，按需调用。',
+      },
+      narrative: {
+        eyebrow: '为什么用户选择我们',
+        title: '买到的不只是接口，而是一套省心的 AI 使用体验。',
+        description: '{siteName} 面向需要长期使用 AI API 和 Token 的用户，把接入、充值、用量查看、额度管理放在同一个入口里。少折腾配置，多把时间花在真正的工作上。',
+      },
+      operationCards: {
+        start: {
+          title: '一键开始',
+          description: '登录后即可查看接入信息和可用额度，新手也能快速用起来。',
+        },
+        value: {
+          title: '按量更划算',
+          description: '用多少扣多少，余额、消耗和明细都能看清楚，不怕糊涂账。',
+        },
+        balance: {
+          title: '额度好管理',
+          description: '个人或团队都能集中查看 Token 用量，避免无感超支。',
+        },
+        stability: {
+          title: '长期稳定',
+          description: '面向日常高频使用场景，重点保障可用性和持续服务体验。',
+        },
+      },
+      workflow: {
+        addCredits: {
+          title: '购买额度',
+          description: '按需充值或开通可用额度，费用透明，适合个人开发者和小团队。',
+        },
+        copySetup: {
+          title: '复制接入',
+          description: '在控制台获取 API Key 和接入说明，直接用于编码工具、脚本或业务项目。',
+        },
+        viewUsage: {
+          title: '查看用量',
+          description: '随时查看 Token 消耗、余额和账单记录，用得明白，续费也更安心。',
+        },
+      },
+    },
+  },
+  auth: {
+    showcase: {
+      headerService: 'AI API 服务',
+      kicker: '稳定 AI API · Token 按量使用',
+      titleLine1: '稳定使用 AI',
+      titleLine2: '从一个清晰入口开始。',
+      accessReady: '服务就绪',
+      passTitle: '用量清晰，账单一目了然，低价稳定',
+      defaultSubtitle: '稳定好用的 AI API 与 Token 服务',
+      metrics: {
+        access: {
+          label: '接入',
+          value: '登录即用',
+        },
+        billing: {
+          label: '计费',
+          value: '按量透明',
+        },
+        service: {
+          label: '服务',
+          value: '长期可用',
+        },
+      },
+      trust: {
+        ready: 'API 现成可用',
+        usage: 'Token 用量清晰',
+        billing: '账单随时可查',
+      },
+    },
   },
   admin: {
     users: {

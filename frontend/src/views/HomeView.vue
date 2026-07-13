@@ -40,14 +40,14 @@
         <!-- Logo -->
         <div class="flex items-center gap-3">
           <div class="logo-box h-11 w-11 overflow-hidden rounded-[15px] shadow-lg shadow-cyan-900/10">
-            <img :src="siteLogo || '/logo.png'" alt="Logo" class="h-full w-full object-cover" />
+            <img :src="siteLogo || '/logo.png'" :alt="siteName" class="h-full w-full object-cover" />
           </div>
           <div class="hidden leading-tight sm:block">
             <div class="text-sm font-semibold tracking-[0.24em] text-slate-900 dark:text-white">
               {{ siteName }}
             </div>
             <div class="text-[11px] uppercase tracking-[0.28em] text-cyan-700/80 dark:text-cyan-300/80">
-              AI API 服务
+              {{ t('home.showcase.headerService') }}
             </div>
           </div>
         </div>
@@ -134,11 +134,12 @@
               class="mb-5 inline-flex items-center gap-2 rounded-full border border-cyan-300/40 bg-white/70 px-3 py-1.5 text-xs font-semibold tracking-[0.22em] text-cyan-800 shadow-sm shadow-cyan-900/5 backdrop-blur dark:border-cyan-300/20 dark:bg-white/10 dark:text-cyan-200"
             >
               <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_16px_rgba(52,211,153,0.8)]"></span>
-              稳定 AI API · Token 按量使用
+              {{ t('home.showcase.kicker') }}
             </div>
             <h1
               v-reveal="{ delay: 80 }"
-              class="mb-5 text-5xl font-black leading-[0.95] tracking-[-0.06em] text-slate-950 dark:text-white md:text-6xl lg:text-7xl"
+              class="brand-shine mb-5 text-5xl font-black leading-[0.95] tracking-[-0.06em] text-slate-950 dark:text-white md:text-6xl lg:text-7xl"
+              :data-text="siteName"
             >
               {{ siteName }}
             </h1>
@@ -152,7 +153,7 @@
               v-reveal="{ delay: 220 }"
               class="mx-auto mb-8 max-w-xl text-sm leading-7 text-slate-500 dark:text-slate-400 lg:mx-0"
             >
-              无需自己维护账号和复杂配置，登录后即可查看额度、用量与账单。适合日常编码、自动化脚本和团队协作场景，重点就是稳定、透明、好用。
+              {{ t('home.showcase.description') }}
             </p>
 
             <!-- CTA Button -->
@@ -165,7 +166,7 @@
                 <Icon name="arrowRight" size="md" class="cta-arrow ml-2" :stroke-width="2" />
               </router-link>
               <div class="text-xs font-medium uppercase tracking-[0.26em] text-slate-500 dark:text-slate-400">
-                按量使用 · 余额清晰 · 长期可用
+                {{ t('home.showcase.ctaMeta') }}
               </div>
             </div>
           </div>
@@ -181,33 +182,33 @@
                     </div>
                     <div>
                       <strong>{{ siteName }}</strong>
-                      <span>AI ACCESS NETWORK</span>
+                      <span>{{ t('home.showcase.cockpit.brandNetwork') }}</span>
                     </div>
                   </div>
-                  <span class="cockpit-live"><i></i> 服务在线</span>
+                  <span class="cockpit-live"><i></i>{{ t('home.showcase.cockpit.online') }}</span>
                 </div>
 
                 <div class="access-pass">
                   <div class="pass-grid" aria-hidden="true"></div>
                   <div class="pass-glow" aria-hidden="true"></div>
                   <div class="pass-topline">
-                    <span>UNIFIED AI ACCESS</span>
-                    <span>01 / READY</span>
+                    <span>{{ t('home.showcase.cockpit.unifiedAccess') }}</span>
+                    <span>{{ t('home.showcase.cockpit.readyStatus') }}</span>
                   </div>
-                  <h2>一份额度，连接多种 AI 能力</h2>
-                  <p>按量使用，余额、消耗与账单随时可查。</p>
+                  <h2>{{ t('home.showcase.cockpit.passTitle') }}</h2>
+                  <p>{{ t('home.showcase.cockpit.passDescription') }}</p>
                   <div class="pass-metrics">
                     <div>
-                      <span>接入</span>
-                      <strong>快速开始</strong>
+                      <span>{{ t('home.showcase.cockpit.metrics.access.label') }}</span>
+                      <strong>{{ t('home.showcase.cockpit.metrics.access.value') }}</strong>
                     </div>
                     <div>
-                      <span>计费</span>
-                      <strong>按量透明</strong>
+                      <span>{{ t('home.showcase.cockpit.metrics.billing.label') }}</span>
+                      <strong>{{ t('home.showcase.cockpit.metrics.billing.value') }}</strong>
                     </div>
                     <div>
-                      <span>服务</span>
-                      <strong>长期可用</strong>
+                      <span>{{ t('home.showcase.cockpit.metrics.service.label') }}</span>
+                      <strong>{{ t('home.showcase.cockpit.metrics.service.value') }}</strong>
                     </div>
                   </div>
                 </div>
@@ -216,35 +217,35 @@
                   <div class="service-row">
                     <span class="service-index">01</span>
                     <div>
-                      <strong>登录即用</strong>
-                      <span>查看 API Key 与接入说明</span>
+                      <strong>{{ t('home.showcase.cockpit.services.ready.title') }}</strong>
+                      <span>{{ t('home.showcase.cockpit.services.ready.description') }}</span>
                     </div>
-                    <i>READY</i>
+                    <i>{{ t('home.showcase.cockpit.services.ready.status') }}</i>
                   </div>
                   <div class="service-row">
                     <span class="service-index">02</span>
                     <div>
-                      <strong>余额清晰</strong>
-                      <span>用量与账单统一查看</span>
+                      <strong>{{ t('home.showcase.cockpit.services.balance.title') }}</strong>
+                      <span>{{ t('home.showcase.cockpit.services.balance.description') }}</span>
                     </div>
-                    <i>LIVE</i>
+                    <i>{{ t('home.showcase.cockpit.services.balance.status') }}</i>
                   </div>
                   <div class="service-row">
                     <span class="service-index">03</span>
                     <div>
-                      <strong>稳定服务</strong>
-                      <span>适合编码、脚本与团队协作</span>
+                      <strong>{{ t('home.showcase.cockpit.services.stable.title') }}</strong>
+                      <span>{{ t('home.showcase.cockpit.services.stable.description') }}</span>
                     </div>
-                    <i>STABLE</i>
+                    <i>{{ t('home.showcase.cockpit.services.stable.status') }}</i>
                   </div>
                 </div>
 
                 <div class="access-footer">
-                  <span>购买额度</span>
+                  <span>{{ t('home.showcase.cockpit.footer.addCredits') }}</span>
                   <i></i>
-                  <span>复制接入</span>
+                  <span>{{ t('home.showcase.cockpit.footer.copySetup') }}</span>
                   <i></i>
-                  <span>查看用量</span>
+                  <span>{{ t('home.showcase.cockpit.footer.viewUsage') }}</span>
                 </div>
               </div>
             </div>
@@ -259,7 +260,7 @@
           >
             <Icon name="swap" size="sm" class="text-cyan-600 dark:text-cyan-300" />
             <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">
-              API 现成可用
+              {{ t('home.showcase.tags.ready') }}
             </span>
           </div>
           <div
@@ -268,7 +269,7 @@
           >
             <Icon name="shield" size="sm" class="text-emerald-600 dark:text-emerald-300" />
             <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">
-              Token 用量清晰
+              {{ t('home.showcase.tags.usage') }}
             </span>
           </div>
           <div
@@ -277,7 +278,7 @@
           >
             <Icon name="chart" size="sm" class="text-amber-600 dark:text-amber-300" />
             <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">
-              按量更省心
+              {{ t('home.showcase.tags.value') }}
             </span>
           </div>
         </div>
@@ -295,10 +296,10 @@
               <Icon name="server" size="lg" class="text-slate-950" />
             </div>
             <h3 class="mb-3 text-xl font-black tracking-[-0.03em] text-slate-950 dark:text-white">
-              一键使用
+              {{ t('home.showcase.features.access.title') }}
             </h3>
             <p class="text-sm leading-7 text-slate-600 dark:text-slate-400">
-              登录后即可获取接入信息，适合编码工具、自动化脚本和业务项目快速开始。
+              {{ t('home.showcase.features.access.description') }}
             </p>
           </div>
 
@@ -325,10 +326,10 @@
               </svg>
             </div>
             <h3 class="mb-3 text-xl font-black tracking-[-0.03em] text-slate-950 dark:text-white">
-              长期可用
+              {{ t('home.showcase.features.availability.title') }}
             </h3>
             <p class="text-sm leading-7 text-slate-600 dark:text-slate-400">
-              面向日常高频使用场景，减少账号、额度和配置问题带来的中断。
+              {{ t('home.showcase.features.availability.description') }}
             </p>
           </div>
 
@@ -355,10 +356,10 @@
               </svg>
             </div>
             <h3 class="mb-3 text-xl font-black tracking-[-0.03em] text-slate-950 dark:text-white">
-              账单透明
+              {{ t('home.showcase.features.billing.title') }}
             </h3>
             <p class="text-sm leading-7 text-slate-600 dark:text-slate-400">
-              Token、余额和明细统一展示，个人和团队都能看清每一次消耗。
+              {{ t('home.showcase.features.billing.description') }}
             </p>
           </div>
         </div>
@@ -366,13 +367,13 @@
         <!-- Supported Providers -->
         <div v-reveal="{ delay: 0 }" class="mb-8 text-center">
           <div class="mb-3 text-xs font-bold uppercase tracking-[0.32em] text-cyan-700 dark:text-cyan-300">
-            available access
+            {{ t('home.showcase.providers.eyebrow') }}
           </div>
           <h2 class="mb-3 text-3xl font-black tracking-[-0.04em] text-slate-950 dark:text-white">
-            可用 API 与 Token 服务
+            {{ t('home.showcase.providers.title') }}
           </h2>
           <p class="text-sm text-slate-500 dark:text-slate-400">
-            一份余额，多种选择，按需调用。
+            {{ t('home.showcase.providers.description') }}
           </p>
         </div>
 
@@ -484,13 +485,13 @@
             <div class="panel-aurora absolute inset-0"></div>
             <div class="relative">
               <div class="mb-4 text-xs font-bold uppercase tracking-[0.34em] text-cyan-200">
-                why customers choose it
+                {{ t('home.showcase.narrative.eyebrow') }}
               </div>
               <h2 class="mb-4 text-3xl font-black leading-tight tracking-[-0.04em] md:text-4xl">
-                买到的不只是接口，而是一套省心的 AI 使用体验。
+                {{ t('home.showcase.narrative.title') }}
               </h2>
               <p class="max-w-xl text-sm leading-7 text-slate-300">
-                {{ siteName }} 面向需要长期使用 AI API 和 Token 的用户，把接入、充值、用量查看、额度管理放在同一个入口里。少折腾配置，多把时间花在真正的工作上。
+                {{ t('home.showcase.narrative.description', { siteName }) }}
               </p>
             </div>
             <div class="relative grid gap-3 sm:grid-cols-2">
@@ -605,56 +606,56 @@ const vReveal = {
 }
 
 // Site settings - directly from appStore (already initialized from injected config)
-const siteName = computed(() => appStore.cachedPublicSettings?.site_name || appStore.siteName || 'AI API')
+const siteName = computed(() => appStore.cachedPublicSettings?.site_name || appStore.siteName)
 const siteLogo = computed(() => sanitizeUrl(appStore.cachedPublicSettings?.site_logo || appStore.siteLogo || '', { allowRelative: true, allowDataUrl: true }))
-const rawSiteSubtitle = computed(() => appStore.cachedPublicSettings?.site_subtitle || '稳定好用的 AI API 与 Token 服务')
+const rawSiteSubtitle = computed(() => appStore.cachedPublicSettings?.site_subtitle || '')
 const siteSubtitle = computed(() => {
   const subtitle = rawSiteSubtitle.value.trim()
-  if (!subtitle || /subscription api conversion|ai api gateway|sub2api/i.test(subtitle)) {
-    return '稳定好用的 AI API 与 Token 服务'
+  if (!subtitle || /subscription(?:\s+to)?\s+api\s+conversion|ai api gateway|sub2api/i.test(subtitle)) {
+    return t('home.showcase.defaultSubtitle')
   }
   return subtitle
 })
 const docUrl = computed(() => sanitizeUrl(appStore.cachedPublicSettings?.doc_url || appStore.docUrl || ''))
 const homeContent = computed(() => appStore.cachedPublicSettings?.home_content || '')
 
-const operationCards = [
+const operationCards = computed(() => [
   {
     badge: '01',
-    title: '一键开始',
-    desc: '登录后即可查看接入信息和可用额度，新手也能快速用起来。',
+    title: t('home.showcase.operationCards.start.title'),
+    desc: t('home.showcase.operationCards.start.description'),
   },
   {
     badge: '02',
-    title: '按量更划算',
-    desc: '用多少扣多少，余额、消耗和明细都能看清楚，不怕糊涂账。',
+    title: t('home.showcase.operationCards.value.title'),
+    desc: t('home.showcase.operationCards.value.description'),
   },
   {
     badge: '03',
-    title: '额度好管理',
-    desc: '个人或团队都能集中查看 Token 用量，避免无感超支。',
+    title: t('home.showcase.operationCards.balance.title'),
+    desc: t('home.showcase.operationCards.balance.description'),
   },
   {
     badge: '04',
-    title: '长期稳定',
-    desc: '面向日常高频使用场景，重点保障可用性和持续服务体验。',
+    title: t('home.showcase.operationCards.stability.title'),
+    desc: t('home.showcase.operationCards.stability.description'),
   },
-]
+])
 
-const workflowItems = [
+const workflowItems = computed(() => [
   {
-    title: '购买额度',
-    desc: '按需充值或开通可用额度，费用透明，适合个人开发者和小团队。',
+    title: t('home.showcase.workflow.addCredits.title'),
+    desc: t('home.showcase.workflow.addCredits.description'),
   },
   {
-    title: '复制接入',
-    desc: '在控制台获取 API Key 和接入说明，直接用于编码工具、脚本或业务项目。',
+    title: t('home.showcase.workflow.copySetup.title'),
+    desc: t('home.showcase.workflow.copySetup.description'),
   },
   {
-    title: '查看用量',
-    desc: '随时查看 Token 消耗、余额和账单记录，用得明白，续费也更安心。',
+    title: t('home.showcase.workflow.viewUsage.title'),
+    desc: t('home.showcase.workflow.viewUsage.description'),
   },
-]
+])
 
 // Check if homeContent is a URL (for iframe display)
 const isHomeContentUrl = computed(() => {
@@ -1390,6 +1391,49 @@ onMounted(() => {
   box-shadow: 0 18px 36px -22px rgba(8, 145, 178, 0.62);
 }
 
+/* ===== Brand text shine ===== */
+.brand-shine {
+  position: relative;
+  display: inline-block;
+}
+
+.brand-shine::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  /* ponytail: 非 repeating + 周期末停顿，避免斜角 repeat 接缝闪一下 */
+  background-image: linear-gradient(
+    110deg,
+    transparent 0%,
+    transparent 40%,
+    #67e8f9 46%,
+    #5eead4 50%,
+    #fcd34d 54%,
+    transparent 60%,
+    transparent 100%
+  );
+  background-size: 220% 100%;
+  background-repeat: no-repeat;
+  background-position: 120% 50%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  pointer-events: none;
+  animation: brand-text-shine 4.5s ease-in-out infinite;
+}
+
+@keyframes brand-text-shine {
+  0%,
+  18% {
+    background-position: 120% 50%;
+  }
+  52%,
+  100% {
+    background-position: -20% 50%;
+  }
+}
+
 /* ===== CTA Button ===== */
 .cta-orbit {
   position: relative;
@@ -1510,8 +1554,12 @@ onMounted(() => {
 @media (prefers-reduced-motion: reduce) {
   .orb,
   .grid-overlay,
-  .cta-orbit::after {
+  .cta-orbit::after,
+  .brand-shine::after {
     animation: none !important;
+  }
+  .brand-shine::after {
+    content: none;
   }
   .cursor-glow {
     display: none;
