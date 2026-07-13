@@ -77,6 +77,11 @@ export default {
       clickToCopy: 'Click to copy this endpoint',
       speedTest: 'Speed Test',
     },
+    docsGuide: {
+      title: "🚀 Need help? View the setup guide",
+      subtitle: 'Step-by-step: API Key, base URL, and client setup',
+      cta: 'Open docs →',
+    },
     allGroups: 'All Groups',
     allStatus: 'All Status',
     columnSettings: 'Column Settings',

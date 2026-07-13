@@ -77,6 +77,11 @@ export default {
       clickToCopy: '点击可复制此端点',
       speedTest: '测速',
     },
+    docsGuide: {
+      title: '🚀 不会配置？点击查看使用教程',
+      subtitle: '手把手教你配置 API Key、模型地址及客户端接入',
+      cta: '立即查看 →',
+    },
     allGroups: '全部分组',
     allStatus: '全部状态',
     columnSettings: '列设置',

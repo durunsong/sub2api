@@ -23,11 +23,33 @@
               @update:model-value="onStatusFilterChange"
             />
           </div>
-          <EndpointPopover
-            v-if="publicSettings?.api_base_url || (publicSettings?.custom_endpoints?.length ?? 0) > 0"
-            :api-base-url="publicSettings?.api_base_url || ''"
-            :custom-endpoints="publicSettings?.custom_endpoints || []"
-          />
+          <div class="flex flex-wrap items-center gap-3">
+            <EndpointPopover
+              v-if="publicSettings?.api_base_url || (publicSettings?.custom_endpoints?.length ?? 0) > 0"
+              :api-base-url="publicSettings?.api_base_url || ''"
+              :custom-endpoints="publicSettings?.custom_endpoints || []"
+            />
+            <!-- ponytail: 与 API 节点同行；左连哪、右怎么配 -->
+            <a
+              href="/docs/"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="ml-auto flex max-w-full items-center gap-3 rounded-lg border border-primary-200/80 bg-primary-50/80 px-3 py-1.5 text-left transition-colors hover:border-primary-300 hover:bg-primary-50 dark:border-primary-800/60 dark:bg-primary-900/20 dark:hover:border-primary-700 dark:hover:bg-primary-900/30"
+              data-tour="keys-docs-guide"
+            >
+              <span class="min-w-0">
+                <span class="block text-xs font-medium text-primary-700 dark:text-primary-300">
+                  {{ t('keys.docsGuide.title') }}
+                </span>
+                <span class="mt-0.5 hidden text-[11px] leading-tight text-primary-600/80 dark:text-primary-400/80 sm:block">
+                  {{ t('keys.docsGuide.subtitle') }}
+                </span>
+              </span>
+              <span class="shrink-0 text-xs font-semibold text-primary-600 dark:text-primary-400">
+                {{ t('keys.docsGuide.cta') }}
+              </span>
+            </a>
+          </div>
         </div>
       </template>
 
