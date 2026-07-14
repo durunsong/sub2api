@@ -45,7 +45,7 @@
             :rowspan="channel.platforms.length"
             class="px-4 py-3 text-center align-middle font-medium text-gray-900 dark:text-white"
           >
-            {{ channel.name }}
+            {{ displayText(channel.name) }}
           </td>
 
           <!-- 描述：独立一列，同样用 rowspan 纵向合并 -->
@@ -54,7 +54,7 @@
             :rowspan="channel.platforms.length"
             class="px-4 py-3 align-middle text-xs text-gray-500 dark:text-gray-400"
           >
-            <template v-if="channel.description">{{ channel.description }}</template>
+            <template v-if="channel.description">{{ displayText(channel.description) }}</template>
             <span v-else class="text-gray-400">-</span>
           </td>
 
@@ -63,11 +63,11 @@
             <span
               :class="[
                 'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium uppercase',
-                platformBadgeClass(section.platform),
+                platformBadgeClass(displayPlatform(section.platform)),
               ]"
             >
-              <PlatformIcon :platform="section.platform as GroupPlatform" size="xs" />
-              {{ section.platform }}
+              <PlatformIcon :platform="displayPlatform(section.platform) as GroupPlatform" size="xs" />
+              {{ displayPlatformLabel(section.platform) }}
             </span>
           </td>
 
@@ -95,6 +95,7 @@
                     :platform="g.platform as GroupPlatform"
                     :subscription-type="(g.subscription_type || 'standard') as SubscriptionType"
                     :show-rate="false"
+                    :user-facing="props.userFacing"
                   />
                 </div>
               </div>
@@ -119,6 +120,7 @@
                     :platform="g.platform as GroupPlatform"
                     :subscription-type="(g.subscription_type || 'standard') as SubscriptionType"
                     :show-rate="false"
+                    :user-facing="props.userFacing"
                   />
                 </div>
               </div>
@@ -157,9 +159,14 @@ import GroupBadge from '@/components/common/GroupBadge.vue'
 import SupportedModelChip from './SupportedModelChip.vue'
 import type { UserAvailableChannel, UserAvailableGroup, UserChannelPlatformSection } from '@/api/channels'
 import type { GroupPlatform, SubscriptionType } from '@/types'
-import { platformBadgeClass } from '@/utils/platformColors'
+import {
+  platformBadgeClass,
+  platformLabel,
+  userFacingPlatform,
+  userFacingPlatformText,
+} from '@/utils/platformColors'
 
-defineProps<{
+const props = withDefaults(defineProps<{
   columns: {
     name: string
     description: string
@@ -173,8 +180,23 @@ defineProps<{
   noPricingLabel: string
   noModelsLabel: string
   emptyLabel: string
-}>()
+  userFacing?: boolean
+}>(), {
+  userFacing: false,
+})
 const { t } = useI18n()
+
+function displayPlatform(platform: string): string {
+  return props.userFacing ? userFacingPlatform(platform) : platform
+}
+
+function displayPlatformLabel(platform: string): string {
+  return props.userFacing ? platformLabel(platform) : platform
+}
+
+function displayText(value: string): string {
+  return props.userFacing ? userFacingPlatformText(value) : value
+}
 
 function exclusiveGroups(section: UserChannelPlatformSection): UserAvailableGroup[] {
   return section.groups.filter((g) => g.is_exclusive)
