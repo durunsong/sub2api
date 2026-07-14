@@ -280,8 +280,8 @@ describe('PaymentView subscription filters', () => {
   it('shows custom labels and switches between platform and duration filters', async () => {
     const basePlan = checkoutInfoWithPlansFixture().data.plans[0]
     const plans: SubscriptionPlan[] = [
-      { ...basePlan, id: 1, name: 'Kiro Day', group_platform: 'kiro', validity_days: 3 },
-      { ...basePlan, id: 2, name: 'Kiro Week', group_platform: 'kiro', validity_days: 7 },
+      { ...basePlan, id: 1, name: 'Claude Day', group_platform: 'kiro', validity_days: 3 },
+      { ...basePlan, id: 2, name: 'Claude Week', group_platform: 'kiro', validity_days: 7 },
       { ...basePlan, id: 3, name: 'Anthropic Month', group_platform: 'anthropic', validity_days: 30 },
       { ...basePlan, id: 4, name: 'OpenAI Week', group_platform: 'openai', validity_days: 7 },
       { ...basePlan, id: 5, name: 'OpenAI Long', group_platform: 'openai', validity_days: 40 },
@@ -297,15 +297,15 @@ describe('PaymentView subscription filters', () => {
     expect(wrapper.text()).toContain('月卡')
 
     await wrapper.findAll('button').find(button => button.text() === '周卡')?.trigger('click')
-    expect(wrapper.text()).toContain('Kiro Week')
+    expect(wrapper.text()).toContain('Claude Week')
     expect(wrapper.text()).toContain('OpenAI Week')
-    expect(wrapper.text()).not.toContain('Kiro Day')
+    expect(wrapper.text()).not.toContain('Claude Day')
     expect(wrapper.text()).not.toContain('Anthropic Month')
     expect(wrapper.text()).not.toContain('OpenAI Long')
 
     await wrapper.findAll('button').find(button => button.text() === 'Claude(Max 5x)')?.trigger('click')
-    expect(wrapper.text()).toContain('Kiro Week')
-    expect(wrapper.text()).toContain('Kiro Day')
+    expect(wrapper.text()).toContain('Claude Week')
+    expect(wrapper.text()).toContain('Claude Day')
     expect(wrapper.text()).not.toContain('OpenAI Week')
     expect(wrapper.text()).not.toContain('Anthropic Month')
   })
@@ -313,7 +313,7 @@ describe('PaymentView subscription filters', () => {
   it('filters plans by plural validity_unit values from checkout info', async () => {
     const basePlan = checkoutInfoWithPlansFixture().data.plans[0]
     const plans: SubscriptionPlan[] = [
-      { ...basePlan, id: 1, name: 'Kiro Day', group_platform: 'kiro', validity_days: 1, validity_unit: 'days' },
+      { ...basePlan, id: 1, name: 'Claude Day', group_platform: 'kiro', validity_days: 1, validity_unit: 'days' },
       { ...basePlan, id: 2, name: 'OpenAI Week', group_platform: 'openai', validity_days: 1, validity_unit: 'weeks' },
       { ...basePlan, id: 3, name: 'OpenAI Month', group_platform: 'openai', validity_days: 1, validity_unit: 'months' },
     ]
@@ -322,18 +322,18 @@ describe('PaymentView subscription filters', () => {
 
     await wrapper.findAll('button').find(button => button.text() === '月卡')?.trigger('click')
     expect(wrapper.text()).toContain('OpenAI Month')
-    expect(wrapper.text()).not.toContain('Kiro Day')
+    expect(wrapper.text()).not.toContain('Claude Day')
     expect(wrapper.text()).not.toContain('OpenAI Week')
 
     await wrapper.findAll('button').find(button => button.text() === 'OpenAI(GPT 20x)')?.trigger('click')
     expect(wrapper.text()).toContain('OpenAI Week')
     expect(wrapper.text()).toContain('OpenAI Month')
-    expect(wrapper.text()).not.toContain('Kiro Day')
+    expect(wrapper.text()).not.toContain('Claude Day')
     expect(wrapper.text()).toContain('周卡')
     expect(wrapper.text()).toContain('月卡')
 
     await wrapper.findAll('button').find(button => button.text() === 'Claude(Max 5x)')?.trigger('click')
-    expect(wrapper.text()).toContain('Kiro Day')
+    expect(wrapper.text()).toContain('Claude Day')
     expect(wrapper.text()).not.toContain('OpenAI Week')
     expect(wrapper.text()).not.toContain('OpenAI Month')
     expect(wrapper.text()).toContain('天卡')

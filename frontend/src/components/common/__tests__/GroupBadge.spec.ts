@@ -30,4 +30,23 @@ describe('GroupBadge', () => {
     expect(wrapper.html()).toContain('text-violet-700')
     expect(wrapper.html()).not.toContain('text-amber-700')
   })
+
+  it('用户侧把 Kiro 分组显示为 Claude 品牌', () => {
+    const wrapper = mount(GroupBadge, {
+      props: {
+        name: 'Kiro Pro',
+        platform: 'kiro',
+        userFacing: true
+      },
+      global: {
+        plugins: [createPinia()]
+      }
+    })
+
+    expect(wrapper.text()).toContain('Claude Pro')
+    expect(wrapper.text()).not.toContain('Kiro')
+    expect(wrapper.html()).toContain('m3.127 10.604')
+    expect(wrapper.html()).toContain('bg-amber-50')
+    expect(wrapper.html()).not.toContain('#9046FF')
+  })
 })

@@ -251,7 +251,7 @@ const PLATFORM_LABELS: Record<string, string> = {
   gemini: 'Gemini',
   antigravity: 'Antigravity',
   grok: 'Grok',
-  kiro: 'Kiro'
+  kiro: 'Claude'
 }
 
 const platformLabel = (p: string) => PLATFORM_LABELS[p] ?? p

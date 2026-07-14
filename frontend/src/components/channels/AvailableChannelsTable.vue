@@ -138,7 +138,7 @@
                 :pricing-key-prefix="pricingKeyPrefix"
                 :no-pricing-label="noPricingLabel"
                 :show-platform="false"
-                :platform-hint="section.platform"
+                :platform-hint="displayPlatform(section.platform)"
               />
               <span v-if="section.supported_models.length === 0" class="text-xs text-gray-400">
                 {{ noModelsLabel }}

@@ -112,8 +112,8 @@
                   <div v-else class="space-y-3">
                     <div v-for="sub in activeSubscriptions" :key="sub.id" class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-dark-700 dark:bg-dark-800">
                       <div class="flex flex-wrap items-center gap-2">
-                        <span :class="['shrink-0 rounded-md px-2 py-0.5 text-xs font-medium', platformBadgeLightClass(sub.group?.platform || '')]">{{ platformLabel(sub.group?.platform || '') }}</span>
-                        <span class="font-bold text-gray-900 dark:text-white">{{ sub.group?.name || t('payment.groupFallback', { id: sub.group_id }) }}</span>
+                        <span :class="['shrink-0 rounded-md px-2 py-0.5 text-xs font-medium', platformBadgeLightClass(userFacingPlatform(sub.group?.platform || ''))]">{{ platformLabel(sub.group?.platform || '') }}</span>
+                        <span class="font-bold text-gray-900 dark:text-white">{{ sub.group?.name ? userFacingPlatformText(sub.group.name) : t('payment.groupFallback', { id: sub.group_id }) }}</span>
                         <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">{{ t('userSubscriptions.status.active') }}</span>
                         <button class="btn btn-primary ml-auto px-3 py-1.5 text-xs" @click="router.push({ path: '/purchase', query: { tab: 'subscription', group: String(sub.group_id) } })">{{ t('payment.renewNow') }}</button>
                       </div>
@@ -148,7 +148,7 @@
                   <span :class="['rounded-md border px-2 py-0.5 text-xs font-medium', planBadgeClass]">
                     {{ platformLabel(selectedPlan.group_platform || '') }}
                   </span>
-                  <h3 class="text-lg font-bold text-gray-900 dark:text-white">{{ selectedPlan.name }}</h3>
+                  <h3 class="text-lg font-bold text-gray-900 dark:text-white">{{ userFacingPlatformText(selectedPlan.name) }}</h3>
                 </div>
                 <!-- Price -->
                 <div class="flex items-baseline gap-2">
@@ -160,7 +160,7 @@
                 </div>
                 <!-- Description -->
                 <p v-if="selectedPlan.description" class="mt-2 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
-                  {{ selectedPlan.description }}
+                  {{ userFacingPlatformText(selectedPlan.description) }}
                 </p>
                 <!-- Limits grid -->
                 <div class="mt-3 grid grid-cols-2 gap-3">
@@ -259,11 +259,11 @@
                 <div class="space-y-2">
                   <div v-for="sub in activeSubscriptions" :key="sub.id"
                     class="flex items-center gap-3 rounded-xl border border-gray-100 bg-white px-3 py-2 dark:border-dark-700 dark:bg-dark-800">
-                    <div :class="['h-6 w-1 shrink-0 rounded-full', platformAccentBarClass(sub.group?.platform || '')]" />
+                    <div :class="['h-6 w-1 shrink-0 rounded-full', platformAccentBarClass(userFacingPlatform(sub.group?.platform || ''))]" />
                     <div class="min-w-0 flex-1">
                       <div class="flex items-center gap-1.5">
-                        <span class="truncate text-xs font-semibold text-gray-900 dark:text-white">{{ sub.group?.name || t('payment.groupFallback', { id: sub.group_id }) }}</span>
-                        <span :class="['shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-medium', platformBadgeLightClass(sub.group?.platform || '')]">{{ platformLabel(sub.group?.platform || '') }}</span>
+                        <span class="truncate text-xs font-semibold text-gray-900 dark:text-white">{{ sub.group?.name ? userFacingPlatformText(sub.group.name) : t('payment.groupFallback', { id: sub.group_id }) }}</span>
+                        <span :class="['shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-medium', platformBadgeLightClass(userFacingPlatform(sub.group?.platform || ''))]">{{ platformLabel(sub.group?.platform || '') }}</span>
                       </div>
                       <div class="flex flex-wrap gap-x-3 text-[11px] text-gray-400 dark:text-gray-500">
                         <span v-if="sub.group?.daily_limit_usd == null && sub.group?.weekly_limit_usd == null && sub.group?.monthly_limit_usd == null">{{ t('payment.planCard.quota') }}: {{ t('payment.planCard.unlimited') }}</span>
@@ -343,7 +343,15 @@ import {
   type PaymentRecoverySnapshot,
   writePaymentRecoverySnapshot,
 } from '@/components/payment/paymentFlow'
-import { platformAccentBarClass, platformBadgeLightClass, platformBadgeClass, platformTextClass, platformLabel } from '@/utils/platformColors'
+import {
+  platformAccentBarClass,
+  platformBadgeLightClass,
+  platformBadgeClass,
+  platformTextClass,
+  platformLabel,
+  userFacingPlatform,
+  userFacingPlatformText,
+} from '@/utils/platformColors'
 import SubscriptionPlanCard from '@/components/payment/SubscriptionPlanCard.vue'
 import PaymentStatusPanel from '@/components/payment/PaymentStatusPanel.vue'
 import Icon from '@/components/icons/Icon.vue'
@@ -836,8 +844,8 @@ const paymentButtonClass = computed(() => {
 })
 
 // Subscription confirm: platform accent colors (clean card, no gradient)
-const planBadgeClass = computed(() => platformBadgeClass(selectedPlan.value?.group_platform || ''))
-const planTextClass = computed(() => platformTextClass(selectedPlan.value?.group_platform || ''))
+const planBadgeClass = computed(() => platformBadgeClass(userFacingPlatform(selectedPlan.value?.group_platform || '')))
+const planTextClass = computed(() => platformTextClass(userFacingPlatform(selectedPlan.value?.group_platform || '')))
 
 // Renewal modal state
 const showRenewalModal = ref(false)

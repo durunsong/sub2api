@@ -9,13 +9,14 @@
 
 ## 一句话
 
-本仓库 = [Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.1.153** + **Kiro** + **XorPay** + **Access Ban** + **Grok/Kiro 配额** + **UI/支付/版本弹窗** 等定制（相对官方 **425** 文件差异；工作区另见文档 §8.2）。
+本仓库 = [Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.1.155** + **Kiro** + **XorPay** + **Access Ban** + **Grok/Kiro 配额** + **UI/支付/版本弹窗** 等定制（相对官方 **441** 文件差异；工作区另见文档 §8.2）。
 
 ## 核心模块
 
 | 模块 | 详见文档章节 |
 |------|-------------|
 | Kiro 平台 | §3 |
+| 用户端 Kiro → Claude 品牌别名 | §3.5 |
 | XorPay 支付 | §4 |
 | Grok 配额口径 | §5 |
 | UI / 品牌 / VersionBadge | §6 |
@@ -30,4 +31,4 @@
 
 ---
 
-*最后更新：2026-07-13*
+*最后更新：2026-07-14*
