@@ -225,7 +225,7 @@ func TestExecUsageLogInsertNoResult_PersistsRequestedModel(t *testing.T) {
 		CreatedAt:      time.Date(2025, 1, 4, 12, 0, 0, 0, time.UTC),
 	})
 
-	mock.ExpectExec("INSERT INTO usage_logs").
+	mock.ExpectExec(`(?s)INSERT INTO usage_logs.*\$54, \$55\s*\)`).
 		WithArgs(anySliceToDriverValues(prepared.args)...).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
@@ -246,6 +246,30 @@ func TestPrepareUsageLogInsert_ArgCountMatchesTypes(t *testing.T) {
 	})
 
 	require.Len(t, prepared.args, len(usageLogInsertArgTypes))
+}
+
+func TestUsageLogRepositoryCreate_StaticPlaceholdersMatchPreparedArgs(t *testing.T) {
+	db, mock := newSQLMock(t)
+	repo := &usageLogRepository{sql: db}
+	createdAt := time.Date(2025, 1, 5, 13, 0, 0, 0, time.UTC)
+	log := &service.UsageLog{
+		UserID:    1,
+		APIKeyID:  2,
+		AccountID: 3,
+		RequestID: "req-static-placeholder-count",
+		Model:     "gpt-5",
+		CreatedAt: createdAt,
+	}
+	prepared := prepareUsageLogInsert(log)
+
+	mock.ExpectQuery(`(?s)INSERT INTO usage_logs.*\$54, \$55\s*\)`).
+		WithArgs(anySliceToDriverValues(prepared.args)...).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at"}).AddRow(int64(101), createdAt))
+
+	inserted, err := repo.Create(context.Background(), log)
+	require.NoError(t, err)
+	require.True(t, inserted)
+	require.NoError(t, mock.ExpectationsWereMet())
 }
 
 func TestPrepareUsageLogInsert_PersistsImageSizeMetadata(t *testing.T) {
