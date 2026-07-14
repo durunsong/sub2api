@@ -165,6 +165,7 @@
                   :platform="row.group.platform"
                   :subscription-type="row.group.subscription_type"
                   :show-rate="false"
+                  user-facing
                 />
                 <span v-else class="text-sm text-gray-400 dark:text-dark-500">{{
                   t('keys.noGroup')
@@ -494,6 +495,7 @@
                 :platform="(option as unknown as GroupOption).platform"
                 :subscription-type="(option as unknown as GroupOption).subscriptionType"
                 :show-rate="false"
+                user-facing
               />
               <span v-else class="text-gray-400">{{ t('keys.selectGroup') }}</span>
             </template>
@@ -505,6 +507,7 @@
                 :show-rate="false"
                 :description="(option as unknown as GroupOption).description"
                 :selected="selected"
+                user-facing
               />
             </template>
           </Select>
@@ -1102,6 +1105,7 @@
                 selectedKeyForGroup?.group_id === option.value ||
                 (!selectedKeyForGroup?.group_id && option.value === null)
               "
+              user-facing
             />
           </button>
           <!-- Empty state when search has no results -->
@@ -1143,6 +1147,7 @@ import type { Column } from '@/components/common/types'
 import type { BatchApiKeyUsageStats } from '@/api/usage'
 import { formatDateTime } from '@/utils/format'
 import { maskApiKey } from '@/utils/maskApiKey'
+import { platformSearchText, userFacingPlatformText } from '@/utils/platformColors'
 import {
   buildCcSwitchImportDeeplink,
   type CcSwitchClientType
@@ -1161,6 +1166,7 @@ interface GroupOption {
   description: string | null
   subscriptionType: SubscriptionType
   platform: GroupPlatform
+  searchKeywords: string
 }
 
 const appStore = useAppStore()
@@ -1369,7 +1375,11 @@ const shouldSubmitEditStatus = (key: ApiKey, status: 'active' | 'inactive') => {
 const groupFilterOptions = computed(() => [
   { value: '', label: t('keys.allGroups') },
   { value: 0, label: t('keys.noGroup') },
-  ...groups.value.map((g) => ({ value: g.id, label: g.name }))
+  ...groups.value.map((g) => ({
+    value: g.id,
+    label: userFacingPlatformText(g.name),
+    searchKeywords: platformSearchText(g.platform)
+  }))
 ])
 
 const statusFilterOptions = computed(() => [
@@ -1399,10 +1409,11 @@ const onStatusFilterChange = (value: string | number | boolean | null) => {
 const groupOptions = computed(() =>
   groups.value.map((group) => ({
     value: group.id,
-    label: group.name,
-    description: group.description,
+    label: userFacingPlatformText(group.name),
+    description: userFacingPlatformText(group.description),
     subscriptionType: group.subscription_type,
-    platform: group.platform
+    platform: group.platform,
+    searchKeywords: platformSearchText(group.platform)
   }))
 )
 
@@ -1413,7 +1424,8 @@ const filteredGroupOptions = computed(() => {
   if (!query) return groupOptions.value
   return groupOptions.value.filter((opt) => {
     return opt.label.toLowerCase().includes(query) ||
-      (opt.description && opt.description.toLowerCase().includes(query))
+      (opt.description && opt.description.toLowerCase().includes(query)) ||
+      opt.searchKeywords.includes(query)
   })
 })
 

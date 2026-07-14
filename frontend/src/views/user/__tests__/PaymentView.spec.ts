@@ -289,9 +289,9 @@ describe('PaymentView subscription filters', () => {
 
     const wrapper = await mountSubscriptionList(plans)
 
-    expect(wrapper.text()).toContain('Claude(Kiro)')
-    expect(wrapper.text()).toContain('Claude(GLM)')
-    expect(wrapper.text()).toContain('OpenAI(GPT)')
+    expect(wrapper.text()).toContain('Claude(Max 5x)')
+    expect(wrapper.text()).toContain('Claude(GLM coding Max)')
+    expect(wrapper.text()).toContain('OpenAI(GPT 20x)')
     expect(wrapper.text()).toContain('天卡')
     expect(wrapper.text()).toContain('周卡')
     expect(wrapper.text()).toContain('月卡')
@@ -303,7 +303,7 @@ describe('PaymentView subscription filters', () => {
     expect(wrapper.text()).not.toContain('Anthropic Month')
     expect(wrapper.text()).not.toContain('OpenAI Long')
 
-    await wrapper.findAll('button').find(button => button.text() === 'Claude(Kiro)')?.trigger('click')
+    await wrapper.findAll('button').find(button => button.text() === 'Claude(Max 5x)')?.trigger('click')
     expect(wrapper.text()).toContain('Kiro Week')
     expect(wrapper.text()).toContain('Kiro Day')
     expect(wrapper.text()).not.toContain('OpenAI Week')
@@ -325,14 +325,14 @@ describe('PaymentView subscription filters', () => {
     expect(wrapper.text()).not.toContain('Kiro Day')
     expect(wrapper.text()).not.toContain('OpenAI Week')
 
-    await wrapper.findAll('button').find(button => button.text() === 'OpenAI(GPT)')?.trigger('click')
+    await wrapper.findAll('button').find(button => button.text() === 'OpenAI(GPT 20x)')?.trigger('click')
     expect(wrapper.text()).toContain('OpenAI Week')
     expect(wrapper.text()).toContain('OpenAI Month')
     expect(wrapper.text()).not.toContain('Kiro Day')
     expect(wrapper.text()).toContain('周卡')
     expect(wrapper.text()).toContain('月卡')
 
-    await wrapper.findAll('button').find(button => button.text() === 'Claude(Kiro)')?.trigger('click')
+    await wrapper.findAll('button').find(button => button.text() === 'Claude(Max 5x)')?.trigger('click')
     expect(wrapper.text()).toContain('Kiro Day')
     expect(wrapper.text()).not.toContain('OpenAI Week')
     expect(wrapper.text()).not.toContain('OpenAI Month')

@@ -6,9 +6,9 @@
     ]"
   >
     <!-- Platform logo -->
-    <PlatformIcon v-if="platform" :platform="platform" size="sm" />
+    <PlatformIcon v-if="visualPlatform" :platform="visualPlatform" size="sm" />
     <!-- Group name -->
-    <span class="truncate">{{ name }}</span>
+    <span class="truncate">{{ displayName }}</span>
     <!-- Right side label -->
     <span v-if="showLabel" :class="labelClass">
       <template v-if="hasCustomRate">
@@ -32,6 +32,7 @@ import { useI18n } from 'vue-i18n'
 import type { SubscriptionType, GroupPlatform } from '@/types'
 import { useAppStore } from '@/stores/app'
 import { formatPeakRateWindow, serverTimezoneLabel } from '@/utils/peak-rate'
+import { userFacingPlatform, userFacingPlatformText } from '@/utils/platformColors'
 import PlatformIcon from './PlatformIcon.vue'
 
 interface Props {
@@ -45,6 +46,7 @@ interface Props {
   peakEnd?: string
   peakRateMultiplier?: number
   showRate?: boolean
+  userFacing?: boolean
   daysRemaining?: number | null // 剩余天数（订阅类型时使用）
   /**
    * 订阅分组默认在右侧 label 展示"订阅"或剩余天数；
@@ -60,12 +62,19 @@ const props = withDefaults(defineProps<Props>(), {
   daysRemaining: null,
   userRateMultiplier: null,
   peakRateEnabled: false,
+  userFacing: false,
   alwaysShowRate: false
 })
 
 const { t } = useI18n()
 
 const isSubscription = computed(() => props.subscriptionType === 'subscription')
+const visualPlatform = computed(() =>
+  props.userFacing && props.platform ? userFacingPlatform(props.platform) : props.platform
+)
+const displayName = computed(() =>
+  props.userFacing ? userFacingPlatformText(props.name) : props.name
+)
 
 // 是否有专属倍率（且与默认倍率不同）
 const hasCustomRate = computed(() => {
@@ -147,22 +156,22 @@ const labelClass = computed(() => {
   }
 
   // 正常状态或无天数：根据平台显示主题色
-  if (props.platform === 'kiro') {
+  if (visualPlatform.value === 'kiro') {
     return `${base} bg-violet-200/60 text-violet-800 dark:bg-violet-800/40 dark:text-violet-300`
   }
-  if (props.platform === 'anthropic') {
+  if (visualPlatform.value === 'anthropic') {
     return `${base} bg-orange-200/60 text-orange-800 dark:bg-orange-800/40 dark:text-orange-300`
   }
-  if (props.platform === 'openai') {
+  if (visualPlatform.value === 'openai') {
     return `${base} bg-emerald-200/60 text-emerald-800 dark:bg-emerald-800/40 dark:text-emerald-300`
   }
-  if (props.platform === 'gemini') {
+  if (visualPlatform.value === 'gemini') {
     return `${base} bg-blue-200/60 text-blue-800 dark:bg-blue-800/40 dark:text-blue-300`
   }
-  if (props.platform === 'antigravity') {
+  if (visualPlatform.value === 'antigravity') {
     return `${base} bg-purple-200/60 text-purple-800 dark:bg-purple-800/40 dark:text-purple-300`
   }
-  if (props.platform === 'grok') {
+  if (visualPlatform.value === 'grok') {
     return `${base} bg-zinc-300/70 text-zinc-800 dark:bg-zinc-700/60 dark:text-zinc-200`
   }
   return `${base} bg-violet-200/60 text-violet-800 dark:bg-violet-800/40 dark:text-violet-300`
@@ -174,33 +183,33 @@ const peakRateClass = computed(() => {
 
 // Badge color based on platform and subscription type
 const badgeClass = computed(() => {
-  if (props.platform === 'kiro') {
+  if (visualPlatform.value === 'kiro') {
     return isSubscription.value
       ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300'
       : 'bg-violet-50 text-violet-700 dark:bg-violet-900/20 dark:text-violet-300'
   }
-  if (props.platform === 'anthropic') {
+  if (visualPlatform.value === 'anthropic') {
     // Claude: orange theme
     return isSubscription.value
       ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
       : 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'
-  } else if (props.platform === 'openai') {
+  } else if (visualPlatform.value === 'openai') {
     // OpenAI: green theme
     return isSubscription.value
       ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
       : 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400'
   }
-  if (props.platform === 'gemini') {
+  if (visualPlatform.value === 'gemini') {
     return isSubscription.value
       ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
       : 'bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-400'
   }
-  if (props.platform === 'antigravity') {
+  if (visualPlatform.value === 'antigravity') {
     return isSubscription.value
       ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
       : 'bg-fuchsia-50 text-fuchsia-700 dark:bg-fuchsia-900/20 dark:text-fuchsia-400'
   }
-  if (props.platform === 'grok') {
+  if (visualPlatform.value === 'grok') {
     return isSubscription.value
       ? 'bg-zinc-200 text-zinc-800 dark:bg-zinc-700 dark:text-zinc-100'
       : 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200'

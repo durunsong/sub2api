@@ -41,6 +41,7 @@
           :no-pricing-label="t('availableChannels.noPricing')"
           :no-models-label="t('availableChannels.noModels')"
           :empty-label="t('availableChannels.empty')"
+          user-facing
         />
       </template>
     </TablePageLayout>
@@ -57,6 +58,7 @@ import AvailableChannelsTable from '@/components/channels/AvailableChannelsTable
 import userChannelsAPI, { type UserAvailableChannel } from '@/api/channels'
 import { useAppStore } from '@/stores/app'
 import { extractApiErrorMessage } from '@/utils/apiError'
+import { platformSearchText, userFacingPlatformText } from '@/utils/platformColors'
 
 const { t } = useI18n()
 const appStore = useAppStore()
@@ -84,13 +86,13 @@ const filteredChannels = computed(() => {
   if (!q) return channels.value
   return channels.value
     .map((ch) => {
-      const nameHit = ch.name.toLowerCase().includes(q)
-      const descHit = (ch.description || '').toLowerCase().includes(q)
+      const nameHit = userFacingPlatformText(ch.name).toLowerCase().includes(q)
+      const descHit = userFacingPlatformText(ch.description).toLowerCase().includes(q)
       if (nameHit || descHit) return ch
       const matchingSections = ch.platforms.filter(
         (p) =>
-          p.platform.toLowerCase().includes(q) ||
-          p.groups.some((g) => g.name.toLowerCase().includes(q)) ||
+          platformSearchText(p.platform).includes(q) ||
+          p.groups.some((g) => userFacingPlatformText(g.name).toLowerCase().includes(q)) ||
           p.supported_models.some((m) => m.name.toLowerCase().includes(q)),
       )
       if (matchingSections.length === 0) return null

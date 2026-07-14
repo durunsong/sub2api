@@ -3,7 +3,7 @@
     <!-- Left: name + description -->
     <div
       class="flex min-w-0 flex-1 flex-col items-start"
-      :title="description || undefined"
+      :title="displayDescription || undefined"
     >
       <!-- Row 1: platform badge (name bold) -->
       <GroupBadge
@@ -11,14 +11,15 @@
         :platform="platform"
         :subscription-type="subscriptionType"
         :show-rate="false"
+        :user-facing="userFacing"
         class="groupOptionItemBadge"
       />
       <!-- Row 2: description with top spacing -->
       <span
-        v-if="description"
+        v-if="displayDescription"
         class="mt-1.5 w-full text-left text-xs leading-relaxed text-gray-500 dark:text-gray-400 line-clamp-2"
       >
-        {{ description }}
+        {{ displayDescription }}
       </span>
     </div>
 
@@ -65,6 +66,7 @@ import GroupBadge from './GroupBadge.vue'
 import type { SubscriptionType, GroupPlatform } from '@/types'
 import { useAppStore } from '@/stores/app'
 import { formatPeakRateWindow, serverTimezoneLabel } from '@/utils/peak-rate'
+import { userFacingPlatform, userFacingPlatformText } from '@/utils/platformColors'
 
 const { t } = useI18n()
 
@@ -81,6 +83,7 @@ interface Props {
   description?: string | null
   selected?: boolean
   showCheckmark?: boolean
+  userFacing?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -88,8 +91,16 @@ const props = withDefaults(defineProps<Props>(), {
   selected: false,
   showCheckmark: true,
   userRateMultiplier: null,
-  peakRateEnabled: false
+  peakRateEnabled: false,
+  userFacing: false
 })
+
+const displayDescription = computed(() =>
+  props.userFacing ? userFacingPlatformText(props.description) : props.description
+)
+const visualPlatform = computed(() =>
+  props.userFacing ? userFacingPlatform(props.platform) : props.platform
+)
 
 // Whether user has a custom rate different from default
 const hasCustomRate = computed(() => {
@@ -125,7 +136,7 @@ const peakRateTitle = computed(() => {
 
 // Rate pill color matches platform badge color
 const ratePillClass = computed(() => {
-  switch (props.platform) {
+  switch (visualPlatform.value) {
     case 'anthropic':
       return 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'
     case 'openai':

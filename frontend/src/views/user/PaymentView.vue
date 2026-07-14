@@ -619,9 +619,9 @@ const visibleSubscriptionPlanDurationFilters = computed(() =>
 )
 
 function subscriptionPlanPlatformLabel(platform: string): string {
-  if (platform === 'kiro') return 'Claude(Kiro)'
-  if (platform === 'anthropic') return 'Claude(GLM)'
-  if (platform === 'openai') return 'OpenAI(GPT)'
+  if (platform === 'kiro') return 'Claude(Max 5x)'
+  if (platform === 'anthropic') return 'Claude(GLM coding Max)'
+  if (platform === 'openai') return 'OpenAI(GPT 20x)'
   return platformLabel(platform)
 }
 

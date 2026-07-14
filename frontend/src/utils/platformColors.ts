@@ -183,7 +183,19 @@ export function platformLabel(p: string): string {
     case 'antigravity': return 'Antigravity'
     case 'gemini': return 'Gemini'
     case 'grok': return 'Grok'
-    case 'kiro': return 'Kiro'
+    case 'kiro': return 'Claude'
     default: return p || 'API'
   }
+}
+
+export function userFacingPlatform<T extends string>(p: T): T | 'anthropic' {
+  return p === 'kiro' ? 'anthropic' : p
+}
+
+export function userFacingPlatformText(value: string | null | undefined): string {
+  return value?.replace(/\bkiro\b/gi, 'Claude') ?? ''
+}
+
+export function platformSearchText(p: string): string {
+  return `${p} ${platformLabel(p)}`.toLowerCase()
 }
