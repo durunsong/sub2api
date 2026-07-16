@@ -35,6 +35,7 @@
         <div class="flex items-baseline gap-1">
           <span class="text-xl font-semibold text-gray-400 dark:text-dark-500">$</span>
           <span :class="['text-4xl font-extrabold leading-none tracking-tight', textClass]">{{ plan.price }}</span>
+          <span v-if="plan.currency" class="text-xs font-medium text-gray-400 dark:text-dark-500">{{ plan.currency }}</span>
         </div>
         <span class="pb-1 text-sm text-gray-500 dark:text-dark-400">/ {{ validitySuffix }}</span>
         <span v-if="plan.original_price" :class="['mb-1 rounded px-1.5 py-0.5 text-[11px] font-semibold', discountClass]">{{ discountText }}</span>
