@@ -242,6 +242,16 @@
               </button>
             </div>
 
+            <button
+              v-if="selectedCount > 0"
+              class="btn btn-secondary flex-1 md:flex-initial"
+              data-test="bulk-edit-limits"
+              @click="showBulkEditModal = true"
+            >
+              <Icon name="users" size="md" class="mr-2" />
+              {{ t('admin.users.bulkLimits.action', { count: selectedCount }) }}
+            </button>
+
             <!-- Create User Button (full width on mobile, auto width on desktop) -->
             <button
               @click="openBatchDelete"
@@ -266,35 +276,18 @@
           :columns="columns"
           :data="sortedUsers"
           :loading="loading"
+          row-key="id"
+          selectable
+          :selected-keys="selectedIds"
+          :selection-label="getUserSelectionLabel"
           :actions-count="7"
           :server-side-sort="true"
           default-sort-key="created_at"
           default-sort-order="desc"
           :sort-storage-key="USER_SORT_STORAGE_KEY"
           @sort="handleSort"
+          @update:selected-keys="handleSelectedKeysUpdate"
         >
-          <template #header-select>
-            <input
-              type="checkbox"
-              class="h-4 w-4 cursor-pointer rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-              :checked="allVisibleSelected"
-              @click.stop
-              @change="toggleSelectAllVisible($event)"
-            />
-          </template>
-
-          <template #cell-select="{ row }">
-            <input
-              type="checkbox"
-              class="h-4 w-4 cursor-pointer rounded border-gray-300 text-primary-600 focus:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-40"
-              :checked="selectedUserIds.has(row.id)"
-              :disabled="row.role === 'admin'"
-              :title="row.role === 'admin' ? t('admin.users.roles.admin') : undefined"
-              @click.stop
-              @change="toggleSelectRow(row, $event)"
-            />
-          </template>
-
           <template #cell-email="{ value }">
             <div class="flex items-center gap-2">
               <div
@@ -780,6 +773,12 @@
     />
     <UserCreateModal :show="showCreateModal" @close="showCreateModal = false" @success="loadUsers" />
     <UserEditModal :show="showEditModal" :user="editingUser" @close="closeEditModal" @success="loadUsers" />
+    <BulkEditUserModal
+      :show="showBulkEditModal"
+      :selected-ids="selectedIds"
+      @close="showBulkEditModal = false"
+      @success="handleBulkLimitsSuccess"
+    />
     <UserPlatformQuotaModal
       :show="showPlatformQuotaModal"
       :user="platformQuotaUser"
@@ -827,6 +826,7 @@ import PlatformCostCell from '@/components/user/PlatformCostCell.vue'
 import UserPlatformQuotaCell from '@/components/user/UserPlatformQuotaCell.vue'
 import UserCreateModal from '@/components/admin/user/UserCreateModal.vue'
 import UserEditModal from '@/components/admin/user/UserEditModal.vue'
+import BulkEditUserModal from '@/components/admin/user/BulkEditUserModal.vue'
 import UserPlatformQuotaModal from '@/components/admin/user/UserPlatformQuotaModal.vue'
 import UserApiKeysModal from '@/components/admin/user/UserApiKeysModal.vue'
 import UserAllowedGroupsModal from '@/components/admin/user/UserAllowedGroupsModal.vue'
@@ -1041,10 +1041,9 @@ const hasVisibleAttributeColumns = computed(() =>
 
 // Filtered columns based on visibility
 const columns = computed<Column[]>(() => {
-  const visible = allColumns.value.filter(col =>
+  return allColumns.value.filter(col =>
     col.key === 'email' || col.key === 'actions' || !hiddenColumns.has(col.key)
   )
-  return [{ key: 'select', label: '', sortable: false }, ...visible]
 })
 
 const users = ref<AdminUser[]>([])
@@ -1320,10 +1319,9 @@ const sortedUsers = computed(() => {
 })
 
 const {
-  selectedSet: selectedUserIds,
+  selectedIds,
   selectedCount,
-  select,
-  deselect,
+  setSelectedIds,
   clear: clearSelectedUsers,
   removeMany: removeSelectedUsers
 } = useTableSelection<AdminUser>({
@@ -1331,15 +1329,17 @@ const {
   getId: (user) => user.id
 })
 
-const deletableVisibleUsers = computed(() =>
-  sortedUsers.value.filter((user) => user.role !== 'admin')
-)
+const handleSelectedKeysUpdate = (keys: Array<string | number>) => {
+  const visibleAdminIds = new Set(
+    sortedUsers.value.filter((user) => user.role === 'admin').map((user) => user.id)
+  )
+  setSelectedIds(
+    keys.filter((key): key is number => typeof key === 'number' && !visibleAdminIds.has(key))
+  )
+}
 
-const allVisibleSelected = computed(() => {
-  const deletable = deletableVisibleUsers.value
-  if (deletable.length === 0) return false
-  return deletable.every((user) => selectedUserIds.value.has(user.id))
-})
+const getUserSelectionLabel = (user: AdminUser) =>
+  t('admin.users.bulkLimits.selectUser', { email: user.email })
 
 // User attribute definitions and values
 const attributeDefinitions = ref<UserAttributeDefinition[]>([])
@@ -1353,6 +1353,7 @@ const pagination = reactive({
 
 const showCreateModal = ref(false)
 const showEditModal = ref(false)
+const showBulkEditModal = ref(false)
 const showDeleteDialog = ref(false)
 const showBatchDeleteDialog = ref(false)
 const showApiKeysModal = ref(false)
@@ -1658,6 +1659,11 @@ const loadUsers = async () => {
   }
 }
 
+const handleBulkLimitsSuccess = async () => {
+  clearSelectedUsers()
+  await loadUsers()
+}
+
 let searchTimeout: ReturnType<typeof setTimeout>
 const handleSearch = () => {
   clearTimeout(searchTimeout)
@@ -1799,25 +1805,6 @@ const handleDelete = (user: AdminUser) => {
   showDeleteDialog.value = true
 }
 
-const toggleSelectAllVisible = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  if (target.checked) {
-    deletableVisibleUsers.value.forEach((user) => select(user.id))
-  } else {
-    deletableVisibleUsers.value.forEach((user) => deselect(user.id))
-  }
-}
-
-const toggleSelectRow = (user: AdminUser, event: Event) => {
-  if (user.role === 'admin') return
-  const target = event.target as HTMLInputElement
-  if (target.checked) {
-    select(user.id)
-  } else {
-    deselect(user.id)
-  }
-}
-
 const openBatchDelete = () => {
   if (selectedCount.value === 0) return
   showBatchDeleteDialog.value = true
@@ -1839,7 +1826,7 @@ const confirmDelete = async () => {
 }
 
 const confirmBatchDelete = async () => {
-  const ids = Array.from(selectedUserIds.value)
+  const ids = [...selectedIds.value]
   if (ids.length === 0) {
     showBatchDeleteDialog.value = false
     return
