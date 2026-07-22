@@ -2876,7 +2876,6 @@ const baseUrlHint = computed(() => {
 
 const antigravityPresetMappings = computed(() => getPresetMappingsByPlatform('antigravity'))
 const bedrockPresets = computed(() => getPresetMappingsByPlatform('bedrock'))
-const isKiroOAuthAccount = computed(() => props.account?.platform === 'kiro' && props.account?.type === 'oauth')
 // Kiro 积分单价适用于所有直连 AWS 的 Kiro 账号(OAuth 与无 base_url 的 API Key)。
 const isKiroAccount = computed(() => props.account?.platform === 'kiro')
 // Kiro 外部中转账号(apikey + 已配 base_url):编辑时显示 base_url 输入。
