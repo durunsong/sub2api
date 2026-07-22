@@ -327,7 +327,7 @@ import subscriptionsAPI from '@/api/subscriptions'
 import type { UserSubscription } from '@/types'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Icon from '@/components/icons/Icon.vue'
-import { formatDateOnly } from '@/utils/format'
+import { formatDateTimeToMinute } from '@/utils/format'
 import {
   platformBorderClass,
   platformBadgeClass,
@@ -451,7 +451,7 @@ function formatExpirationDate(expiresAt: string): string {
     return t('userSubscriptions.status.expired')
   }
 
-  const dateStr = formatDateOnly(expires)
+  const dateStr = formatDateTimeToMinute(expires)
 
   if (days === 0) {
     return `${dateStr} (${t('common.today')})`

@@ -356,10 +356,10 @@ import SubscriptionPlanCard from '@/components/payment/SubscriptionPlanCard.vue'
 import PaymentStatusPanel from '@/components/payment/PaymentStatusPanel.vue'
 import Icon from '@/components/icons/Icon.vue'
 import { DEFAULT_PAYMENT_CURRENCY, currencySymbol, formatPaymentAmount, normalizePaymentCurrency } from '@/components/payment/currency'
+import { planValiditySuffix as validitySuffixOf } from '@/components/payment/validity'
 import type { PaymentMethodOption } from '@/components/payment/PaymentMethodSelector.vue'
 import { buildPaymentErrorToastMessage, describePaymentScenarioError } from './paymentUx'
 import { hasWechatResumeQuery, parseWechatResumeRoute, stripWechatResumeQuery } from './paymentWechatResume'
-import { formatPlanValiditySuffix } from '@/utils/subscriptionPlanValidity'
 
 const i18n = useI18n()
 const { t } = i18n
@@ -857,11 +857,7 @@ const renewalPlans = computed(() => {
 
 const planValiditySuffix = computed(() => {
   if (!selectedPlan.value) return ''
-  return formatPlanValiditySuffix(
-    selectedPlan.value.validity_days,
-    selectedPlan.value.validity_unit,
-    t,
-  )
+  return validitySuffixOf(selectedPlan.value, t)
 })
 
 function selectPlan(plan: SubscriptionPlan) {

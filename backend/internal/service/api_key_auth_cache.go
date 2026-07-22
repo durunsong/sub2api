@@ -107,6 +107,10 @@ type APIKeyAuthGroupSnapshot struct {
 	KiroStickySessionTTLSeconds int     `json:"kiro_sticky_session_ttl_seconds"`
 	KiroCacheEmulationRatio     float64 `json:"kiro_cache_emulation_ratio"`
 	KiroEndpointMode            string  `json:"kiro_endpoint_mode"`
+	// MaxReasoningEffort OpenAI/Codex 请求的推理强度上限，空字符串表示不限制。
+	MaxReasoningEffort string `json:"max_reasoning_effort,omitempty"`
+	// ReasoningEffortMappings rewrites explicit effort values before the ceiling.
+	ReasoningEffortMappings []ReasoningEffortMapping `json:"reasoning_effort_mappings"`
 
 	// 高峰时段倍率：PeakRateEnabled 为 true 且请求时刻处于 [PeakStart, PeakEnd) 时，
 	// token 计费倍率额外乘以 PeakRateMultiplier（详见 Group.PeakMultiplierAt）。

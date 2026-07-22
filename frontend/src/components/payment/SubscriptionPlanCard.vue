@@ -31,9 +31,9 @@
 
       <!-- Price -->
       <div class="mb-5 flex items-end gap-2">
-        <span v-if="plan.original_price" class="pb-1 text-sm text-gray-400 line-through dark:text-dark-500">${{ plan.original_price }}</span>
+        <span v-if="plan.original_price" class="pb-1 text-sm text-gray-400 line-through dark:text-dark-500">{{ planCurrencySymbol }}{{ plan.original_price }}<template v-if="plan.currency"> {{ plan.currency }}</template></span>
         <div class="flex items-baseline gap-1">
-          <span class="text-xl font-semibold text-gray-400 dark:text-dark-500">$</span>
+          <span class="text-xl font-semibold text-gray-400 dark:text-dark-500">{{ planCurrencySymbol }}</span>
           <span :class="['text-4xl font-extrabold leading-none tracking-tight', textClass]">{{ plan.price }}</span>
           <span v-if="plan.currency" class="text-xs font-medium text-gray-400 dark:text-dark-500">{{ plan.currency }}</span>
         </div>
@@ -101,6 +101,8 @@ import { useI18n } from 'vue-i18n'
 import Icon from '@/components/icons/Icon.vue'
 import type { SubscriptionPlan } from '@/types/payment'
 import type { UserSubscription } from '@/types'
+import { planValiditySuffix } from './validity'
+import { currencySymbol } from '@/components/payment/currency'
 import {
   platformAccentBarClass,
   platformBadgeLightClass,
@@ -113,7 +115,6 @@ import {
   userFacingPlatform,
   userFacingPlatformText,
 } from '@/utils/platformColors'
-import { formatPlanValiditySuffix } from '@/utils/subscriptionPlanValidity'
 
 const props = defineProps<{ plan: SubscriptionPlan; activeSubscriptions?: UserSubscription[] }>()
 const emit = defineEmits<{ select: [plan: SubscriptionPlan] }>()
@@ -140,6 +141,7 @@ const discountText = computed(() => {
   const pct = Math.round((1 - props.plan.price / props.plan.original_price) * 100)
   return pct > 0 ? `-${pct}%` : ''
 })
+const planCurrencySymbol = computed(() => currencySymbol(props.plan.currency || 'USD'))
 const MODEL_SCOPE_LABELS: Record<string, string> = {
   claude: 'Claude',
   gemini_text: 'Gemini',
@@ -153,7 +155,5 @@ const modelScopeLabels = computed(() => {
   return scopes.map(s => MODEL_SCOPE_LABELS[s] || s)
 })
 
-const validitySuffix = computed(() =>
-  formatPlanValiditySuffix(props.plan.validity_days, props.plan.validity_unit, t),
-)
+const validitySuffix = computed(() => planValiditySuffix(props.plan, t))
 </script>

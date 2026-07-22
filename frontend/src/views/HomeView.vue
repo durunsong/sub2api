@@ -40,7 +40,7 @@
         <!-- Logo -->
         <div class="flex items-center gap-3">
           <div class="logo-box h-11 w-11 overflow-hidden rounded-[15px] shadow-lg shadow-cyan-900/10">
-            <img :src="siteLogo || '/logo.png'" :alt="siteName" class="h-full w-full object-cover" />
+            <img :src="siteLogo || '/logo.svg'" :alt="siteName" class="h-full w-full object-cover" />
           </div>
           <div class="hidden leading-tight sm:block">
             <div class="text-sm font-semibold tracking-[0.24em] text-slate-900 dark:text-white">
@@ -179,7 +179,7 @@
                 <div class="cockpit-header">
                   <div class="cockpit-brand">
                     <div class="cockpit-logo">
-                      <img :src="siteLogo || '/logo.png'" alt="" />
+                      <img :src="siteLogo || '/logo.svg'" alt="" />
                     </div>
                     <div>
                       <strong>{{ siteName }}</strong>

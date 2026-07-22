@@ -25,7 +25,7 @@
       <nav class="mx-auto flex max-w-6xl items-center justify-between">
         <router-link to="/" class="auth-header-brand flex items-center gap-3">
           <div class="auth-header-logo h-10 w-10 overflow-hidden rounded-[14px]">
-            <img :src="siteLogo || '/logo.png'" alt="" class="h-full w-full object-cover" />
+            <img :src="siteLogo || '/logo.svg'" alt="" class="h-full w-full object-cover" />
           </div>
           <div>
             <strong>{{ siteName }}</strong>
@@ -97,7 +97,7 @@
       <section class="auth-form-column">
         <div v-if="!immersive" class="mb-8 text-center">
           <div class="auth-logo mb-4 inline-flex h-16 w-16 overflow-hidden rounded-[20px]">
-            <img :src="siteLogo || '/logo.png'" :alt="siteName" class="h-full w-full object-cover" />
+            <img :src="siteLogo || '/logo.svg'" :alt="siteName" class="h-full w-full object-cover" />
           </div>
           <h1 class="text-gradient mb-2 text-3xl font-bold">{{ siteName }}</h1>
           <p class="text-sm text-gray-500 dark:text-dark-400">{{ siteSubtitle }}</p>
