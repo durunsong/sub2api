@@ -207,7 +207,7 @@ func (s *AccountTestService) TestAccountConnection(c *gin.Context, accountID int
 		return s.routeAntigravityTest(c, account, modelID, prompt)
 	}
 
-	if account.IsKiro() && account.Type == AccountTypeOAuth {
+	if isKiroDirectModeAccount(account) {
 		return s.testKiroAccountConnection(c, account, modelID)
 	}
 
@@ -254,9 +254,6 @@ func (s *AccountTestService) testClaudeAccountConnection(c *gin.Context, account
 		}
 
 		baseURL := account.GetBaseURL()
-		if baseURL == "" && account.Platform == PlatformKiro {
-			return s.sendErrorAndEnd(c, "Kiro API Key accounts require a Base URL")
-		}
 		if baseURL == "" {
 			baseURL = "https://api.anthropic.com"
 		}
@@ -419,17 +416,27 @@ func (s *AccountTestService) testKiroAccountConnection(c *gin.Context, account *
 		testModelID = mappedModel
 	}
 
-	if account.Type != AccountTypeOAuth {
+	if !isKiroDirectModeAccount(account) {
 		return s.sendErrorAndEnd(c, fmt.Sprintf("Unsupported Kiro account type: %s", account.Type))
 	}
 
-	if s.kiroTokenProvider == nil {
-		return s.sendErrorAndEnd(c, "Kiro token provider not configured")
-	}
-
-	accessToken, err := s.kiroTokenProvider.GetAccessToken(ctx, account)
-	if err != nil {
-		return s.sendErrorAndEnd(c, fmt.Sprintf("Failed to get Kiro access token: %s", err.Error()))
+	// API Key 账号:api_key 即长期 Bearer Token,无需 token provider 刷新。
+	// OAuth 账号:经 kiroTokenProvider 获取(必要时刷新)access_token。
+	var accessToken string
+	if account.Type == AccountTypeAPIKey {
+		accessToken = firstKiroCredential(account, "kiro_api_key", "kiroApiKey", "api_key")
+		if accessToken == "" {
+			return s.sendErrorAndEnd(c, "No API key available")
+		}
+	} else {
+		if s.kiroTokenProvider == nil {
+			return s.sendErrorAndEnd(c, "Kiro token provider not configured")
+		}
+		token, err := s.kiroTokenProvider.GetAccessToken(ctx, account)
+		if err != nil {
+			return s.sendErrorAndEnd(c, fmt.Sprintf("Failed to get Kiro access token: %s", err.Error()))
+		}
+		accessToken = token
 	}
 
 	c.Writer.Header().Set("Content-Type", "text/event-stream")
@@ -460,7 +467,7 @@ func (s *AccountTestService) testKiroAccountConnection(c *gin.Context, account *
 	pr, pw := io.Pipe()
 	go func() {
 		defer func() { _ = resp.Body.Close() }()
-		_, streamErr := kiropkg.StreamEventStreamAsAnthropicWithContext(ctx, resp.Body, pw, testModelID, estimateKiroInputTokens(payloadBytes), kiropkg.KiroRequestContext{})
+		_, streamErr := kiropkg.StreamEventStreamAsAnthropicWithContext(ctx, resp.Body, pw, testModelID, estimateKiroInputTokens(ctx, payloadBytes), kiropkg.KiroRequestContext{})
 		if streamErr != nil {
 			_ = pw.CloseWithError(streamErr)
 			return
@@ -478,7 +485,8 @@ func formatKiroTestError(statusCode int, body []byte, requestedModel string, acc
 func (s *AccountTestService) executeKiroTestUpstream(ctx context.Context, account *Account, anthropicBody []byte, mappedModel, token string) (*http.Response, error) {
 	modelID := kiropkg.MapModel(mappedModel)
 	currentToken := token
-	profileArn := resolveKiroPayloadProfileArn(account)
+	// 测试连接走 Q endpoint，Q endpoint 不需要 profileArn（凭据中的占位符 ARN 会导致 403）
+	profileArn := ""
 	preparedBody := prepareKiroPayloadBodyForRequestModel(anthropicBody, mappedModel)
 	buildResult, err := kiropkg.BuildKiroPayloadWithContext(preparedBody, modelID, profileArn, "AI_EDITOR", nil)
 	if err != nil {
