@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/domain"
@@ -208,7 +207,8 @@ func TestAccountTestService_KiroInvalidModelDoesNotRefreshProfileArnOrRetry(t *t
 
 	firstBody, readErr := io.ReadAll(upstream.requests[0].Body)
 	require.NoError(t, readErr)
-	require.Contains(t, string(firstBody), `"profileArn":"arn:aws:codewhisperer:us-east-1:123456789012:profile/STALE"`)
+	// Q endpoint 不传 profileArn（凭据中的占位符 ARN 会导致 403）
+	require.NotContains(t, string(firstBody), `"profileArn"`)
 	require.Equal(t, "arn:aws:codewhisperer:us-east-1:123456789012:profile/STALE", account.GetCredential("profile_arn"))
 }
 
@@ -274,7 +274,7 @@ func TestBuildKiroPayloadForAccount_KiroBuilderIDWithoutProfileArnOmitsProfileAr
 	require.NotContains(t, string(kiroPayload), `"profileArn":`)
 }
 
-func TestBuildKiroPayloadForAccount_KiroBuilderIDUsesCredentialProfileArn(t *testing.T) {
+func TestBuildKiroPayloadForAccount_KiroBuilderIDWithCachedProfileArnOmitsForQMode(t *testing.T) {
 	account := &Account{
 		ID:       33,
 		Name:     "kiro-builder-id-cached",
@@ -297,10 +297,11 @@ func TestBuildKiroPayloadForAccount_KiroBuilderIDUsesCredentialProfileArn(t *tes
 	buildResult, err := (&GatewayService{}).buildKiroPayloadForAccount(context.Background(), account, nil, payloadBytes, "claude-sonnet-4-6", "kiro-access-token", "claude-sonnet-4-6", nil)
 	require.NoError(t, err)
 	kiroPayload := buildResult.Payload
-	require.Contains(t, string(kiroPayload), `"profileArn":"arn:aws:codewhisperer:us-east-1:123456789012:profile/CACHED"`)
+	// parsed=nil → Q endpoint 模式，Q endpoint 不传 profileArn
+	require.NotContains(t, string(kiroPayload), `"profileArn"`)
 }
 
-func TestForwardKiroMessagesStreamCapturesMeteringCredits(t *testing.T) {
+func TestGatewayServiceForwardRoutesKiroOAuthAndCapturesMeteringCredits(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
@@ -357,13 +358,134 @@ func TestForwardKiroMessagesStreamCapturesMeteringCredits(t *testing.T) {
 	parsed, err := ParseGatewayRequest(NewRequestBodyRef(requestBody), domain.PlatformAnthropic)
 	require.NoError(t, err)
 
-	result, err := svc.forwardKiroMessages(context.Background(), c, account, parsed, time.Now())
+	result, err := svc.Forward(context.Background(), c, account, parsed)
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	require.True(t, result.Stream)
 	require.InDelta(t, 0.17, result.Usage.KiroCredits, 0.000001)
 	require.Equal(t, 3, result.Usage.OutputTokens)
 	require.NotContains(t, rec.Body.String(), "_sub2api_kiro_credits")
+	require.Len(t, upstream.requests, 1)
+	require.Equal(t, "q.us-east-1.amazonaws.com", upstream.requests[0].URL.Host)
+	require.Equal(t, "/generateAssistantResponse", upstream.requests[0].URL.Path)
+	require.NotEqual(t, "api.anthropic.com", upstream.requests[0].URL.Host)
+}
+
+func TestGatewayServiceForwardRoutesKiroOAuthNonStreaming(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
+
+	account := &Account{
+		ID:          22,
+		Name:        "kiro-non-stream",
+		Platform:    PlatformKiro,
+		Type:        AccountTypeOAuth,
+		Concurrency: 1,
+		Credentials: map[string]any{"access_token": "kiro-access-token"},
+	}
+	upstream := &queuedHTTPUpstream{responses: []*http.Response{
+		newJSONResponse(http.StatusUnauthorized, `{"type":"error","error":{"type":"authentication_error","message":"Invalid bearer token"}}`),
+	}}
+	svc := &GatewayService{
+		httpUpstream:        upstream,
+		kiroCooldownStore:   &stubKiroCooldownStore{},
+		tlsFPProfileService: &TLSFingerprintProfileService{},
+	}
+	requestBody := []byte(`{"model":"claude-sonnet-4-6","stream":false,"messages":[{"role":"user","content":"hi"}]}`)
+	parsed, err := ParseGatewayRequest(NewRequestBodyRef(requestBody), domain.PlatformAnthropic)
+	require.NoError(t, err)
+
+	_, err = svc.Forward(context.Background(), c, account, parsed)
+	require.Error(t, err)
+	require.Len(t, upstream.requests, 1)
+	require.Equal(t, "q.us-east-1.amazonaws.com", upstream.requests[0].URL.Host)
+	require.Equal(t, "/generateAssistantResponse", upstream.requests[0].URL.Path)
+}
+
+func TestGatewayServiceForwardRoutesKiroAPIKeyByBaseURL(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	t.Run("direct without base URL", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(rec)
+		c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
+		account := &Account{
+			ID:          23,
+			Name:        "kiro-api-key-direct",
+			Platform:    PlatformKiro,
+			Type:        AccountTypeAPIKey,
+			Concurrency: 1,
+			Credentials: map[string]any{"api_key": "kiro-api-key"},
+		}
+		upstream := &queuedHTTPUpstream{responses: []*http.Response{
+			newJSONResponse(http.StatusUnauthorized, `{"message":"invalid token"}`),
+		}}
+		svc := &GatewayService{
+			httpUpstream:        upstream,
+			kiroCooldownStore:   &stubKiroCooldownStore{},
+			tlsFPProfileService: &TLSFingerprintProfileService{},
+		}
+		requestBody := []byte(`{"model":"claude-sonnet-4-6","stream":true,"messages":[{"role":"user","content":"hi"}]}`)
+		parsed, err := ParseGatewayRequest(NewRequestBodyRef(requestBody), domain.PlatformAnthropic)
+		require.NoError(t, err)
+
+		_, err = svc.Forward(context.Background(), c, account, parsed)
+		require.Error(t, err)
+		require.Len(t, upstream.requests, 1)
+		require.Equal(t, "q.us-east-1.amazonaws.com", upstream.requests[0].URL.Host)
+		require.Equal(t, []string{"API_KEY"}, upstream.requests[0].Header["TokenType"])
+	})
+
+	t.Run("relay with base URL", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(rec)
+		c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
+		account := &Account{
+			ID:          24,
+			Name:        "kiro-api-key-relay",
+			Platform:    PlatformKiro,
+			Type:        AccountTypeAPIKey,
+			Concurrency: 1,
+			Credentials: map[string]any{
+				"api_key":  "relay-api-key",
+				"base_url": "https://relay-upstream.example.com",
+			},
+		}
+		upstream := &queuedHTTPUpstream{responses: []*http.Response{
+			newJSONResponse(http.StatusOK, `{"id":"msg_1","type":"message","usage":{"input_tokens":1,"output_tokens":1}}`),
+		}}
+		svc := &GatewayService{
+			cfg:                 &config.Config{},
+			httpUpstream:        upstream,
+			rateLimitService:    &RateLimitService{},
+			tlsFPProfileService: &TLSFingerprintProfileService{},
+		}
+		requestBody := []byte(`{"model":"claude-sonnet-4-6","stream":false,"messages":[{"role":"user","content":"hi"}]}`)
+		parsed, err := ParseGatewayRequest(NewRequestBodyRef(requestBody), domain.PlatformAnthropic)
+		require.NoError(t, err)
+
+		result, err := svc.Forward(context.Background(), c, account, parsed)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		require.Len(t, upstream.requests, 1)
+		require.Equal(t, "relay-upstream.example.com", upstream.requests[0].URL.Host)
+		require.Equal(t, "/v1/messages", upstream.requests[0].URL.Path)
+		require.Empty(t, upstream.requests[0].Header.Get("Authorization"))
+		require.Equal(t, "relay-api-key", upstream.requests[0].Header.Get("x-api-key"))
+	})
+}
+
+func TestBuildUpstreamRequestRejectsKiroDirectAccount(t *testing.T) {
+	svc := &GatewayService{}
+	for _, account := range []*Account{
+		{Platform: PlatformKiro, Type: AccountTypeOAuth},
+		{Platform: PlatformKiro, Type: AccountTypeAPIKey},
+	} {
+		_, _, err := svc.buildUpstreamRequest(context.Background(), nil, account, []byte(`{}`), "token", "oauth", "model", false, false)
+		require.EqualError(t, err, "kiro direct account must use the kiro forwarding path")
+	}
 }
 
 func buildKiroEventStreamFrame(t *testing.T, eventType string, payload map[string]any) []byte {
