@@ -24,4 +24,9 @@ describe('platformColors', () => {
     expect(userFacingPlatformText('Kiro Pro / kiro')).toBe('Claude Pro / Claude')
     expect(platformSearchText('kiro')).toContain('claude')
   })
+
+  it('聚合分组保留独立主题', () => {
+    expect(platformBadgeClass('composite')).toContain('cyan')
+    expect(platformLabel('composite')).toBe('Composite')
+  })
 })
