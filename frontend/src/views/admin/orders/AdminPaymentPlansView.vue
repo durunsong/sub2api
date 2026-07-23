@@ -1,16 +1,29 @@
 <template>
   <AppLayout>
     <div class="space-y-4">
-      <!-- Actions -->
-      <div class="flex items-center justify-end gap-2">
-        <button @click="loadPlans" :disabled="plansLoading" class="btn btn-secondary" :title="t('common.refresh')">
-          <Icon name="refresh" size="md" :class="plansLoading ? 'animate-spin' : ''" />
-        </button>
-        <button @click="openPlanEdit(null)" class="btn btn-primary">{{ t('payment.admin.createPlan') }}</button>
+      <!-- Filters -->
+      <div class="card p-4">
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="flex-1 sm:max-w-64">
+            <input
+              v-model="planSearch"
+              type="text"
+              :placeholder="t('payment.admin.searchPlans')"
+              class="input"
+            />
+          </div>
+          <Select v-model="forSaleFilter" :options="forSaleFilterOptions" class="w-36" />
+          <div class="flex flex-1 flex-wrap items-center justify-end gap-2">
+            <button @click="loadPlans" :disabled="plansLoading" class="btn btn-secondary" :title="t('common.refresh')">
+              <Icon name="refresh" size="md" :class="plansLoading ? 'animate-spin' : ''" />
+            </button>
+            <button @click="openPlanEdit(null)" class="btn btn-primary">{{ t('payment.admin.createPlan') }}</button>
+          </div>
+        </div>
       </div>
 
       <!-- Plans Table -->
-      <DataTable :columns="planColumns" :data="plans" :loading="plansLoading">
+      <DataTable :columns="planColumns" :data="filteredPlans" :loading="plansLoading">
         <template #cell-name="{ value, row }">
           <span class="text-sm font-medium" :class="getPlanNameClass(row.group_id)">{{ value }}</span>
         </template>
@@ -88,6 +101,7 @@ import type { Column } from '@/components/common/types'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import Select from '@/components/common/Select.vue'
 import Icon from '@/components/icons/Icon.vue'
 import GroupBadge from '@/components/common/GroupBadge.vue'
 import PlanEditDialog from './PlanEditDialog.vue'
@@ -137,6 +151,8 @@ function getPlanNameClass(groupId: number): string {
 
 const plansLoading = ref(false)
 const plans = ref<SubscriptionPlan[]>([])
+const planSearch = ref('')
+const forSaleFilter = ref('')
 const showPlanDialog = ref(false)
 const showDeletePlanDialog = ref(false)
 const editingPlan = ref<SubscriptionPlan | null>(null)
@@ -152,6 +168,38 @@ const planColumns = computed((): Column[] => [
   { key: 'sort_order', label: t('payment.admin.sortOrder') },
   { key: 'actions', label: t('common.actions') },
 ])
+
+const forSaleFilterOptions = computed(() => [
+  { value: '', label: t('payment.admin.allSaleStatuses') },
+  { value: 'true', label: t('payment.admin.onSale') },
+  { value: 'false', label: t('payment.admin.offSale') },
+])
+
+// ponytail: 套餐列表接口无服务端搜索，全量拉取后前端过滤；量大再改后端 keyword
+const filteredPlans = computed(() => {
+  const q = planSearch.value.trim().toLowerCase()
+  return plans.value.filter((plan) => {
+    if (forSaleFilter.value === 'true' && !plan.for_sale) return false
+    if (forSaleFilter.value === 'false' && plan.for_sale) return false
+    if (!q) return true
+    const group = getGroup(plan.group_id)
+    const haystack = [
+      String(plan.id),
+      plan.name,
+      plan.description,
+      plan.currency,
+      String(plan.price),
+      plan.group_name,
+      plan.group_platform,
+      group?.name,
+      group?.platform,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+    return haystack.includes(q)
+  })
+})
 
 async function loadPlans() {
   plansLoading.value = true
