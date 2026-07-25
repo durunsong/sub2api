@@ -14,7 +14,7 @@ import (
 	"github.com/dgraph-io/ristretto"
 )
 
-const apiKeyAuthSnapshotVersion = 18 // v18: include Kiro endpoint mode and group reasoning effort policy
+const apiKeyAuthSnapshotVersion = 19 // v19: include Kiro endpoint/reasoning policy and the OpenAI Live gate
 
 type apiKeyAuthCacheConfig struct {
 	l1Size        int
@@ -415,6 +415,7 @@ func (s *APIKeyService) snapshotFromAPIKey(ctx context.Context, apiKey *APIKey) 
 			MCPXMLInject:                    groupForSnapshot.MCPXMLInject,
 			SupportedModelScopes:            groupForSnapshot.SupportedModelScopes,
 			AllowMessagesDispatch:           groupForSnapshot.AllowMessagesDispatch,
+			AllowLive:                       groupForSnapshot.AllowLive,
 			DefaultMappedModel:              groupForSnapshot.DefaultMappedModel,
 			MessagesDispatchModelConfig:     groupForSnapshot.MessagesDispatchModelConfig,
 			ModelsListConfig:                groupForSnapshot.ModelsListConfig,
@@ -506,6 +507,7 @@ func (s *APIKeyService) snapshotToAPIKey(key string, snapshot *APIKeyAuthSnapsho
 			MCPXMLInject:                    snapshot.Group.MCPXMLInject,
 			SupportedModelScopes:            snapshot.Group.SupportedModelScopes,
 			AllowMessagesDispatch:           snapshot.Group.AllowMessagesDispatch,
+			AllowLive:                       snapshot.Group.AllowLive,
 			DefaultMappedModel:              snapshot.Group.DefaultMappedModel,
 			MessagesDispatchModelConfig:     snapshot.Group.MessagesDispatchModelConfig,
 			ModelsListConfig:                snapshot.Group.ModelsListConfig,

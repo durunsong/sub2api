@@ -1,7 +1,7 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.1.164**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.1.164**，并保留本 Fork
+当前整合版本为 **v0.1.165**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.1.165**，并保留本 Fork
 的全部定制能力。
 
 ## 必须保留的模块
@@ -17,6 +17,15 @@
 | Fork UI | 首页、品牌、VersionBadge、支付体验和管理端定制必须保留 |
 | Ops | 管理端筛选删除错误日志能力必须保留 |
 | 套餐续期 | 活跃套餐叠加、过期套餐续期、日卡重置额度和备注追加必须保留 |
+
+## v0.1.165 整合内容
+
+- 合入 OpenAI Live WebSocket 网关、分组级 Live 开关、平台 attestation 与对应请求计费类型。
+- 合入跨请求 `session_id` 持久化，同时保留 Fork 的 Kiro Credits 用量字段与写入/查询链路。
+- 合入注册邮箱别名规范化和并发去重，兼容 Fork 原有邮箱格式限制与用户管理逻辑。
+- 合入 Ollama Cloud 按模型刷新去抖、PostgreSQL 16 兼容和抓取下限修复。
+- 合入 Responses item ID/namespace、Gemini 图片响应、Grok/OpenAI 重试冷却及公告预览样式修复。
+- 合入 Claude Opus 5 定价与模型白名单，同时保留 Fork 的 Thinking、Sonnet/Haiku 和 Kiro 映射模型。
 
 ## v0.1.164 整合内容
 
@@ -45,4 +54,4 @@
 - Access Ban 的服务、路由和网关中间件不得因官方安全中间件更新而被移除。
 - `wire.go`、`wire_gen.go`、网关路由、套餐服务、Ops 服务和设置页属于高冲突文件，合并后必须运行对应测试。
 
-*最后更新：2026-07-22*
+*最后更新：2026-07-25*
