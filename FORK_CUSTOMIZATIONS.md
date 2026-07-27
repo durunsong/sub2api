@@ -1,7 +1,7 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.1.165**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.1.165**，并保留本 Fork
+当前整合版本为 **v0.1.166**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.1.166**，并保留本 Fork
 的全部定制能力。
 
 ## 必须保留的模块
@@ -17,6 +17,15 @@
 | Fork UI | 首页、品牌、VersionBadge、支付体验和管理端定制必须保留 |
 | Ops | 管理端筛选删除错误日志能力必须保留 |
 | 套餐续期 | 活跃套餐叠加、过期套餐续期、日卡重置额度和备注追加必须保留 |
+
+## v0.1.166 整合内容
+
+- 合入面板 API 分级限流，认证接口按用户、公开接口按安全客户端 IP 计数，同时保留 Access Ban 的认证与网关拦截链路。
+- 合入 Antigravity OpenAI 兼容加固、Codex Responses/Anthropic 工具调用配对及账号切换 reasoning 清理。
+- 合入 OpenAI WebSocket 分轮模型计费、最终上游模型统计、模型映射计费与 Gemini 3.6 Flash 定价修复。
+- 合入系统设置部分更新保护、显式 `CONFIG_FILE`、Grok 402 暂停、Gemini 重试和计费探针时间解析修复。
+- 合入多币种支付看板、请求 ID/路由用户筛选、可选推广码、移动端渠道列表和下拉框边界修复，同时保留 XorPay 与 Fork UI。
+- 合入 Caddy SSE 去缓冲、图像与遥测依赖安全升级，并保留 Fork 已使用的更高版本 `golang.org/x/image`。
 
 ## v0.1.165 整合内容
 
@@ -54,4 +63,4 @@
 - Access Ban 的服务、路由和网关中间件不得因官方安全中间件更新而被移除。
 - `wire.go`、`wire_gen.go`、网关路由、套餐服务、Ops 服务和设置页属于高冲突文件，合并后必须运行对应测试。
 
-*最后更新：2026-07-25*
+*最后更新：2026-07-27*
