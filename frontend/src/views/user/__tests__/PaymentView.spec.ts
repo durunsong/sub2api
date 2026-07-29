@@ -341,6 +341,17 @@ describe('PaymentView subscription filters', () => {
 })
 
 describe('PaymentView subscription confirmation amounts', () => {
+  it('shows GLM instead of Anthropic in the selected plan badge', async () => {
+    const wrapper = await mountSubscriptionConfirm({
+      plan: {
+        group_platform: 'anthropic',
+      },
+    })
+
+    expect(wrapper.text()).toContain('GLM')
+    expect(wrapper.text()).not.toContain('Anthropic')
+  })
+
   it('shows converted CNY pay amount using the subscription rate, not the balance multiplier', async () => {
     const wrapper = await mountSubscriptionConfirm({
       checkout: {

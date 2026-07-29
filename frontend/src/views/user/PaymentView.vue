@@ -149,7 +149,7 @@
                 <!-- Header: platform badge + plan name -->
                 <div class="mb-3 flex flex-wrap items-center gap-2">
                   <span :class="['rounded-md border px-2 py-0.5 text-xs font-medium', planBadgeClass]">
-                    {{ platformLabel(selectedPlan.group_platform || '') }}
+                    {{ subscriptionPlanBadgeLabel(selectedPlan.group_platform || '') }}
                   </span>
                   <h3 class="text-lg font-bold text-gray-900 dark:text-white">{{ userFacingPlatformText(selectedPlan.name) }}</h3>
                 </div>
@@ -360,6 +360,10 @@ import PaymentStatusPanel from '@/components/payment/PaymentStatusPanel.vue'
 import Icon from '@/components/icons/Icon.vue'
 import { DEFAULT_PAYMENT_CURRENCY, currencySymbol, formatPaymentAmount, normalizePaymentCurrency } from '@/components/payment/currency'
 import { planValiditySuffix as validitySuffixOf } from '@/components/payment/validity'
+import {
+  subscriptionPlanBadgeLabel,
+  subscriptionPlanFilterLabel,
+} from '@/components/payment/subscriptionPlanLabels'
 import type { PaymentMethodOption } from '@/components/payment/PaymentMethodSelector.vue'
 import { buildPaymentErrorToastMessage, describePaymentScenarioError } from './paymentUx'
 import { hasWechatResumeQuery, parseWechatResumeRoute, stripWechatResumeQuery } from './paymentWechatResume'
@@ -633,10 +637,7 @@ const visibleSubscriptionPlanDurationFilters = computed(() =>
 )
 
 function subscriptionPlanPlatformLabel(platform: string): string {
-  if (platform === 'kiro') return 'Claude(Max 5x)'
-  if (platform === 'anthropic') return 'Claude(GLM coding Max)'
-  if (platform === 'openai') return 'OpenAI(GPT 20x)'
-  return platformLabel(platform)
+  return subscriptionPlanFilterLabel(platform)
 }
 
 function matchesSubscriptionPlanDuration(plan: SubscriptionPlan): boolean {

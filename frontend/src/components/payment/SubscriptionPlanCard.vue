@@ -103,6 +103,7 @@ import type { SubscriptionPlan } from '@/types/payment'
 import type { UserSubscription } from '@/types'
 import { planValiditySuffix } from './validity'
 import { currencySymbol } from '@/components/payment/currency'
+import { subscriptionPlanBadgeLabel } from '@/components/payment/subscriptionPlanLabels'
 import {
   platformAccentBarClass,
   platformBadgeLightClass,
@@ -111,7 +112,6 @@ import {
   platformIconClass,
   platformButtonClass,
   platformDiscountClass,
-  platformLabel,
   userFacingPlatform,
   userFacingPlatformText,
 } from '@/utils/platformColors'
@@ -134,7 +134,7 @@ const textClass = computed(() => platformTextClass(visualPlatform.value))
 const iconClass = computed(() => platformIconClass(visualPlatform.value))
 const btnClass = computed(() => platformButtonClass(visualPlatform.value))
 const discountClass = computed(() => platformDiscountClass(visualPlatform.value))
-const pLabel = computed(() => platformLabel(platform.value))
+const pLabel = computed(() => subscriptionPlanBadgeLabel(platform.value))
 
 const discountText = computed(() => {
   if (!props.plan.original_price || props.plan.original_price <= 0) return ''

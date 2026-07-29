@@ -61,6 +61,13 @@ const mountPlanCard = (groupPlatform: string, overrides: Partial<SubscriptionPla
   });
 
 describe("SubscriptionPlanCard", () => {
+  it("shows GLM instead of the internal Anthropic platform name", () => {
+    const text = mountPlanCard("anthropic").text();
+
+    expect(text).toContain("GLM");
+    expect(text).not.toContain("Anthropic");
+  });
+
   it("does not show Antigravity model scopes for OpenAI plans", () => {
     const text = mountPlanCard("openai").text();
 
