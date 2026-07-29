@@ -626,6 +626,24 @@ func (s *SubscriptionService) RestoreSubscription(ctx context.Context, subscript
 
 // ExtendSubscription 调整订阅时长（正数延长，负数缩短）
 func (s *SubscriptionService) ExtendSubscription(ctx context.Context, subscriptionID int64, days int) (*UserSubscription, error) {
+	return s.AdjustSubscription(ctx, subscriptionID, days, false)
+}
+
+type subscriptionAdjustmentRepository interface {
+	AdjustExpiryAndMonthlyWindow(
+		ctx context.Context,
+		subscriptionID int64,
+		newExpiresAt time.Time,
+		newMonthlyWindowStart *time.Time,
+		reactivate bool,
+	) error
+}
+
+// AdjustSubscription adjusts the subscription term. When shiftMonthlyReset is
+// enabled, an active monthly quota window is shifted by the same calendar-day
+// delta so its next reset date keeps the same position relative to expiry.
+// Daily and weekly windows intentionally keep their normal cadence.
+func (s *SubscriptionService) AdjustSubscription(ctx context.Context, subscriptionID int64, days int, shiftMonthlyReset bool) (*UserSubscription, error) {
 	sub, err := s.userSubRepo.GetByID(ctx, subscriptionID)
 	if err != nil {
 		return nil, ErrSubscriptionNotFound
@@ -666,12 +684,30 @@ func (s *SubscriptionService) ExtendSubscription(ctx context.Context, subscripti
 		return nil, ErrAdjustWouldExpire
 	}
 
-	if err := s.userSubRepo.ExtendExpiry(ctx, subscriptionID, newExpiresAt); err != nil {
-		return nil, err
+	reactivate := sub.Status == SubscriptionStatusExpired
+	if shiftMonthlyReset && sub.MonthlyWindowStart != nil {
+		adjustmentRepo, ok := s.userSubRepo.(subscriptionAdjustmentRepository)
+		if !ok {
+			return nil, fmt.Errorf("subscription repository does not support monthly reset date adjustment")
+		}
+		newMonthlyWindowStart := sub.MonthlyWindowStart.AddDate(0, 0, days)
+		if err := adjustmentRepo.AdjustExpiryAndMonthlyWindow(
+			ctx,
+			subscriptionID,
+			newExpiresAt,
+			&newMonthlyWindowStart,
+			reactivate,
+		); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := s.userSubRepo.ExtendExpiry(ctx, subscriptionID, newExpiresAt); err != nil {
+			return nil, err
+		}
 	}
 
 	// 如果订阅已过期，恢复为active状态
-	if sub.Status == SubscriptionStatusExpired {
+	if reactivate && (!shiftMonthlyReset || sub.MonthlyWindowStart == nil) {
 		if err := s.userSubRepo.UpdateStatus(ctx, subscriptionID, SubscriptionStatusActive); err != nil {
 			return nil, err
 		}

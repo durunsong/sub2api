@@ -657,6 +657,8 @@ export default {
       currentExpiration: 'Current expiration',
       adjustDaysPlaceholder: 'Positive to extend, negative to shorten',
       adjustHint: 'Enter positive number to extend, negative to shorten (remaining days must be > 0)',
+      followResetDate: 'Shift reset date with adjustment',
+      followResetDateHint: 'Move the next monthly quota reset by the same number of days. Daily and weekly quotas are unchanged.',
       assign: 'Assign',
       assigning: 'Assigning...',
       adjust: 'Adjust',

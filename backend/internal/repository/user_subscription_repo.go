@@ -345,6 +345,24 @@ func (r *userSubscriptionRepository) ExtendExpiry(ctx context.Context, subscript
 	return translatePersistenceError(err, service.ErrSubscriptionNotFound, nil)
 }
 
+func (r *userSubscriptionRepository) AdjustExpiryAndMonthlyWindow(
+	ctx context.Context,
+	subscriptionID int64,
+	newExpiresAt time.Time,
+	newMonthlyWindowStart *time.Time,
+	reactivate bool,
+) error {
+	client := clientFromContext(ctx, r.client)
+	update := client.UserSubscription.UpdateOneID(subscriptionID).
+		SetExpiresAt(newExpiresAt).
+		SetNillableMonthlyWindowStart(newMonthlyWindowStart)
+	if reactivate {
+		update.SetStatus(service.SubscriptionStatusActive)
+	}
+	_, err := update.Save(ctx)
+	return translatePersistenceError(err, service.ErrSubscriptionNotFound, nil)
+}
+
 func (r *userSubscriptionRepository) UpdateStatus(ctx context.Context, subscriptionID int64, status string) error {
 	client := clientFromContext(ctx, r.client)
 	_, err := client.UserSubscription.UpdateOneID(subscriptionID).

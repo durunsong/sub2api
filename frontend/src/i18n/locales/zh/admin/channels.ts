@@ -657,6 +657,8 @@ export default {
       currentExpiration: '当前到期时间',
       adjustDaysPlaceholder: '正数延长，负数缩短',
       adjustHint: '输入正数延长订阅，负数缩短订阅（缩短后剩余天数需大于0）',
+      followResetDate: '重置日期跟随调整天数',
+      followResetDateHint: '将每月额度的下次重置日期同步前移或后移相同天数；每日、每周额度不受影响',
       assign: '分配',
       assigning: '分配中...',
       adjust: '调整',
