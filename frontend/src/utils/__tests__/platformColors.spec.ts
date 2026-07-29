@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  platformAccentColor,
   platformBadgeClass,
+  platformBorderStrongClass,
   platformGradientClass,
   platformLabel,
   platformSearchText,
@@ -16,6 +18,8 @@ describe('platformColors', () => {
     expect(platformGradientClass('kiro')).toContain('from-violet-500')
     expect(platformGradientClass('kiro')).toContain('to-fuchsia-500')
     expect(platformBadgeClass('kiro')).not.toContain('orange')
+    expect(platformBorderStrongClass('kiro')).toContain('violet')
+    expect(platformAccentColor('kiro')).toBe('#8b5cf6')
   })
 
   it('用户侧将 Kiro 显示和搜索为 Claude', () => {

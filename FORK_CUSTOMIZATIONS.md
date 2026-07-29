@@ -1,7 +1,7 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.1.166**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.1.166**，并保留本 Fork
+当前整合版本为 **v0.1.168**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.1.168**，并保留本 Fork
 的全部定制能力。
 
 ## 必须保留的模块
@@ -17,6 +17,15 @@
 | Fork UI | 首页、品牌、VersionBadge、支付体验和管理端定制必须保留 |
 | Ops | 管理端筛选删除错误日志能力必须保留 |
 | 套餐续期 | 活跃套餐叠加、过期套餐续期、日卡重置额度和备注追加必须保留 |
+
+## v0.1.168 整合内容
+
+- 合入 Passkey 登录、注册/撤销密码确认、后台开关与 WebAuthn 配置校验，同时保留 Access Ban 的认证拦截与 IP Ban 依赖注入。
+- 合入模型广场、分组级模型定价展示和可选 JWT 鉴权，并保留 Kiro 在用户端统一显示为 Claude 的平台别名规则。
+- 合入 Kimi K3/1M 后缀支持、Claude Sonnet 5 状态别名、模型 ID 快速复制和 GPT-5.6 `max` 推理强度兼容。
+- 合入 Codex API Key Web Search、OAuth system cache breakpoint、透传优先于模型映射及 Anthropic 消息 ID 格式修复。
+- 合入 OpenAI Live 会话 store 故障容错、显式 setup bypass，以及用户/API Key 限定列更新与并发丢失更新保护。
+- 合入提示词安全审计配置解密恢复与保存死锁修复，同时保留 Fork 的独立扫描引擎、策略、事件和管理控制台。
 
 ## v0.1.166 整合内容
 
@@ -63,4 +72,4 @@
 - Access Ban 的服务、路由和网关中间件不得因官方安全中间件更新而被移除。
 - `wire.go`、`wire_gen.go`、网关路由、套餐服务、Ops 服务和设置页属于高冲突文件，合并后必须运行对应测试。
 
-*最后更新：2026-07-27*
+*最后更新：2026-07-29*
