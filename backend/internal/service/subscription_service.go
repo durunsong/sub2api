@@ -639,11 +639,11 @@ type subscriptionAdjustmentRepository interface {
 	) error
 }
 
-// AdjustSubscription adjusts the subscription term. When shiftMonthlyReset is
-// enabled, an active monthly quota window is shifted by the same calendar-day
-// delta so its next reset date keeps the same position relative to expiry.
+// AdjustSubscription adjusts the subscription term. When alignMonthlyReset is
+// enabled, the active monthly quota window is rebased so its next reset occurs
+// at the adjusted subscription expiry.
 // Daily and weekly windows intentionally keep their normal cadence.
-func (s *SubscriptionService) AdjustSubscription(ctx context.Context, subscriptionID int64, days int, shiftMonthlyReset bool) (*UserSubscription, error) {
+func (s *SubscriptionService) AdjustSubscription(ctx context.Context, subscriptionID int64, days int, alignMonthlyReset bool) (*UserSubscription, error) {
 	sub, err := s.userSubRepo.GetByID(ctx, subscriptionID)
 	if err != nil {
 		return nil, ErrSubscriptionNotFound
@@ -685,12 +685,12 @@ func (s *SubscriptionService) AdjustSubscription(ctx context.Context, subscripti
 	}
 
 	reactivate := sub.Status == SubscriptionStatusExpired
-	if shiftMonthlyReset && sub.MonthlyWindowStart != nil {
+	if alignMonthlyReset && sub.MonthlyWindowStart != nil {
 		adjustmentRepo, ok := s.userSubRepo.(subscriptionAdjustmentRepository)
 		if !ok {
 			return nil, fmt.Errorf("subscription repository does not support monthly reset date adjustment")
 		}
-		newMonthlyWindowStart := sub.MonthlyWindowStart.AddDate(0, 0, days)
+		newMonthlyWindowStart := newExpiresAt.Add(-30 * 24 * time.Hour)
 		if err := adjustmentRepo.AdjustExpiryAndMonthlyWindow(
 			ctx,
 			subscriptionID,
@@ -707,7 +707,7 @@ func (s *SubscriptionService) AdjustSubscription(ctx context.Context, subscripti
 	}
 
 	// 如果订阅已过期，恢复为active状态
-	if reactivate && (!shiftMonthlyReset || sub.MonthlyWindowStart == nil) {
+	if reactivate && (!alignMonthlyReset || sub.MonthlyWindowStart == nil) {
 		if err := s.userSubRepo.UpdateStatus(ctx, subscriptionID, SubscriptionStatusActive); err != nil {
 			return nil, err
 		}

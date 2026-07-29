@@ -33,7 +33,7 @@ func (s *adjustmentUserSubRepoStub) AdjustExpiryAndMonthlyWindow(
 	return nil
 }
 
-func TestAdjustSubscription_ShiftsMonthlyResetWithExpiry(t *testing.T) {
+func TestAdjustSubscription_AlignsMonthlyResetWithAdjustedExpiry(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Second)
 	dailyStart := now.Add(-6 * time.Hour)
 	weeklyStart := now.Add(-2 * 24 * time.Hour)
@@ -59,7 +59,7 @@ func TestAdjustSubscription_ShiftsMonthlyResetWithExpiry(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, originalExpiry.AddDate(0, 0, 60), got.ExpiresAt)
 	require.NotNil(t, got.MonthlyWindowStart)
-	require.Equal(t, monthlyStart.AddDate(0, 0, 60), *got.MonthlyWindowStart)
+	require.Equal(t, got.ExpiresAt, got.MonthlyWindowStart.Add(30*24*time.Hour))
 	require.Equal(t, dailyStart, *got.DailyWindowStart)
 	require.Equal(t, weeklyStart, *got.WeeklyWindowStart)
 }
@@ -87,4 +87,29 @@ func TestAdjustSubscription_DefaultKeepsMonthlyResetDate(t *testing.T) {
 	require.Equal(t, originalExpiry.AddDate(0, 0, 60), got.ExpiresAt)
 	require.NotNil(t, got.MonthlyWindowStart)
 	require.Equal(t, monthlyStart, *got.MonthlyWindowStart)
+}
+
+func TestAdjustSubscription_AlignsExistingSubscriptionWithoutChangingExpiry(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Second)
+	monthlyStart := now.Add(-4 * 24 * time.Hour)
+	originalExpiry := now.AddDate(0, 0, 87)
+
+	baseRepo := newSubscriptionUserSubRepoStub()
+	baseRepo.seed(&UserSubscription{
+		ID:                 3,
+		UserID:             10,
+		GroupID:            20,
+		Status:             SubscriptionStatusActive,
+		ExpiresAt:          originalExpiry,
+		MonthlyWindowStart: &monthlyStart,
+	})
+	repo := &adjustmentUserSubRepoStub{subscriptionUserSubRepoStub: baseRepo}
+	svc := NewSubscriptionService(groupRepoNoop{}, repo, nil, nil, nil)
+
+	got, err := svc.AdjustSubscription(context.Background(), 3, 0, true)
+
+	require.NoError(t, err)
+	require.Equal(t, originalExpiry, got.ExpiresAt)
+	require.NotNil(t, got.MonthlyWindowStart)
+	require.Equal(t, got.ExpiresAt, got.MonthlyWindowStart.Add(30*24*time.Hour))
 }

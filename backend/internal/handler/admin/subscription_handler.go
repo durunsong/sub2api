@@ -56,8 +56,9 @@ type BulkAssignSubscriptionRequest struct {
 
 // AdjustSubscriptionRequest represents adjust subscription request (extend or shorten)
 type AdjustSubscriptionRequest struct {
-	Days              int  `json:"days" binding:"required,min=-36500,max=36500"` // negative to shorten, positive to extend
-	ShiftMonthlyReset bool `json:"shift_monthly_reset"`                          // shift the monthly quota reset date by the same number of days
+	Days              int  `json:"days" binding:"min=-36500,max=36500"` // negative to shorten, positive to extend, zero to align only
+	AlignMonthlyReset bool `json:"align_monthly_reset"`                 // align the next monthly quota reset with the adjusted expiry
+	ShiftMonthlyReset bool `json:"shift_monthly_reset"`                 // backward compatibility for the original option name
 }
 
 // List handles listing all subscriptions with pagination and filters
@@ -201,6 +202,11 @@ func (h *SubscriptionHandler) Extend(c *gin.Context) {
 		response.BadRequest(c, "Invalid request: "+err.Error())
 		return
 	}
+	alignMonthlyReset := req.AlignMonthlyReset || req.ShiftMonthlyReset
+	if req.Days == 0 && !alignMonthlyReset {
+		response.BadRequest(c, "Adjustment days must be non-zero unless aligning the monthly reset date")
+		return
+	}
 
 	idempotencyPayload := struct {
 		SubscriptionID int64                     `json:"subscription_id"`
@@ -210,7 +216,7 @@ func (h *SubscriptionHandler) Extend(c *gin.Context) {
 		Body:           req,
 	}
 	executeAdminIdempotentJSON(c, "admin.subscriptions.extend", idempotencyPayload, service.DefaultWriteIdempotencyTTL(), func(ctx context.Context) (any, error) {
-		subscription, execErr := h.subscriptionService.AdjustSubscription(ctx, subscriptionID, req.Days, req.ShiftMonthlyReset)
+		subscription, execErr := h.subscriptionService.AdjustSubscription(ctx, subscriptionID, req.Days, alignMonthlyReset)
 		if execErr != nil {
 			return nil, execErr
 		}

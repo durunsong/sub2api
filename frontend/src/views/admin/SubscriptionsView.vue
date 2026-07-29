@@ -667,7 +667,7 @@
           class="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 bg-white p-4 transition-colors hover:border-primary-300 hover:bg-primary-50/40 dark:border-dark-600 dark:bg-dark-800 dark:hover:border-primary-700 dark:hover:bg-primary-900/10"
         >
           <input
-            v-model="extendForm.shift_monthly_reset"
+            v-model="extendForm.align_monthly_reset"
             type="checkbox"
             class="mt-0.5 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-dark-500 dark:bg-dark-700"
           />
@@ -1033,7 +1033,7 @@ const assignForm = reactive({
 
 const extendForm = reactive({
   days: 30,
-  shift_monthly_reset: false
+  align_monthly_reset: false
 })
 
 // Group options for filter (all groups)
@@ -1284,7 +1284,7 @@ const handleAssignSubscription = async () => {
 const handleExtend = (subscription: UserSubscription) => {
   extendingSubscription.value = subscription
   extendForm.days = 30
-  extendForm.shift_monthly_reset = false
+  extendForm.align_monthly_reset = false
   showExtendModal.value = true
 }
 
@@ -1310,7 +1310,7 @@ const handleExtendSubscription = async () => {
   try {
     await adminAPI.subscriptions.extend(extendingSubscription.value.id, {
       days: extendForm.days,
-      shift_monthly_reset: extendForm.shift_monthly_reset
+      align_monthly_reset: extendForm.align_monthly_reset
     })
     appStore.showSuccess(t('admin.subscriptions.subscriptionAdjusted'))
     closeExtendModal()

@@ -1990,7 +1990,7 @@ export interface BulkAssignSubscriptionRequest {
 
 export interface ExtendSubscriptionRequest {
   days: number
-  shift_monthly_reset?: boolean
+  align_monthly_reset?: boolean
 }
 
 // ==================== Query Parameters ====================
