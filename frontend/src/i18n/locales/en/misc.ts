@@ -399,6 +399,12 @@ export default {
     noActiveSubscription: 'No active subscription',
     tabTopUp: 'Top Up',
     tabSubscribe: 'Subscribe',
+    durationFilter: {
+      day: 'Day Pass',
+      week: 'Week Pass',
+      oneMonth: '1-Month Pass',
+      threeMonths: '3-Month Pass',
+    },
     noPlans: 'No subscription plans available',
     notAvailable: 'Top-up is currently unavailable',
     confirmSubscription: 'Confirm Subscription',

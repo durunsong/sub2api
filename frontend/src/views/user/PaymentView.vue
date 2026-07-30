@@ -246,7 +246,7 @@
                   :class="selectedPlanDuration === option.key ? 'border-primary-500 bg-primary-50 text-primary-700 dark:border-primary-400 dark:bg-primary-900/30 dark:text-primary-200' : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:border-dark-700 dark:bg-dark-800 dark:text-gray-400 dark:hover:text-gray-200'"
                   @click="selectSubscriptionPlanDuration(option.key)"
                 >
-                  {{ option.label }}
+                  {{ t(option.labelKey) }}
                 </button>
               </div>
               <div v-if="checkout.plans.length === 0" class="card py-16 text-center">
@@ -585,11 +585,12 @@ const visibleMethods = computed(() => getVisibleMethods(checkout.value.methods))
 const enabledMethods = computed(() => Object.keys(visibleMethods.value))
 const validAmount = computed(() => amount.value ?? 0)
 const RECHARGE_MAX_AMOUNT = 1000
-type SubscriptionPlanDurationFilterKey = 'day' | 'week' | 'month'
-const subscriptionPlanDurationFilters: Array<{ key: SubscriptionPlanDurationFilterKey; label: string }> = [
-  { key: 'day', label: '天卡' },
-  { key: 'week', label: '周卡' },
-  { key: 'month', label: '月卡' },
+type SubscriptionPlanDurationFilterKey = 'day' | 'week' | 'oneMonth' | 'threeMonths'
+const subscriptionPlanDurationFilters: Array<{ key: SubscriptionPlanDurationFilterKey; labelKey: string }> = [
+  { key: 'day', labelKey: 'payment.durationFilter.day' },
+  { key: 'week', labelKey: 'payment.durationFilter.week' },
+  { key: 'oneMonth', labelKey: 'payment.durationFilter.oneMonth' },
+  { key: 'threeMonths', labelKey: 'payment.durationFilter.threeMonths' },
 ]
 const balanceRechargeMultiplier = computed(() => {
   const multiplier = checkout.value.balance_recharge_multiplier
@@ -610,15 +611,24 @@ const planGridClass = computed(() => {
 })
 
 function subscriptionPlanDurationKey(plan: SubscriptionPlan): SubscriptionPlanDurationFilterKey | '' {
-  const unit = (plan.validity_unit || '').toLowerCase()
-  if (unit === 'week' || unit === 'weeks') return 'week'
-  if (unit === 'month' || unit === 'months') return 'month'
+  const amount = Number(plan.validity_days)
+  if (!Number.isFinite(amount) || amount <= 0) return ''
 
-  const days = plan.validity_days
-  if (!Number.isFinite(days)) return ''
-  if (days < 4) return 'day'
-  if (days > 6 && days < 10) return 'week'
-  if (days > 20 && days < 35) return 'month'
+  const unit = String(plan.validity_unit || 'days').trim().toLowerCase()
+  const normalizedUnit = unit.endsWith('s') ? unit.slice(0, -1) : unit
+  if (normalizedUnit === 'week') return 'week'
+  if (normalizedUnit === 'month') {
+    if (amount === 1) return 'oneMonth'
+    if (amount === 3) return 'threeMonths'
+    return ''
+  }
+
+  if (amount <= 3) return 'day'
+  if (amount >= 7 && amount <= 9) return 'week'
+  // Compatible with both the current month-based values (1/3 months) and
+  // legacy day-based values (30/90 days).
+  if (amount >= 21 && amount <= 35) return 'oneMonth'
+  if (amount >= 80 && amount <= 100) return 'threeMonths'
   return ''
 }
 

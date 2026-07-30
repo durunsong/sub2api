@@ -1707,3 +1707,20 @@ func TestAdminService_PreviewCompositeRouteUsesExplicitRoutes(t *testing.T) {
 	require.NotNil(t, decision.Route)
 	require.Equal(t, int64(11), decision.Route.ID)
 }
+
+func TestDefaultModelsListCandidateIDs_KiroUsesKiroDefaultModels(t *testing.T) {
+	ids := defaultModelsListCandidateIDs(PlatformKiro)
+	require.Contains(t, ids, "gpt-5.6-sol")
+	require.Contains(t, ids, "gpt-5.6-terra")
+	require.Contains(t, ids, "gpt-5.6-luna")
+	require.Contains(t, ids, "claude-sonnet-4-6")
+	require.NotEqual(t, defaultModelsListCandidateIDs(PlatformAnthropic), ids)
+}
+
+func TestGetGroupModelsListCandidates_KiroCreateUsesKiroDefaults(t *testing.T) {
+	svc := &adminServiceImpl{}
+	ids, err := svc.GetGroupModelsListCandidates(context.Background(), 0, PlatformKiro)
+	require.NoError(t, err)
+	require.Contains(t, ids, "gpt-5.6-sol")
+	require.Contains(t, ids, "claude-opus-4-8")
+}

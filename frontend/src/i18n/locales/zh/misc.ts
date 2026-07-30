@@ -423,6 +423,12 @@ export default {
     noActiveSubscription: '暂无有效订阅',
     tabTopUp: '充值',
     tabSubscribe: '订阅',
+    durationFilter: {
+      day: '天卡',
+      week: '周卡',
+      oneMonth: '1月卡',
+      threeMonths: '3月卡',
+    },
     noPlans: '暂无可用订阅套餐',
     notAvailable: '充值功能暂未开放',
     confirmSubscription: '确认订阅',

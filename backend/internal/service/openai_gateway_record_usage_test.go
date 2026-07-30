@@ -2502,6 +2502,39 @@ func TestGatewayServiceCalculateRecordUsageCost_ChannelImageBillingUsesImageCoun
 	require.InDelta(t, 0.5, cost.ActualCost, 1e-12)
 }
 
+func TestGatewayServiceCalculateRecordUsageCost_KiroGPT56UsesOpenAIFallbackInsteadOfConservativeClaudeFallback(t *testing.T) {
+	svc := &GatewayService{
+		billingService: NewBillingService(&config.Config{}, nil),
+	}
+
+	cost := svc.calculateRecordUsageCost(
+		context.Background(),
+		&ForwardResult{
+			Model: "gpt-5.6-terra",
+			Usage: ClaudeUsage{
+				InputTokens:              1000,
+				OutputTokens:             200,
+				CacheCreationInputTokens: 10,
+				CacheReadInputTokens:     50,
+				KiroCredits:              999,
+			},
+		},
+		&APIKey{},
+		"gpt-5.6-terra",
+		1.0,
+		1.0,
+		&recordUsageOpts{IsKiroAccount: true},
+	)
+
+	require.NotNil(t, cost)
+	require.Equal(t, string(BillingModeToken), cost.BillingMode)
+	require.InDelta(t, 1000*2.5e-6, cost.InputCost, 1e-12)
+	require.InDelta(t, 200*15e-6, cost.OutputCost, 1e-12)
+	require.InDelta(t, 10*3.125e-6, cost.CacheCreationCost, 1e-12)
+	require.InDelta(t, 50*0.25e-6, cost.CacheReadCost, 1e-12)
+	require.InDelta(t, cost.TotalCost, cost.ActualCost, 1e-12)
+}
+
 func TestGatewayServiceCalculateRecordUsageCost_ChannelImageBillingUsesSizeTier(t *testing.T) {
 	groupID := int64(127)
 	defaultPrice := 0.10

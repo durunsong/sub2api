@@ -8,6 +8,6 @@ export function subscriptionPlanBadgeLabel(platform: string): string {
 export function subscriptionPlanFilterLabel(platform: string): string {
   if (platform === 'kiro') return 'Claude(Max 5x)'
   if (platform === 'anthropic') return 'Claude(GLM coding Max)'
-  if (platform === 'openai') return 'OpenAI(GPT 20x)'
+  if (platform === 'openai') return 'OpenAI(GPT Pro 20x)'
   return platformLabel(platform)
 }

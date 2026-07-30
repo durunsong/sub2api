@@ -819,8 +819,22 @@ func shouldUseKiroConservativeBillingFallback(result *ForwardResult, billingMode
 	if result == nil {
 		return false
 	}
+	if opts == nil || !opts.IsKiroAccount {
+		return false
+	}
+	if isExactKiroGPT56Model(billingModel) || isExactKiroGPT56Model(result.Model) {
+		return false
+	}
+	return true
+}
 
-	return opts != nil && opts.IsKiroAccount
+func isExactKiroGPT56Model(model string) bool {
+	switch strings.TrimSpace(strings.ToLower(model)) {
+	case "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna":
+		return true
+	default:
+		return false
+	}
 }
 
 func (s *GatewayService) calculateKiroConservativeTokenCost(tokens UsageTokens, multiplier float64) *CostBreakdown {

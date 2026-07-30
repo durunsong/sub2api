@@ -120,7 +120,8 @@ func (s *GatewayService) ForwardAsResponses(
 		if parsed != nil {
 			group = parsed.Group
 		}
-		resp, _, err = s.openKiroAnthropicStreamResponse(ctx, account, parsed, anthropicBody, mappedModel, originalModel, c.Request.Header, group)
+		cacheUsage := s.buildKiroResponsesCacheEmulationUsage(ctx, account, group, body, mappedModel, estimateKiroInputTokens(ctx, anthropicBody))
+		resp, _, err = s.openKiroAnthropicStreamResponse(ctx, account, parsed, anthropicBody, mappedModel, originalModel, c.Request.Header, group, cacheUsage)
 		if err != nil {
 			safeErr := sanitizeUpstreamErrorMessage(err.Error())
 			setOpsUpstreamError(c, 0, safeErr, "")
@@ -312,6 +313,19 @@ func mergeAnthropicUsage(dst *ClaudeUsage, src apicompat.AnthropicUsage) {
 	}
 }
 
+func mergeKiroCreditsFromAnthropicPayload(dst *ClaudeUsage, payload string) {
+	if dst == nil || payload == "" || !gjson.Valid(payload) {
+		return
+	}
+	if credits := kiroCreditsFromUsageGJSON(gjson.Get(payload, "usage")); credits > 0 {
+		dst.KiroCredits = credits
+		return
+	}
+	if credits := kiroCreditsFromUsageGJSON(gjson.Get(payload, "message.usage")); credits > 0 {
+		dst.KiroCredits = credits
+	}
+}
+
 // parseAnthropicSSEField parses an SSE field line in the form "field:value" or "field: value".
 // According to the SSE spec (https://html.spec.whatwg.org/multipage/server-sent-events.html#event-stream-interpretation),
 // the space after the colon is optional. This function handles both formats.
@@ -386,6 +400,7 @@ func (s *GatewayService) handleResponsesBufferedStreamingResponse(
 			if event.Usage != nil {
 				mergeAnthropicUsage(&usage, *event.Usage)
 			}
+			mergeKiroCreditsFromAnthropicPayload(&usage, payload)
 			if event.Delta != nil && event.Delta.StopReason != "" && finalResp != nil {
 				finalResp.StopReason = apicompat.AnthropicStopReasonPtr(event.Delta.StopReason)
 			}
@@ -613,6 +628,8 @@ func (s *GatewayService) handleResponsesStreamingResponse(
 			)
 			continue
 		}
+
+		mergeKiroCreditsFromAnthropicPayload(&usage, payload)
 
 		if processEvent(&event) {
 			return resultWithUsage(), nil
