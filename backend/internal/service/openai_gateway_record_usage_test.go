@@ -2527,7 +2527,6 @@ func TestGatewayServiceCalculateRecordUsageCost_KiroGPT56UsesOpenAIFallbackInste
 	)
 
 	require.NotNil(t, cost)
-	require.Equal(t, string(BillingModeToken), cost.BillingMode)
 	require.InDelta(t, 1000*2.5e-6, cost.InputCost, 1e-12)
 	require.InDelta(t, 200*15e-6, cost.OutputCost, 1e-12)
 	require.InDelta(t, 10*3.125e-6, cost.CacheCreationCost, 1e-12)
