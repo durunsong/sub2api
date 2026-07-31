@@ -1,7 +1,7 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.1.168**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.1.168**，并保留本 Fork
+当前整合版本为 **v0.1.169**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.1.169**，并保留本 Fork
 的全部定制能力。
 
 ## 必须保留的模块
@@ -17,6 +17,15 @@
 | Fork UI | 首页、品牌、VersionBadge、支付体验和管理端定制必须保留 |
 | Ops | 管理端筛选删除错误日志能力必须保留 |
 | 套餐续期 | 活跃套餐叠加、过期套餐续期、日卡重置额度和备注追加必须保留 |
+
+## v0.1.169 整合内容
+
+- 合入上游 URL 路径片段闭集校验（`upstream_path_guard` / `guardResponsesSubpath`），修复 GHSA-vrxq-qm4h-6hgg，同时保留 Gateway 上的 Access Ban（`ipBanAnthropic` / `ipBanGoogle`）中间件。
+- 合入 OpenAI 代理断流熔断 fail-open、`gateway.openai_proxy_stream_circuit.disabled` 配置项，以及容器 `no-new-privileges`。
+- 合入 glm-5.2 独立兜底定价、GPT-5.6 Luna/Terra 费率更新、Anthropic count_tokens 剥离 `max_tokens`、Claude auto 分类器识别修复。
+- 合入 SMTP 标准邮件格式、Qwen3Guard 辅助字段兼容、临时不可调度账号跳过 Token 刷新、可用渠道组合模型按平台展示。
+- 合入订阅到期标签与套餐卡片标题可读性修复；用户端继续保留 Kiro→Claude 别名，并继续隐藏倍率展示。
+- 合入 release 定价兜底资源打包修复与 Passkey 部署说明补充。
 
 ## v0.1.168 整合内容
 
@@ -72,4 +81,4 @@
 - Access Ban 的服务、路由和网关中间件不得因官方安全中间件更新而被移除。
 - `wire.go`、`wire_gen.go`、网关路由、套餐服务、Ops 服务和设置页属于高冲突文件，合并后必须运行对应测试。
 
-*最后更新：2026-07-29*
+*最后更新：2026-07-31*

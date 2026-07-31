@@ -17,7 +17,10 @@
           <span :class="['mt-0.5 shrink-0 rounded-md border px-2 py-0.5 text-xs font-medium', badgeLightClass, borderClass]">
             {{ pLabel }}
           </span>
-          <h3 class="min-w-0 flex-1 text-xl font-bold leading-tight text-gray-900 line-clamp-2 dark:text-white">
+          <h3
+            :title="userFacingPlatformText(plan.name)"
+            class="min-w-0 flex-1 break-words [overflow-wrap:anywhere] text-xl font-bold leading-tight text-gray-900 line-clamp-2 dark:text-white"
+          >
             {{ userFacingPlatformText(plan.name) }}
           </h3>
           <span :class="['mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-xs font-medium', badgeLightClass]">
