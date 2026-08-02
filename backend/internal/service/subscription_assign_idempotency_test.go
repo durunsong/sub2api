@@ -405,6 +405,14 @@ func TestAssignSubscriptionRenewsExpiredDailyCard(t *testing.T) {
 	require.False(t, sub.StartsAt.After(after))
 	require.True(t, sub.HasOneTimeDailyQuota())
 	require.True(t, sub.IsActive())
+	require.Equal(t, sub.StartsAt.AddDate(0, 0, 1), sub.ExpiresAt)
+	require.Equal(t, sub.StartsAt, *sub.DailyWindowStart)
+	require.Equal(t, sub.StartsAt, *sub.WeeklyWindowStart)
+	require.Equal(t, sub.StartsAt, *sub.MonthlyWindowStart)
+	require.Zero(t, sub.DailyUsageUSD)
+	require.Zero(t, sub.WeeklyUsageUSD)
+	require.Zero(t, sub.MonthlyUsageUSD)
+	require.Equal(t, "old\nadmin-reassign", sub.Notes)
 }
 
 func TestAssignSubscriptionAppendsNotesOnExistingActive(t *testing.T) {
