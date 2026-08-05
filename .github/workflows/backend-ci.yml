@@ -76,6 +76,7 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.9
+          # Pin the patch version so the action skips the remote version-mapping lookup.
+          version: v2.9.0
           args: --timeout=30m
           working-directory: backend
