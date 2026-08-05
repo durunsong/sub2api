@@ -389,7 +389,12 @@ func (s *BillingCacheService) setBalanceCache(ctx context.Context, userID int64,
 	}
 	var err error
 	if versioned {
-		err = s.cache.(versionedBalanceCache).SetUserBalanceIfGeneration(ctx, userID, balance, generation)
+		versionedCache, ok := s.cache.(versionedBalanceCache)
+		if !ok {
+			logger.LegacyPrintf("service.billing_cache", "Warning: versioned balance cache unavailable for user %d; skipping cache refill", userID)
+			return
+		}
+		err = versionedCache.SetUserBalanceIfGeneration(ctx, userID, balance, generation)
 	} else {
 		err = s.cache.SetUserBalance(ctx, userID, balance)
 	}
