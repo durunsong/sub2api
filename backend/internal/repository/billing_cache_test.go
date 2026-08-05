@@ -3,12 +3,59 @@
 package repository
 
 import (
+	"context"
 	"math"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 )
+
+func TestBillingBalanceGeneration_FencesStaleRefill(t *testing.T) {
+	cache, mr := newMiniRedisCache(t)
+	ctx := context.Background()
+	const userID = int64(42)
+
+	generation, err := cache.GetUserBalanceGeneration(ctx, userID)
+	require.NoError(t, err)
+	require.Zero(t, generation)
+
+	require.NoError(t, cache.SetUserBalance(ctx, userID, 10))
+	require.NoError(t, cache.InvalidateUserBalance(ctx, userID))
+	require.NoError(t, cache.SetUserBalanceIfGeneration(ctx, userID, 10, generation))
+
+	require.False(t, mr.Exists(billingBalanceKey(userID)))
+	current, err := cache.GetUserBalanceGeneration(ctx, userID)
+	require.NoError(t, err)
+	require.Equal(t, int64(1), current)
+	require.GreaterOrEqual(t, mr.TTL(billingBalanceGenerationKey(userID)), billingBalanceGenerationTTL-time.Second)
+}
+
+func TestBillingBalanceGeneration_InvalidationDeletesBalanceWhenGenerationIsCorrupt(t *testing.T) {
+	cache, mr := newMiniRedisCache(t)
+	ctx := context.Background()
+	const userID = int64(44)
+
+	mr.Set(billingBalanceGenerationKey(userID), "corrupt")
+	mr.Set(billingBalanceKey(userID), "10")
+
+	require.Error(t, cache.InvalidateUserBalance(ctx, userID))
+	require.False(t, mr.Exists(billingBalanceKey(userID)))
+}
+
+func TestBillingBalanceGeneration_AllowsCurrentRefill(t *testing.T) {
+	cache, mr := newMiniRedisCache(t)
+	ctx := context.Background()
+	const userID = int64(43)
+
+	generation, err := cache.GetUserBalanceGeneration(ctx, userID)
+	require.NoError(t, err)
+	require.NoError(t, cache.SetUserBalanceIfGeneration(ctx, userID, 12.5, generation))
+
+	cached, err := mr.Get(billingBalanceKey(userID))
+	require.NoError(t, err)
+	require.Equal(t, "12.5", cached)
+}
 
 func TestBillingBalanceKey(t *testing.T) {
 	tests := []struct {

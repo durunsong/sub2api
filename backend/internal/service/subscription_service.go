@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/rand/v2"
 	"strconv"
+	"strings"
 	"time"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
@@ -28,6 +29,7 @@ var (
 	ErrSubscriptionExpired         = infraerrors.Forbidden("SUBSCRIPTION_EXPIRED", "subscription has expired")
 	ErrSubscriptionSuspended       = infraerrors.Forbidden("SUBSCRIPTION_SUSPENDED", "subscription is suspended")
 	ErrSubscriptionAlreadyExists   = infraerrors.Conflict("SUBSCRIPTION_ALREADY_EXISTS", "subscription already exists for this user and group")
+	ErrSubscriptionAssignConflict  = infraerrors.Conflict("SUBSCRIPTION_ASSIGN_CONFLICT", "subscription exists but request conflicts with existing assignment semantics")
 	ErrSubscriptionNotRevoked      = infraerrors.Conflict("SUBSCRIPTION_NOT_REVOKED", "subscription is not revoked")
 	ErrSubscriptionRestoreConflict = infraerrors.Conflict("SUBSCRIPTION_RESTORE_CONFLICT", "subscription already exists for this user and group")
 	ErrGroupNotSubscriptionType    = infraerrors.BadRequest("GROUP_NOT_SUBSCRIPTION_TYPE", "group is not a subscription type")
@@ -243,33 +245,9 @@ func (s *SubscriptionService) assignOrExtendSubscription(ctx context.Context, in
 		validityDays = MaxValidityDays
 	}
 
-	// 已有订阅，执行续期（在事务中完成所有更新）
+	// 已有订阅，执行续期（在事务中锁定并重新读取，避免并发覆盖）
 	if existingSub != nil {
-		now := time.Now()
-		var newExpiresAt time.Time
-
-		isExpired := !existingSub.ExpiresAt.After(now)
-		// 未过期再买 1 日卡：只发放 1 次付费重置机会，不清零用量、不改到期时间。
-		// 新的 24h 从用户点击「重置日额度」时起算（见 UserResetDailyQuota）。
-		grantPendingDailyReset := !isExpired && validityDays == 1
-		if !isExpired {
-			if grantPendingDailyReset {
-				newExpiresAt = existingSub.ExpiresAt // 占位，实际不改期
-			} else {
-				// 未过期多日卡：从当前过期时间累加，并发放一次手动重置
-				newExpiresAt = existingSub.ExpiresAt.AddDate(0, 0, validityDays)
-			}
-		} else {
-			// 已过期：从当前时间开始计算（用量在续订时清零）
-			newExpiresAt = now.AddDate(0, 0, validityDays)
-		}
-
-		// 确保不超过最大过期时间
-		if newExpiresAt.After(MaxExpiresAt) {
-			newExpiresAt = MaxExpiresAt
-		}
-
-		if err := s.updateExistingSubscriptionTerm(ctx, existingSub, input.Notes, now, newExpiresAt, isExpired, grantPendingDailyReset); err != nil {
+		if err := s.updateExistingSubscriptionTerm(ctx, existingSub.ID, validityDays, input.Notes, false); err != nil {
 			return nil, false, err
 		}
 
@@ -313,16 +291,47 @@ func (s *SubscriptionService) maybeInvalidateAssignmentCaches(userID, groupID in
 
 func (s *SubscriptionService) updateExistingSubscriptionTerm(
 	ctx context.Context,
-	existingSub *UserSubscription,
+	subscriptionID int64,
+	validityDays int,
 	notes string,
-	startsAt time.Time,
-	newExpiresAt time.Time,
-	isExpired bool,
-	grantPendingDailyReset bool,
+	assignmentSemantics bool,
 ) error {
 	return s.withSubscriptionUpdateTx(ctx, func(txCtx context.Context) error {
+		existingSub, err := s.userSubRepo.GetByIDForUpdate(txCtx, subscriptionID)
+		if err != nil {
+			return fmt.Errorf("lock subscription for renewal: %w", err)
+		}
+		if assignmentSemantics && existingSub.Status == SubscriptionStatusSuspended {
+			return nil
+		}
+
+		now := time.Now()
+		if s.now != nil {
+			now = s.now()
+		}
+		isExpired := !existingSub.ExpiresAt.After(now)
+		if assignmentSemantics {
+			isExpired = existingSub.Status == SubscriptionStatusExpired ||
+				(existingSub.Status != SubscriptionStatusSuspended && !existingSub.ExpiresAt.After(now))
+		}
+		// Fork 日卡续期语义：活跃日卡只发放一次待激活重置，不改到期时间。
+		grantPendingDailyReset := !assignmentSemantics && !isExpired && validityDays == 1
+		newExpiresAt := existingSub.ExpiresAt
+		if !grantPendingDailyReset {
+			newExpiresAt = existingSub.ExpiresAt.AddDate(0, 0, validityDays)
+			if isExpired {
+				newExpiresAt = now.AddDate(0, 0, validityDays)
+			}
+			if newExpiresAt.After(MaxExpiresAt) {
+				newExpiresAt = MaxExpiresAt
+			}
+		}
+		if assignmentSemantics && strings.TrimSpace(existingSub.Notes) == strings.TrimSpace(notes) {
+			notes = ""
+		}
+
 		if isExpired {
-			renewed := renewedSubscriptionTerm(existingSub, notes, startsAt, newExpiresAt)
+			renewed := renewedSubscriptionTerm(existingSub, notes, now, newExpiresAt)
 			if err := s.userSubRepo.Update(txCtx, renewed); err != nil {
 				return fmt.Errorf("renew expired subscription: %w", err)
 			}
@@ -570,6 +579,99 @@ func (s *SubscriptionService) BulkAssignSubscription(ctx context.Context, input 
 	}
 
 	return result, nil
+}
+
+func (s *SubscriptionService) assignSubscriptionWithReuse(ctx context.Context, input *AssignSubscriptionInput) (*UserSubscription, bool, error) {
+	// 检查分组是否存在且为订阅类型
+	group, err := s.groupRepo.GetByID(ctx, input.GroupID)
+	if err != nil {
+		return nil, false, fmt.Errorf("group not found: %w", err)
+	}
+	if !group.IsSubscriptionType() {
+		return nil, false, ErrGroupNotSubscriptionType
+	}
+
+	// 检查是否已存在订阅；若已存在，则按幂等成功返回现有订阅
+	exists, err := s.userSubRepo.ExistsByUserIDAndGroupID(ctx, input.UserID, input.GroupID)
+	if err != nil {
+		return nil, false, err
+	}
+	if exists {
+		sub, getErr := s.userSubRepo.GetByUserIDAndGroupID(ctx, input.UserID, input.GroupID)
+		if getErr != nil {
+			return nil, false, getErr
+		}
+		now := time.Now()
+		if sub.Status == SubscriptionStatusExpired ||
+			(sub.Status != SubscriptionStatusSuspended && !sub.ExpiresAt.After(now)) {
+			validityDays := normalizeAssignValidityDays(input.ValidityDays)
+			if err := s.updateExistingSubscriptionTerm(ctx, sub.ID, validityDays, input.Notes, true); err != nil {
+				return nil, false, err
+			}
+			s.maybeInvalidateAssignmentCaches(input.UserID, input.GroupID, false)
+			renewed, getErr := s.userSubRepo.GetByID(ctx, sub.ID)
+			return renewed, true, getErr
+		}
+		if conflictReason, conflict := detectAssignSemanticConflict(sub, input); conflict {
+			return nil, false, ErrSubscriptionAssignConflict.WithMetadata(map[string]string{
+				"conflict_reason": conflictReason,
+			})
+		}
+		return sub, true, nil
+	}
+
+	sub, err := s.createSubscription(ctx, input)
+	if err != nil {
+		return nil, false, err
+	}
+
+	// 失效订阅缓存
+	s.InvalidateSubCache(input.UserID, input.GroupID)
+	if s.billingCacheService != nil {
+		userID, groupID := input.UserID, input.GroupID
+		go func() {
+			cacheCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			_ = s.billingCacheService.InvalidateSubscription(cacheCtx, userID, groupID)
+		}()
+	}
+
+	return sub, false, nil
+}
+
+func detectAssignSemanticConflict(existing *UserSubscription, input *AssignSubscriptionInput) (string, bool) {
+	if existing == nil || input == nil {
+		return "", false
+	}
+
+	normalizedDays := normalizeAssignValidityDays(input.ValidityDays)
+	if !existing.StartsAt.IsZero() {
+		expectedExpiresAt := existing.StartsAt.AddDate(0, 0, normalizedDays)
+		if expectedExpiresAt.After(MaxExpiresAt) {
+			expectedExpiresAt = MaxExpiresAt
+		}
+		if !existing.ExpiresAt.Equal(expectedExpiresAt) {
+			return "validity_days_mismatch", true
+		}
+	}
+
+	existingNotes := strings.TrimSpace(existing.Notes)
+	inputNotes := strings.TrimSpace(input.Notes)
+	if existingNotes != inputNotes {
+		return "notes_mismatch", true
+	}
+
+	return "", false
+}
+
+func normalizeAssignValidityDays(days int) int {
+	if days <= 0 {
+		days = 30
+	}
+	if days > MaxValidityDays {
+		days = MaxValidityDays
+	}
+	return days
 }
 
 // RevokeSubscription 撤销订阅

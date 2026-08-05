@@ -82,18 +82,25 @@ const (
 
 // cacheWriteTask 缓存写入任务
 type cacheWriteTask struct {
-	kind             cacheWriteKind
-	userID           int64
-	groupID          int64
-	apiKeyID         int64
-	balance          float64
-	amount           float64
-	subscriptionData *subscriptionCacheData
+	kind              cacheWriteKind
+	userID            int64
+	groupID           int64
+	apiKeyID          int64
+	balance           float64
+	balanceGeneration int64
+	versionedBalance  bool
+	amount            float64
+	subscriptionData  *subscriptionCacheData
 }
 
 // apiKeyRateLimitLoader defines the interface for loading rate limit data from DB.
 type apiKeyRateLimitLoader interface {
 	GetRateLimitData(ctx context.Context, keyID int64) (*APIKeyRateLimitData, error)
+}
+
+type versionedBalanceCache interface {
+	GetUserBalanceGeneration(ctx context.Context, userID int64) (int64, error)
+	SetUserBalanceIfGeneration(ctx context.Context, userID int64, balance float64, expectedGeneration int64) error
 }
 
 type subscriptionCacheInvalidationPubSub interface {
@@ -219,7 +226,7 @@ func (s *BillingCacheService) cacheWriteWorker(ch <-chan cacheWriteTask) {
 		ctx, cancel := context.WithTimeout(context.Background(), cacheWriteTimeout)
 		switch task.kind {
 		case cacheWriteSetBalance:
-			s.setBalanceCache(ctx, task.userID, task.balance)
+			s.setBalanceCache(ctx, task.userID, task.balance, task.balanceGeneration, task.versionedBalance)
 		case cacheWriteSetSubscription:
 			s.setSubscriptionCache(ctx, task.userID, task.groupID, task.subscriptionData)
 		case cacheWriteUpdateSubscriptionUsage:
@@ -325,17 +332,35 @@ func (s *BillingCacheService) GetUserBalance(ctx context.Context, userID int64) 
 		loadCtx, cancel := context.WithTimeout(context.Background(), balanceLoadTimeout)
 		defer cancel()
 
+		var (
+			generation int64
+			versioned  bool
+		)
+		if cache, ok := s.cache.(versionedBalanceCache); ok {
+			var generationErr error
+			generation, generationErr = cache.GetUserBalanceGeneration(loadCtx, userID)
+			if generationErr != nil {
+				logger.LegacyPrintf("service.billing_cache", "Warning: get balance cache generation failed for user %d; skipping refill: %v", userID, generationErr)
+			} else {
+				versioned = true
+			}
+		}
+
 		balance, err := s.getUserBalanceFromDB(loadCtx, userID)
 		if err != nil {
 			return nil, err
 		}
 
 		// 异步建立缓存
-		_ = s.enqueueCacheWrite(cacheWriteTask{
-			kind:    cacheWriteSetBalance,
-			userID:  userID,
-			balance: balance,
-		})
+		if _, supportsVersioning := s.cache.(versionedBalanceCache); !supportsVersioning || versioned {
+			_ = s.enqueueCacheWrite(cacheWriteTask{
+				kind:              cacheWriteSetBalance,
+				userID:            userID,
+				balance:           balance,
+				balanceGeneration: generation,
+				versionedBalance:  versioned,
+			})
+		}
 		return balance, nil
 	})
 	if err != nil {
@@ -358,11 +383,17 @@ func (s *BillingCacheService) getUserBalanceFromDB(ctx context.Context, userID i
 }
 
 // setBalanceCache 设置余额缓存
-func (s *BillingCacheService) setBalanceCache(ctx context.Context, userID int64, balance float64) {
+func (s *BillingCacheService) setBalanceCache(ctx context.Context, userID int64, balance float64, generation int64, versioned bool) {
 	if s.cache == nil {
 		return
 	}
-	if err := s.cache.SetUserBalance(ctx, userID, balance); err != nil {
+	var err error
+	if versioned {
+		err = s.cache.(versionedBalanceCache).SetUserBalanceIfGeneration(ctx, userID, balance, generation)
+	} else {
+		err = s.cache.SetUserBalance(ctx, userID, balance)
+	}
+	if err != nil {
 		logger.LegacyPrintf("service.billing_cache", "Warning: set balance cache failed for user %d: %v", userID, err)
 	}
 }

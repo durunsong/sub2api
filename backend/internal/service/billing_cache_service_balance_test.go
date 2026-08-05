@@ -41,6 +41,116 @@ func (s *balanceEligibilityCacheStub) InvalidateUserBalance(context.Context, int
 	return nil
 }
 
+type versionedBalanceCacheStub struct {
+	billingCacheWorkerStub
+
+	generation    atomic.Int64
+	generationErr error
+	balanceSet    chan float64
+}
+
+func (s *versionedBalanceCacheStub) GetUserBalance(context.Context, int64) (float64, error) {
+	return 0, errors.New("cache miss")
+}
+
+func (s *versionedBalanceCacheStub) GetUserBalanceGeneration(context.Context, int64) (int64, error) {
+	if s.generationErr != nil {
+		return 0, s.generationErr
+	}
+	return s.generation.Load(), nil
+}
+
+func (s *versionedBalanceCacheStub) SetUserBalance(_ context.Context, _ int64, balance float64) error {
+	s.balanceSet <- balance
+	return nil
+}
+
+func (s *versionedBalanceCacheStub) SetUserBalanceIfGeneration(_ context.Context, _ int64, balance float64, expected int64) error {
+	if s.generation.Load() == expected {
+		s.balanceSet <- balance
+	}
+	return nil
+}
+
+func (s *versionedBalanceCacheStub) InvalidateUserBalance(context.Context, int64) error {
+	s.generation.Add(1)
+	return nil
+}
+
+type blockingBalanceUserRepoStub struct {
+	balanceLoadUserRepoStub
+	started chan struct{}
+	release chan struct{}
+}
+
+func (s *blockingBalanceUserRepoStub) GetByID(ctx context.Context, id int64) (*User, error) {
+	s.calls.Add(1)
+	close(s.started)
+	select {
+	case <-s.release:
+		return &User{ID: id, Balance: s.balance}, nil
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+}
+
+func TestGetUserBalance_DoesNotRefillStaleBalanceAfterInvalidation(t *testing.T) {
+	cache := &versionedBalanceCacheStub{balanceSet: make(chan float64, 1)}
+	userRepo := &blockingBalanceUserRepoStub{
+		balanceLoadUserRepoStub: balanceLoadUserRepoStub{balance: 10},
+		started:                 make(chan struct{}),
+		release:                 make(chan struct{}),
+	}
+	svc := NewBillingCacheService(cache, userRepo, nil, nil, nil, nil, &config.Config{}, nil)
+	t.Cleanup(svc.Stop)
+
+	result := make(chan error, 1)
+	go func() {
+		_, err := svc.GetUserBalance(context.Background(), 1)
+		result <- err
+	}()
+
+	<-userRepo.started
+	require.NoError(t, svc.InvalidateUserBalance(context.Background(), 1))
+	close(userRepo.release)
+	require.NoError(t, <-result)
+
+	require.Never(t, func() bool {
+		return len(cache.balanceSet) > 0
+	}, 200*time.Millisecond, 10*time.Millisecond)
+}
+
+func TestGetUserBalance_RefillsWhenGenerationIsUnchanged(t *testing.T) {
+	cache := &versionedBalanceCacheStub{balanceSet: make(chan float64, 1)}
+	userRepo := &balanceLoadUserRepoStub{balance: 10}
+	svc := NewBillingCacheService(cache, userRepo, nil, nil, nil, nil, &config.Config{}, nil)
+	t.Cleanup(svc.Stop)
+
+	balance, err := svc.GetUserBalance(context.Background(), 1)
+	require.NoError(t, err)
+	require.Equal(t, 10.0, balance)
+	require.Eventually(t, func() bool {
+		return len(cache.balanceSet) == 1
+	}, time.Second, 10*time.Millisecond)
+}
+
+func TestGetUserBalance_GenerationReadFailureSkipsRefill(t *testing.T) {
+	cache := &versionedBalanceCacheStub{
+		generationErr: errors.New("redis unavailable"),
+		balanceSet:    make(chan float64, 1),
+	}
+	userRepo := &balanceLoadUserRepoStub{balance: 10}
+	svc := NewBillingCacheService(cache, userRepo, nil, nil, nil, nil, &config.Config{}, nil)
+	t.Cleanup(svc.Stop)
+
+	balance, err := svc.GetUserBalance(context.Background(), 1)
+	require.NoError(t, err)
+	require.Equal(t, 10.0, balance)
+	require.Never(t, func() bool {
+		return len(cache.balanceSet) > 0
+	}, 200*time.Millisecond, 10*time.Millisecond)
+}
+
 func TestCheckBillingEligibility_RejectsBalanceBelowMinimumReserve(t *testing.T) {
 	cache := &balanceEligibilityCacheStub{balance: 0.005}
 	cfg := &config.Config{}

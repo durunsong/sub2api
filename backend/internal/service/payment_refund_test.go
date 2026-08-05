@@ -3,7 +3,11 @@
 package service
 
 import (
+	"bytes"
 	"context"
+	"errors"
+	"fmt"
+	"log/slog"
 	"strconv"
 	"testing"
 	"time"
@@ -117,6 +121,169 @@ func TestPrepareRefundRejectsLegacyGuessedProviderInstance(t *testing.T) {
 	require.Nil(t, result)
 	require.Error(t, err)
 	require.Equal(t, "REFUND_DISABLED", infraerrors.Reason(err))
+}
+
+func TestPrepDeductBalanceRequiresForceWhenBalanceIsInsufficient(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		balance     float64
+		force       bool
+		wantDeduct  float64
+		wantWarning bool
+	}{
+		{name: "insufficient balance", balance: 40, wantWarning: true},
+		{name: "forced insufficient balance", balance: 40, force: true, wantDeduct: 40},
+		{name: "equal balance", balance: 100, wantDeduct: 100},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			plan := &RefundPlan{RefundAmount: 100}
+			svc := &PaymentService{userRepo: &mockUserRepo{getByIDUser: &User{Balance: tc.balance}}}
+
+			result := svc.prepDeduct(context.Background(), &dbent.PaymentOrder{
+				UserID:    1,
+				OrderType: payment.OrderTypeBalance,
+			}, plan, tc.force)
+
+			if tc.wantWarning {
+				require.NotNil(t, result)
+				require.False(t, result.Success)
+				require.True(t, result.RequireForce)
+				require.Equal(t, "user balance is insufficient for deduction, use force", result.Warning)
+				require.Zero(t, plan.BalanceToDeduct)
+				return
+			}
+			require.Nil(t, result)
+			require.Equal(t, payment.DeductionTypeBalance, plan.DeductionType)
+			require.Equal(t, tc.wantDeduct, plan.BalanceToDeduct)
+		})
+	}
+}
+
+type recordingBalanceCacheInvalidator struct {
+	calls  []int64
+	err    error
+	onCall func(context.Context, int64)
+}
+
+func (r *recordingBalanceCacheInvalidator) InvalidateUserBalance(ctx context.Context, userID int64) error {
+	r.calls = append(r.calls, userID)
+	if r.onCall != nil {
+		r.onCall(ctx, userID)
+	}
+	return r.err
+}
+
+func TestExecuteRefundUsesActualAvailableBalanceDeduction(t *testing.T) {
+	ctx := context.Background()
+	client := newPaymentConfigServiceTestClient(t)
+	user, err := client.User.Create().
+		SetEmail("refund-execute-clamp@example.com").
+		SetPasswordHash("hash").
+		SetUsername("refund-execute-clamp").
+		Save(ctx)
+	require.NoError(t, err)
+	order, err := client.PaymentOrder.Create().
+		SetUserID(user.ID).
+		SetUserEmail(user.Email).
+		SetUserName(user.Username).
+		SetAmount(100).
+		SetPayAmount(100).
+		SetFeeRate(0).
+		SetRechargeCode("REFUND-EXECUTE-CLAMP").
+		SetOutTradeNo("refund_execute_clamp").
+		SetPaymentType(payment.TypeStripe).
+		SetPaymentTradeNo("").
+		SetOrderType(payment.OrderTypeBalance).
+		SetStatus(OrderStatusCompleted).
+		SetExpiresAt(time.Now().Add(time.Hour)).
+		SetPaidAt(time.Now()).
+		SetClientIP("127.0.0.1").
+		SetSrcHost("api.example.com").
+		Save(ctx)
+	require.NoError(t, err)
+
+	deducted := false
+	repo := &mockUserRepo{deductAvailableBalanceFn: func(_ context.Context, id int64, amount float64) (float64, error) {
+		require.Equal(t, user.ID, id)
+		require.Equal(t, 100.0, amount)
+		deducted = true
+		return 25, nil
+	}}
+	plan := &RefundPlan{
+		OrderID: order.ID, Order: order, RefundAmount: 100, GatewayAmount: 100,
+		Reason: "concurrent spend", Force: true, DeductionType: payment.DeductionTypeBalance, BalanceToDeduct: 100,
+	}
+
+	cache := &recordingBalanceCacheInvalidator{onCall: func(context.Context, int64) { require.True(t, deducted) }}
+	result, err := (&PaymentService{entClient: client, userRepo: repo, balanceCacheInvalidator: cache}).ExecuteRefund(ctx, plan)
+	require.NoError(t, err)
+	require.Equal(t, []int64{user.ID}, cache.calls)
+	require.True(t, result.Success)
+	require.Equal(t, 25.0, plan.BalanceToDeduct)
+	require.Equal(t, 25.0, result.BalanceDeducted)
+	audit, err := client.PaymentAuditLog.Query().
+		Where(paymentauditlog.OrderIDEQ(strconv.FormatInt(order.ID, 10)), paymentauditlog.ActionEQ("REFUND_SUCCESS")).
+		Only(ctx)
+	require.NoError(t, err)
+	require.Contains(t, audit.Detail, `"balanceDeducted":25`)
+}
+
+func TestExecuteRefundIgnoresBalanceCacheInvalidationFailure(t *testing.T) {
+	ctx := context.Background()
+	client := newPaymentConfigServiceTestClient(t)
+	user, err := client.User.Create().
+		SetEmail("refund-cache-failure@example.com").
+		SetPasswordHash("hash").
+		SetUsername("refund-cache-failure").
+		Save(ctx)
+	require.NoError(t, err)
+	order, err := client.PaymentOrder.Create().
+		SetUserID(user.ID).
+		SetUserEmail(user.Email).
+		SetUserName(user.Username).
+		SetAmount(50).
+		SetPayAmount(50).
+		SetFeeRate(0).
+		SetRechargeCode("REFUND-CACHE-FAILURE").
+		SetOutTradeNo("refund_cache_failure").
+		SetPaymentType(payment.TypeStripe).
+		SetPaymentTradeNo("").
+		SetOrderType(payment.OrderTypeBalance).
+		SetStatus(OrderStatusCompleted).
+		SetExpiresAt(time.Now().Add(time.Hour)).
+		SetPaidAt(time.Now()).
+		SetClientIP("127.0.0.1").
+		SetSrcHost("api.example.com").
+		Save(ctx)
+	require.NoError(t, err)
+
+	var logs bytes.Buffer
+	previousLogger := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, nil)))
+	t.Cleanup(func() { slog.SetDefault(previousLogger) })
+
+	cache := &recordingBalanceCacheInvalidator{err: errors.New("redis unavailable")}
+	svc := &PaymentService{
+		entClient: client,
+		userRepo: &mockUserRepo{deductAvailableBalanceFn: func(context.Context, int64, float64) (float64, error) {
+			return 50, nil
+		}},
+		balanceCacheInvalidator: cache,
+	}
+	result, err := svc.ExecuteRefund(ctx, &RefundPlan{
+		OrderID: order.ID, Order: order, RefundAmount: 50, GatewayAmount: 50,
+		Reason: "cache failure", DeductionType: payment.DeductionTypeBalance, BalanceToDeduct: 50,
+	})
+
+	require.NoError(t, err)
+	require.True(t, result.Success)
+	require.Equal(t, []int64{user.ID}, cache.calls)
+	require.Contains(t, logs.String(), "level=ERROR")
+	require.Contains(t, logs.String(), "msg=payment_refund.balance_cache_invalidation_failed")
+	require.Contains(t, logs.String(), "operation=deduct")
+	require.Contains(t, logs.String(), fmt.Sprintf("order_id=%d", order.ID))
+	require.Contains(t, logs.String(), fmt.Sprintf("user_id=%d", user.ID))
+	require.Contains(t, logs.String(), `error="redis unavailable"`)
 }
 
 func TestGwRefundRejectsAlipayMerchantIdentitySnapshotMismatch(t *testing.T) {
@@ -366,8 +533,10 @@ func TestQueryAndFinalizeRefundFinalizesProviderStatuses(t *testing.T) {
 		status     string
 		wantStatus string
 		wantDeduct float64
+		available  float64
 	}{
-		{name: "success", status: payment.ProviderStatusSuccess, wantStatus: OrderStatusRefunded, wantDeduct: 100},
+		{name: "success", status: payment.ProviderStatusSuccess, wantStatus: OrderStatusRefunded, wantDeduct: 100, available: 100},
+		{name: "success clamps current balance", status: payment.ProviderStatusSuccess, wantStatus: OrderStatusRefunded, wantDeduct: 35, available: 35},
 		{name: "failed", status: payment.ProviderStatusFailed, wantStatus: OrderStatusRefundFailed},
 		{name: "pending", status: payment.ProviderStatusPending, wantStatus: OrderStatusRefundPending},
 	} {
@@ -380,9 +549,9 @@ func TestQueryAndFinalizeRefundFinalizesProviderStatuses(t *testing.T) {
 			svc := &PaymentService{
 				entClient:    client,
 				loadBalancer: &captureLoadBalancer{},
-				userRepo: &mockUserRepo{deductBalanceFn: func(ctx context.Context, id int64, amount float64) error {
-					deducted += amount
-					return nil
+				userRepo: &mockUserRepo{deductAvailableBalanceFn: func(ctx context.Context, id int64, amount float64) (float64, error) {
+					deducted += tc.available
+					return tc.available, nil
 				}},
 			}
 			restore := replacePaymentProviderFactoryForTest(t, &refundQueryProviderTestDouble{
@@ -395,12 +564,135 @@ func TestQueryAndFinalizeRefundFinalizesProviderStatuses(t *testing.T) {
 			require.NotNil(t, result)
 			require.Equal(t, tc.status == payment.ProviderStatusSuccess, result.Success)
 			require.Equal(t, tc.wantDeduct, deducted)
+			if tc.status == payment.ProviderStatusSuccess {
+				require.Equal(t, tc.wantDeduct, result.BalanceDeducted)
+				audit, err := client.PaymentAuditLog.Query().
+					Where(paymentauditlog.OrderIDEQ(strconv.FormatInt(order.ID, 10)), paymentauditlog.ActionEQ("REFUND_SUCCESS")).
+					Only(ctx)
+				require.NoError(t, err)
+				require.Contains(t, audit.Detail, fmt.Sprintf(`"balanceDeducted":%v`, tc.wantDeduct))
+			}
 
 			reloaded, err := client.PaymentOrder.Get(ctx, order.ID)
 			require.NoError(t, err)
 			require.Equal(t, tc.wantStatus, reloaded.Status)
 		})
 	}
+}
+
+func TestFinalizePendingRefundSuccessRejectsStaleCallerBeforeSecondDeduction(t *testing.T) {
+	ctx := context.Background()
+	client := newPaymentConfigServiceTestClient(t)
+	order := createPendingRefundOrderForTest(t, ctx, client, "finalize-stale")
+
+	deductions := 0
+	cache := &recordingBalanceCacheInvalidator{onCall: func(cacheCtx context.Context, userID int64) {
+		require.Nil(t, dbent.TxFromContext(cacheCtx))
+		reloaded, reloadErr := client.PaymentOrder.Get(cacheCtx, order.ID)
+		require.NoError(t, reloadErr)
+		require.Equal(t, OrderStatusRefunded, reloaded.Status)
+	}}
+	svc := &PaymentService{
+		entClient: client,
+		userRepo: &mockUserRepo{deductAvailableBalanceFn: func(ctx context.Context, id int64, amount float64) (float64, error) {
+			require.NotNil(t, dbent.TxFromContext(ctx))
+			deductions++
+			return amount, nil
+		}},
+		balanceCacheInvalidator: cache,
+	}
+
+	first, err := svc.finalizePendingRefundSuccess(ctx, svc.refundFinalizePlan(order))
+	require.NoError(t, err)
+	require.True(t, first.Success)
+
+	second, err := svc.finalizePendingRefundSuccess(ctx, svc.refundFinalizePlan(order))
+	require.Nil(t, second)
+	require.Error(t, err)
+	require.Equal(t, "CONFLICT", infraerrors.Reason(err))
+	require.Equal(t, 1, deductions)
+	require.Equal(t, []int64{order.UserID}, cache.calls)
+
+	successAudits, err := client.PaymentAuditLog.Query().
+		Where(paymentauditlog.OrderIDEQ(strconv.FormatInt(order.ID, 10)), paymentauditlog.ActionEQ("REFUND_SUCCESS")).
+		Count(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 1, successAudits)
+}
+
+func TestFinalizePendingRefundSuccessRollsBackPostDeductionFailure(t *testing.T) {
+	ctx := context.Background()
+	client := newPaymentConfigServiceTestClient(t)
+	order := createPendingRefundOrderForTest(t, ctx, client, "finalize-rollback")
+	_, err := client.User.UpdateOneID(order.UserID).SetBalance(100).Save(ctx)
+	require.NoError(t, err)
+
+	cache := &recordingBalanceCacheInvalidator{}
+	svc := &PaymentService{
+		entClient: client,
+		userRepo: &mockUserRepo{deductAvailableBalanceFn: func(ctx context.Context, id int64, amount float64) (float64, error) {
+			tx := dbent.TxFromContext(ctx)
+			require.NotNil(t, tx)
+			if _, updateErr := tx.Client().User.UpdateOneID(id).AddBalance(-amount).Save(ctx); updateErr != nil {
+				return 0, updateErr
+			}
+			return 0, errors.New("injected failure after deduction")
+		}},
+		balanceCacheInvalidator: cache,
+	}
+
+	result, err := svc.finalizePendingRefundSuccess(ctx, svc.refundFinalizePlan(order))
+	require.Nil(t, result)
+	require.ErrorContains(t, err, "injected failure after deduction")
+
+	user, err := client.User.Get(ctx, order.UserID)
+	require.NoError(t, err)
+	require.Equal(t, 100.0, user.Balance)
+	reloaded, err := client.PaymentOrder.Get(ctx, order.ID)
+	require.NoError(t, err)
+	require.Equal(t, OrderStatusRefundPending, reloaded.Status)
+	successAudits, err := client.PaymentAuditLog.Query().
+		Where(paymentauditlog.OrderIDEQ(strconv.FormatInt(order.ID, 10)), paymentauditlog.ActionEQ("REFUND_SUCCESS")).
+		Count(ctx)
+	require.NoError(t, err)
+	require.Zero(t, successAudits)
+	require.Empty(t, cache.calls)
+}
+
+func TestRollbackRefundInvalidatesRestoredBalance(t *testing.T) {
+	restored := false
+	cache := &recordingBalanceCacheInvalidator{onCall: func(context.Context, int64) { require.True(t, restored) }}
+	repo := &mockUserRepo{updateBalanceFn: func(context.Context, int64, float64) error {
+		restored = true
+		return nil
+	}}
+	svc := &PaymentService{userRepo: repo, balanceCacheInvalidator: cache}
+	plan := &RefundPlan{
+		OrderID:         9,
+		Order:           &dbent.PaymentOrder{UserID: 42},
+		DeductionType:   payment.DeductionTypeBalance,
+		BalanceToDeduct: 12,
+	}
+
+	require.True(t, svc.RollbackRefund(context.Background(), plan, errors.New("gateway failed")))
+	require.Equal(t, []int64{42}, cache.calls)
+}
+
+func TestRollbackRefundDoesNotInvalidateWhenBalanceRestoreFails(t *testing.T) {
+	ctx := context.Background()
+	client := newPaymentConfigServiceTestClient(t)
+	cache := &recordingBalanceCacheInvalidator{}
+	repo := &mockUserRepo{updateBalanceErr: errors.New("database unavailable")}
+	svc := &PaymentService{entClient: client, userRepo: repo, balanceCacheInvalidator: cache}
+	plan := &RefundPlan{
+		OrderID:         10,
+		Order:           &dbent.PaymentOrder{UserID: 43},
+		DeductionType:   payment.DeductionTypeBalance,
+		BalanceToDeduct: 12,
+	}
+
+	require.False(t, svc.RollbackRefund(ctx, plan, errors.New("gateway failed")))
+	require.Empty(t, cache.calls)
 }
 
 func TestQueryAndFinalizeRefundUnsupportedProviderReturnsClearError(t *testing.T) {
