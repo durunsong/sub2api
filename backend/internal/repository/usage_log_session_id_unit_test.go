@@ -32,7 +32,7 @@ func newSessionIDUsageLog(sessionID *string) *service.UsageLog {
 // arg slice / arg-type table so the five INSERT column lists stay in sync. The Fork's
 // kiro_credits field remains immediately before session_id; created_at is always last.
 func TestPrepareUsageLogInsert_SessionIDArgWiring(t *testing.T) {
-	require.Len(t, usageLogInsertArgTypes, 58, "arg-type table must include kiro_credits and session_id")
+	require.Len(t, usageLogInsertArgTypes, 60, "arg-type table must include upstream model audit, kiro_credits, and session_id")
 
 	sessionID := "sess-persisted-123"
 	prepared := prepareUsageLogInsert(newSessionIDUsageLog(&sessionID))

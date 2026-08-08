@@ -1,7 +1,7 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.1.171**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.1.171**，并保留本 Fork
+当前整合版本为 **v0.1.172**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.1.172**，并保留本 Fork
 的全部定制能力。
 
 ## 必须保留的模块
@@ -17,6 +17,14 @@
 | Fork UI | 首页、品牌、VersionBadge、支付体验和管理端定制必须保留 |
 | Ops | 管理端筛选删除错误日志能力必须保留 |
 | 套餐续期 | 活跃套餐叠加、过期套餐续期、日卡重置额度和备注追加必须保留 |
+
+## v0.1.172 整合内容
+
+- 合入安全加固与上游响应模型审计，新增迁移 `194`/`195`，补齐响应模型记录、错配查询索引及相关用量查询能力。
+- 合入订阅日额度按午夜重置、金额按数据库 `NUMERIC(20,8)` 精度量化，避免日窗口与高精度金额口径漂移。
+- 合入网关、OpenAI/Grok/Antigravity 模型兼容与转发、腾讯验证码、Ops 日志、代理超时及模型广场等集中修复。
+- 官方 v0.1.172 tag 内 `backend/cmd/server/VERSION` 仍为 0.1.171；本 Fork 按 release tag 设为 0.1.172。
+- 迁移 `157` 继续同时包含 `kiro` + `grok`，`159`/`160` Access Ban 迁移继续保留；Kiro、XorPay、Access Ban、Kiro→Claude、VersionBadge、支付与订阅定制全部保留。
 
 ## v0.1.171 整合内容
 
@@ -96,4 +104,4 @@
 - Access Ban 的服务、路由和网关中间件不得因官方安全中间件更新而被移除。
 - `wire.go`、`wire_gen.go`、网关路由、套餐服务、Ops 服务和设置页属于高冲突文件，合并后必须运行对应测试。
 
-*最后更新：2026-08-05*
+*最后更新：2026-08-08*

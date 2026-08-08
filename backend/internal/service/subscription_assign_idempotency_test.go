@@ -9,6 +9,7 @@ import (
 	dbent "github.com/Wei-Shaw/sub2api/ent"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/timezone"
 	"github.com/dgraph-io/ristretto"
 	"github.com/stretchr/testify/require"
 )
@@ -163,10 +164,10 @@ func (userSubRepoNoop) AddManualResetCredits(context.Context, int64, int) error 
 func (userSubRepoNoop) ConsumeManualResetCreditAndResetDaily(context.Context, int64, int64, time.Time, bool, time.Time, time.Time) error {
 	panic("unexpected ConsumeManualResetCreditAndResetDaily call")
 }
-func (userSubRepoNoop) ActivateWindows(context.Context, int64, time.Time) error {
+func (userSubRepoNoop) ActivateWindows(context.Context, int64, time.Time, time.Time) error {
 	panic("unexpected ActivateWindows call")
 }
-func (userSubRepoNoop) ResetUsageWindows(context.Context, int64, bool, bool, bool, time.Time) error {
+func (userSubRepoNoop) ResetUsageWindows(context.Context, int64, bool, bool, bool, time.Time, time.Time) error {
 	panic("unexpected ResetUsageWindows call")
 }
 func (userSubRepoNoop) ResetDailyUsage(context.Context, int64, *time.Time, time.Time) error {
@@ -413,7 +414,7 @@ func TestAssignSubscriptionRenewsExpiredDailyCard(t *testing.T) {
 	require.True(t, sub.HasOneTimeDailyQuota())
 	require.True(t, sub.IsActive())
 	require.Equal(t, sub.StartsAt.AddDate(0, 0, 1), sub.ExpiresAt)
-	require.Equal(t, sub.StartsAt, *sub.DailyWindowStart)
+	require.Equal(t, timezone.StartOfDay(sub.StartsAt), *sub.DailyWindowStart, "续期后日窗口应锚定当天 0 点")
 	require.Equal(t, sub.StartsAt, *sub.WeeklyWindowStart)
 	require.Equal(t, sub.StartsAt, *sub.MonthlyWindowStart)
 	require.Zero(t, sub.DailyUsageUSD)

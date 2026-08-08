@@ -14,8 +14,8 @@ Cursor 场景下还会加载 [`.cursor/rules/sub2api-fork.mdc`](.cursor/rules/su
 | 项 | 值 |
 |----|-----|
 | 上游官方 | https://github.com/Wei-Shaw/sub2api |
-| 已同步基线 | tag **v0.1.171** |
-| 当前 VERSION | `backend/cmd/server/VERSION` = **0.1.171** |
+| 已同步基线 | tag **v0.1.172** |
+| 当前 VERSION | `backend/cmd/server/VERSION` = **0.1.172** |
 | 完整差异文档 | **`docs/FORK_VS_UPSTREAM.md`**（相对历史基线；含 Fork 扩展见文档 §8.2 / §12；快捷清单见 `FORK_CUSTOMIZATIONS.md`） |
 | 快捷索引 | `FORK_CUSTOMIZATIONS.md` |
 
@@ -124,6 +124,7 @@ Access Ban 迁移顺序：`159` 建表 → `160` 扩展 rule_type / ua_pattern�
 - v0.1.169：上游 URL 路径片段校验（安全修复）、代理断流熔断 fail-open、glm-5.2 定价与订阅到期标签修复；Fork 保留 Access Ban / Kiro→Claude / XorPay
 - v0.1.170：分组利润控制、API Key 全平台上游倍率探测/自动同步、利润预演工具，以及 Anthropic 部分用量计费、OpenAI/Grok/订阅窗口等修复；Fork 保留 Kiro 粘性 TTL、Access Ban / Kiro→Claude / XorPay 与自定义批量操作交互
 - v0.1.171：腾讯天御/阿里云验证码 2.0 三选一门禁、Codex 身份与版本同步、composite 推理强度、OpenAI reset credit 缓存、退款强制确认与 Stripe 幂等、订阅并发锁、token refresh 单飞、计费失败留痕、Messages/WS/调度/模型广场等修复；Fork 叠加保留全部既有定制
+- v0.1.172：安全加固、上游响应模型审计（迁移 `194`/`195`）、订阅日额度午夜重置、金额 `NUMERIC(20,8)` 量化，以及网关、模型、验证码、Ops 等修复；官方 tag 内 VERSION 仍为 0.1.171，本 Fork 按 release tag 设为 0.1.172，并保留全部 Fork 定制
 
 ---
 
@@ -144,7 +145,7 @@ Access Ban 迁移顺序：`159` 建表 → `160` 扩展 rule_type / ua_pattern�
 
 见 `docs/FORK_VS_UPSTREAM.md` §14。原则：**Kiro + XorPay + Access Ban + Grok 定制全部保留**。
 
-`upstream/main` 可能领先于 v0.1.171；merge 时以 tag 为基线，逐文件保留 Fork 模块。
+`upstream/main` 可能领先于 v0.1.172；merge 时以 tag 为基线，逐文件保留 Fork 模块。
 
 ---
 

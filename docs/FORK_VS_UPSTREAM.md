@@ -2,10 +2,10 @@
 
 > **上游官方仓库**：[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api)
 > **本 Fork 远程**：`origin` → `durunsong/sub2api`（中转/部署用）
-> **对比基准**：官方 tag **`v0.1.171`**（2026-08-05）
-> **本 Fork 当前版本**：`backend/cmd/server/VERSION` = **0.1.171**
-> **统计**：历史相对 v0.1.164 的大盘差异见下文；v0.1.165–v0.1.171 增量以根目录 `FORK_CUSTOMIZATIONS.md` 为准
-> **当前工作区**：已合入官方 v0.1.171，并保留 Kiro / XorPay / Access Ban / UI 定制
+> **对比基准**：官方 tag **`v0.1.172`**（2026-08-08）
+> **本 Fork 当前版本**：`backend/cmd/server/VERSION` = **0.1.172**
+> **统计**：历史相对 v0.1.164 的大盘差异见下文；v0.1.165–v0.1.172 增量以根目录 `FORK_CUSTOMIZATIONS.md` 为准
+> **当前工作区**：已合入官方 v0.1.172，并保留 Kiro / XorPay / Access Ban / UI 定制
 > **维护**：新增 Fork 定制后，请同步更新本文与根目录 `AGENTS.md` 摘要。
 
 ---
@@ -20,7 +20,7 @@
 | **`AGENTS.md`**（项目根） | AI 协作**强制摘要**与禁区，改代码前必读 |
 | **`FORK_CUSTOMIZATIONS.md`**（项目根） | 历史清单，已收敛到本文；保留作快捷索引 |
 
-**注意**：本 Fork 已同步官方至 **v0.1.171**，但 **`upstream/main` 仍可能领先**。与官方同步时以目标 **tag** 为准；merge `main` 前务必先读本文 Fork 定制章节，禁止 blindly 采用上游覆盖 Kiro / XorPay / Access Ban 等模块。
+**注意**：本 Fork 已同步官方至 **v0.1.172**，但 **`upstream/main` 仍可能领先**。与官方同步时以目标 **tag** 为准；merge `main` 前务必先读本文 Fork 定制章节，禁止 blindly 采用上游覆盖 Kiro / XorPay / Access Ban 等模块。
 
 ---
 
@@ -74,6 +74,7 @@
 - v0.1.169 官方能力：上游 URL 路径片段闭集校验（GHSA-vrxq-qm4h-6hgg）、代理断流熔断 fail-open、glm-5.2 定价、订阅到期标签与套餐标题可读性、SMTP/Passkey/Qwen3Guard 辅助字段等修复；本 Fork 在 `gateway.go` 保留 Access Ban 的同时挂上 `guardResponsesSubpath`
 - v0.1.170 官方能力：分组级利润控制、API Key 全平台上游倍率探测与可选自动同步、`profit-preview` 离线预演、内容审核代理与账号全结果批量选择；同时合入 Anthropic 流中断部分用量计费、OpenAI/Grok 转发、订阅窗口和 SMTP 等修复；本 Fork 继续保留 Kiro 粘性 TTL、Access Ban、XorPay、Kiro→Claude 别名和自定义确认弹窗
 - v0.1.171 官方能力：腾讯天御/阿里云验证码 2.0 与 Turnstile 三选一门禁、Codex 出站身份统一和版本同步、composite 推理强度、OpenAI reset credit 缓存、退款 `require_force` 与 Stripe 幂等、订阅并发锁、token refresh 单飞、计费失败用量留痕、Messages 临时错误 failover、WS/调度取消和模型广场图片价格修复；本 Fork 在这些能力上继续叠加 Kiro/XorPay/Access Ban、续期定制、提示词审计与 UI 品牌定制
+- v0.1.172 官方能力：安全加固、上游响应模型审计与迁移 `194`/`195`、订阅日额度午夜重置、金额按 `NUMERIC(20,8)` 量化，以及网关、OpenAI/Grok/Antigravity 模型兼容、腾讯验证码、Ops 日志、代理超时和模型广场等修复；官方 tag 内 VERSION 仍为 0.1.171，本 Fork 按 release tag 设为 0.1.172，并完整保留 Kiro/XorPay/Access Ban、Kiro→Claude、VersionBadge、支付与订阅定制
 
 v0.1.160 同步时额外补齐 `securityaudit.ProviderSet` 中 `*PromptService` 到 `PromptAdminService` 的 Wire 接口绑定，确保当前 Fork 可重新生成 `wire_gen.go`；其余提示词审计实现保持官方版本。
 
@@ -805,4 +806,4 @@ deploy/docker-compose.yml
 
 ---
 
-*最后更新：2026-08-05 · 基准：官方 v0.1.171 · 增量清单见 `FORK_CUSTOMIZATIONS.md` · 工作区：`git status --short`*
+*最后更新：2026-08-08 · 基准：官方 v0.1.172 · 增量清单见 `FORK_CUSTOMIZATIONS.md` · 工作区：`git status --short`*
