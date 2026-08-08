@@ -293,10 +293,15 @@ describe('PaymentView subscription filters', () => {
       { ...basePlan, id: 4, name: 'OpenAI Week', group_platform: 'openai', validity_days: 7 },
       { ...basePlan, id: 5, name: 'OpenAI Three Months', group_platform: 'openai', validity_days: 90 },
       { ...basePlan, id: 6, name: 'OpenAI Long', group_platform: 'openai', validity_days: 40 },
+      { ...basePlan, id: 7, name: '智普套餐', description: '支持 GLM Coding', group_name: '智普编程套餐', group_platform: 'openai', validity_days: 30 },
     ]
 
     const wrapper = await mountSubscriptionList(plans)
+    const filterLabels = wrapper.findAll('button').map(button => button.text())
 
+    expect(wrapper.text()).toContain('智普-GLM Plan MAX')
+    expect(filterLabels.indexOf('智普-GLM Plan MAX')).toBeLessThan(filterLabels.indexOf('Claude(Max 5x)'))
+    expect(filterLabels.indexOf('Claude(Max 5x)')).toBeLessThan(filterLabels.indexOf('OpenAI(GPT Pro 20x)'))
     expect(wrapper.text()).toContain('Claude(Max 5x)')
     expect(wrapper.text()).toContain('Claude(GLM coding Max)')
     expect(wrapper.text()).toContain('OpenAI(GPT Pro 20x)')
@@ -312,6 +317,15 @@ describe('PaymentView subscription filters', () => {
     expect(wrapper.text()).not.toContain('Anthropic One Month')
     expect(wrapper.text()).not.toContain('OpenAI Three Months')
     expect(wrapper.text()).not.toContain('OpenAI Long')
+
+    await wrapper.findAll('button').find(button => button.text() === '智普-GLM Plan MAX')?.trigger('click')
+    expect(wrapper.text()).toContain('智普套餐')
+    expect(wrapper.text()).not.toContain('OpenAI Week')
+    expect(wrapper.text()).not.toContain('Claude Day')
+
+    await wrapper.findAll('button').find(button => button.text() === 'OpenAI(GPT Pro 20x)')?.trigger('click')
+    expect(wrapper.text()).toContain('OpenAI Week')
+    expect(wrapper.text()).not.toContain('智普套餐')
 
     await wrapper.findAll('button').find(button => button.text() === '3月卡')?.trigger('click')
     expect(wrapper.text()).toContain('OpenAI Three Months')
@@ -362,6 +376,28 @@ describe('PaymentView subscription filters', () => {
     expect(wrapper.text()).not.toContain('OpenAI One Month')
     expect(wrapper.text()).not.toContain('OpenAI Three Months')
     expect(wrapper.text()).toContain('天卡')
+  })
+  it('recognizes GLM in group name, plan name, or description case-insensitively', async () => {
+    const basePlan = checkoutInfoWithPlansFixture().data.plans[0]
+    const plans: SubscriptionPlan[] = [
+      { ...basePlan, id: 1, name: 'Group match', group_name: 'GLM Plan', group_platform: 'openai' },
+      { ...basePlan, id: 2, name: 'glm coding', group_name: 'Other', group_platform: 'openai' },
+      { ...basePlan, id: 3, name: 'Description match', group_name: 'Other', description: 'Supports GlM models', group_platform: 'openai' },
+      { ...basePlan, id: 4, name: 'OpenAI Plan', group_name: 'Codex', description: 'GPT models', group_platform: 'openai' },
+      { ...basePlan, id: 5, name: 'Anthropic GLM Plan', group_name: 'Anthropic', group_platform: 'anthropic' },
+    ]
+
+    const wrapper = await mountSubscriptionList(plans)
+
+    await wrapper.findAll('button').find(button => button.text() === '智普-GLM Plan MAX')?.trigger('click')
+    expect(wrapper.findAll('.plan-card').map(card => card.text())).toEqual([
+      'Group match',
+      'glm coding',
+      'Description match',
+    ])
+
+    await wrapper.findAll('button').find(button => button.text() === 'OpenAI(GPT Pro 20x)')?.trigger('click')
+    expect(wrapper.findAll('.plan-card').map(card => card.text())).toEqual(['OpenAI Plan'])
   })
 })
 

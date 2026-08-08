@@ -585,7 +585,14 @@ const visibleMethods = computed(() => getVisibleMethods(checkout.value.methods))
 const enabledMethods = computed(() => Object.keys(visibleMethods.value))
 const validAmount = computed(() => amount.value ?? 0)
 const RECHARGE_MAX_AMOUNT = 1000
+const ZHIPU_PLAN_FILTER = 'zhipu-glm'
 type SubscriptionPlanDurationFilterKey = 'day' | 'week' | 'oneMonth' | 'threeMonths'
+
+function isZhipuGlmPlan(plan: SubscriptionPlan): boolean {
+  return plan.group_platform === 'openai'
+    && [plan.group_name, plan.name, plan.description]
+      .some(value => String(value || '').toLowerCase().includes('glm'))
+}
 const subscriptionPlanDurationFilters: Array<{ key: SubscriptionPlanDurationFilterKey; labelKey: string }> = [
   { key: 'day', labelKey: 'payment.durationFilter.day' },
   { key: 'week', labelKey: 'payment.durationFilter.week' },
@@ -634,10 +641,23 @@ function subscriptionPlanDurationKey(plan: SubscriptionPlan): SubscriptionPlanDu
 
 const subscriptionPlanPlatforms = computed(() => {
   const platforms = new Set<string>()
+  if (checkout.value.plans.some(isZhipuGlmPlan)) platforms.add(ZHIPU_PLAN_FILTER)
+
   checkout.value.plans.forEach((plan) => {
-    if (plan.group_platform) platforms.add(plan.group_platform)
+    if (!plan.group_platform) return
+    if (plan.group_platform === 'openai' && isZhipuGlmPlan(plan)) return
+    platforms.add(plan.group_platform)
   })
-  return Array.from(platforms).sort((a, b) => subscriptionPlanPlatformLabel(a).localeCompare(subscriptionPlanPlatformLabel(b)))
+
+  const priority = [ZHIPU_PLAN_FILTER, 'kiro', 'anthropic', 'openai']
+  return Array.from(platforms).sort((a, b) => {
+    const aIndex = priority.indexOf(a)
+    const bIndex = priority.indexOf(b)
+    if (aIndex >= 0 || bIndex >= 0) {
+      return (aIndex < 0 ? priority.length : aIndex) - (bIndex < 0 ? priority.length : bIndex)
+    }
+    return subscriptionPlanPlatformLabel(a).localeCompare(subscriptionPlanPlatformLabel(b))
+  })
 })
 
 const visibleSubscriptionPlanDurationFilters = computed(() =>
@@ -647,7 +667,14 @@ const visibleSubscriptionPlanDurationFilters = computed(() =>
 )
 
 function subscriptionPlanPlatformLabel(platform: string): string {
+  if (platform === ZHIPU_PLAN_FILTER) return '智普-GLM Plan MAX'
   return subscriptionPlanFilterLabel(platform)
+}
+
+function matchesSubscriptionPlanPlatform(plan: SubscriptionPlan, platform: string): boolean {
+  if (platform === ZHIPU_PLAN_FILTER) return isZhipuGlmPlan(plan)
+  if (platform === 'openai') return plan.group_platform === 'openai' && !isZhipuGlmPlan(plan)
+  return plan.group_platform === platform
 }
 
 function matchesSubscriptionPlanDuration(plan: SubscriptionPlan): boolean {
@@ -656,7 +683,7 @@ function matchesSubscriptionPlanDuration(plan: SubscriptionPlan): boolean {
 
 const filteredSubscriptionPlans = computed(() => {
   return checkout.value.plans.filter(plan => {
-    if (selectedPlanPlatform.value) return plan.group_platform === selectedPlanPlatform.value
+    if (selectedPlanPlatform.value) return matchesSubscriptionPlanPlatform(plan, selectedPlanPlatform.value)
     return matchesSubscriptionPlanDuration(plan)
   })
 })

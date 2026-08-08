@@ -52,6 +52,7 @@ Cursor 场景下还会加载 [`.cursor/rules/sub2api-fork.mdc`](.cursor/rules/su
 - **Ops**：`DELETE /ops/errors` 批量删错误日志
 - **VersionBadge**：隐藏「立即更新」，保留版本提示与 changelog 链接
 - **支付 UX**：用户端隐藏倍率；二维码 payAmount / creditedAmount 分离
+- **购买页智普筛选**：OpenAI 协议下名称、分组名或描述含 `GLM` 的套餐显示为 `智普-GLM Plan MAX`，普通 OpenAI 分类必须排除这些套餐
 - **UI**：首页/登录靛蓝紫罗兰主题、`logo.svg`、Select/ConfirmDialog 替换原生控件
 - **ProxyAdBanner**：已移除
 
