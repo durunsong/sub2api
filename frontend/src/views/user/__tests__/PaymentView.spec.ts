@@ -468,6 +468,22 @@ describe('PaymentView subscription confirmation amounts', () => {
     expect(wrapper.text()).toContain('GLM')
     expect(wrapper.text()).not.toContain('Anthropic')
   })
+  it.each([
+    { field: 'name', value: 'GLM Coding Plan' },
+    { field: 'group_name', value: '智普 GLM' },
+    { field: 'description', value: 'Supports GLM models' },
+  ] as const)('shows GLM instead of OpenAI when selected plan $field contains GLM', async ({ field, value }) => {
+    const wrapper = await mountSubscriptionConfirm({
+      plan: {
+        group_platform: 'openai',
+        [field]: value,
+      },
+    })
+
+    expect(wrapper.text()).toContain('GLM')
+    expect(wrapper.text()).not.toContain('OpenAI')
+  })
+
 
   it('shows converted CNY pay amount using the subscription rate, not the balance multiplier', async () => {
     const wrapper = await mountSubscriptionConfirm({

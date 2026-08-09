@@ -137,7 +137,7 @@ const textClass = computed(() => platformTextClass(visualPlatform.value))
 const iconClass = computed(() => platformIconClass(visualPlatform.value))
 const btnClass = computed(() => platformButtonClass(visualPlatform.value))
 const discountClass = computed(() => platformDiscountClass(visualPlatform.value))
-const pLabel = computed(() => subscriptionPlanBadgeLabel(platform.value))
+const pLabel = computed(() => subscriptionPlanBadgeLabel(platform.value, props.plan))
 
 const discountText = computed(() => {
   if (!props.plan.original_price || props.plan.original_price <= 0) return ''

@@ -68,6 +68,21 @@ describe("SubscriptionPlanCard", () => {
     expect(text).not.toContain("Anthropic");
   });
 
+  it("shows GLM for OpenAI-compatible GLM plans while keeping regular OpenAI labels", () => {
+    const glmText = mountPlanCard("openai", {
+      name: "智普-GLM-月卡-1亿-token",
+      description: "支持 GLM Coding",
+    }).text();
+    const openAIText = mountPlanCard("openai", {
+      name: "Codex Pro",
+      description: "支持 GPT 模型",
+    }).text();
+
+    expect(glmText).toContain("GLM");
+    expect(glmText).not.toContain("OpenAI");
+    expect(openAIText).toContain("OpenAI");
+  });
+
   it("does not show Antigravity model scopes for OpenAI plans", () => {
     const text = mountPlanCard("openai").text();
 

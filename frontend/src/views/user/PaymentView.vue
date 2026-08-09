@@ -149,7 +149,7 @@
                 <!-- Header: platform badge + plan name -->
                 <div class="mb-3 flex flex-wrap items-center gap-2">
                   <span :class="['rounded-md border px-2 py-0.5 text-xs font-medium', planBadgeClass]">
-                    {{ subscriptionPlanBadgeLabel(selectedPlan.group_platform || '') }}
+                    {{ subscriptionPlanBadgeLabel(selectedPlan.group_platform || '', selectedPlan) }}
                   </span>
                   <h3 class="text-lg font-bold text-gray-900 dark:text-white">{{ userFacingPlatformText(selectedPlan.name) }}</h3>
                 </div>

@@ -1,7 +1,13 @@
 import { platformLabel } from '@/utils/platformColors'
 
-export function subscriptionPlanBadgeLabel(platform: string): string {
-  if (platform === 'anthropic') return 'GLM'
+export function subscriptionPlanBadgeLabel(
+  platform: string,
+  plan?: { group_name?: string; name?: string; description?: string },
+): string {
+  const isOpenAICompatibleGlm = platform === 'openai'
+    && [plan?.group_name, plan?.name, plan?.description]
+      .some(value => String(value || '').toLowerCase().includes('glm'))
+  if (platform === 'anthropic' || isOpenAICompatibleGlm) return 'GLM'
   return platformLabel(platform)
 }
 
