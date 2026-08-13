@@ -1,7 +1,7 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.1.175**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.1.175**（官方无独立 v0.1.174 tag），并保留本 Fork
+当前整合版本为 **v0.1.176**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.1.176**（官方无独立 v0.1.174 tag），并保留本 Fork
 的全部定制能力。
 
 ## 必须保留的模块
@@ -17,6 +17,15 @@
 | Fork UI | 首页、品牌、VersionBadge、支付体验和管理端定制必须保留 |
 | Ops | 管理端筛选删除错误日志能力必须保留 |
 | 套餐续期 | 活跃套餐叠加、过期套餐续期、日卡重置额度和备注追加必须保留 |
+
+## v0.1.176 整合内容
+
+- 合入 Grok 4.6（`grok-4.6` / `grok-4.6-latest`）目录、官方定价与 JWT 订阅档位识别（free / SuperGrok / Heavy / Lite）。
+- 合入分组逐模型定价：`model_pricing` 与 `long_context_pricing_enabled`，解析链为 Group → Channel → 内置；关闭长上下文时 token 模型只取最低档。
+- 合入原生 `POST /x_search`（仅 Grok 分组），Chat↔Responses 保留 x_search 过滤字段；Gateway 兼容路径与官方路径均挂 Access Ban（`ipBanAnthropic`）。
+- 合入备份 leader 锁、渠道缓存失效、定价冲突检测、Responses 探测、Realtime 音频计费、未登记 Grok 文本模型计费等修复。
+- 新增迁移 `221_group_model_pricing.sql`（`long_context_pricing_enabled` 默认 `TRUE`）。官方 tag 内 VERSION 仍为 0.1.175，本 Fork 按 release tag 设为 0.1.176。
+- 迁移 `157` 继续同时包含 `kiro` + `grok`，`159`/`160` Access Ban 迁移继续保留；分组 `oneof` 仍含 `kiro`；Kiro 缓存模拟 UI 与逐模型定价 UI 并存。Kiro、XorPay、Access Ban、用户端 Kiro→Claude、VersionBadge 禁用在线更新、GLM 套餐分类和支付定制全部保留。
 
 ## v0.1.175 整合内容
 

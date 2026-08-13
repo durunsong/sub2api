@@ -14,8 +14,8 @@ Cursor 场景下还会加载 [`.cursor/rules/sub2api-fork.mdc`](.cursor/rules/su
 | 项 | 值 |
 |----|-----|
 | 上游官方 | https://github.com/Wei-Shaw/sub2api |
-| 已同步基线 | tag **v0.1.175**（官方无 v0.1.174 tag） |
-| 当前 VERSION | `backend/cmd/server/VERSION` = **0.1.175** |
+| 已同步基线 | tag **v0.1.176**（官方无 v0.1.174 tag） |
+| 当前 VERSION | `backend/cmd/server/VERSION` = **0.1.176** |
 | 完整差异文档 | **`docs/FORK_VS_UPSTREAM.md`**（相对历史基线；含 Fork 扩展见文档 §8.2 / §12；快捷清单见 `FORK_CUSTOMIZATIONS.md`） |
 | 快捷索引 | `FORK_CUSTOMIZATIONS.md` |
 
@@ -84,6 +84,8 @@ frontend/src/i18n/locales/en.ts
 frontend/src/views/user/PaymentView.vue
 frontend/src/views/admin/IpBansView.vue
 frontend/src/components/common/VersionBadge.vue
+backend/internal/server/routes/gateway.go
+backend/internal/handler/admin/group_handler.go
 ```
 
 **Wire 注入顺序**：`kiroTokenProvider` **在前**，`grokTokenProvider` **在后**；`IPBanService` 须注入 `AuthService`。
@@ -128,6 +130,7 @@ Access Ban 迁移顺序：`159` 建表 → `160` 扩展 rule_type / ua_pattern�
 - v0.1.172：安全加固、上游响应模型审计（迁移 `194`/`195`）、订阅日额度午夜重置、金额 `NUMERIC(20,8)` 量化，以及网关、模型、验证码、Ops 等修复；官方 tag 内 VERSION 仍为 0.1.171，本 Fork 按 release tag 设为 0.1.172，并保留全部 Fork 定制
 - v0.1.173：Grok SSO/refresh/跨实例会话，媒体 Voice、搜索计费与调度，渠道监控 V2，邮箱域名限量注册，以及 Gemini/OpenAI 集中修复；包含迁移 `194`–`206`、`217`–`220` 和安全默认变化，并继续保留 Kiro/XorPay/Access Ban、Kiro→Claude、VersionBadge、GLM 与支付定制
 - v0.1.175：Codex OAuth 设备指纹收敛、按上游响应模型计费、大文件备份分卷上传/恢复，以及 OpenAI/Grok/Gemini/WS/审计等集中修复；官方无 v0.1.174 tag。官方 tag 内 VERSION 仍为 0.1.173，本 Fork 按 release tag 设为 0.1.175，并继续保留全部 Fork 定制
+- v0.1.176：Grok 4.6 / JWT 订阅档位、分组逐模型定价（`model_pricing` + `long_context_pricing_enabled`）、原生 `POST /x_search`，以及备份 leader 锁、渠道缓存、定价冲突、Responses 探测、Realtime 音频计费等修复；新增迁移 `221`。官方 tag 内 VERSION 仍为 0.1.175，本 Fork 按 release tag 设为 0.1.176。Gateway `/x_search` 保留 Access Ban；分组 `oneof` 仍含 `kiro`
 
 ---
 
@@ -148,7 +151,7 @@ Access Ban 迁移顺序：`159` 建表 → `160` 扩展 rule_type / ua_pattern�
 
 见 `docs/FORK_VS_UPSTREAM.md` §14。原则：**Kiro + XorPay + Access Ban + Grok 定制全部保留**。
 
-`upstream/main` 可能领先于 v0.1.175；merge 时以 tag 为基线，逐文件保留 Fork 模块。
+`upstream/main` 可能领先于 v0.1.176；merge 时以 tag 为基线，逐文件保留 Fork 模块。
 
 ---
 
