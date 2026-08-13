@@ -14,8 +14,8 @@ Cursor 场景下还会加载 [`.cursor/rules/sub2api-fork.mdc`](.cursor/rules/su
 | 项 | 值 |
 |----|-----|
 | 上游官方 | https://github.com/Wei-Shaw/sub2api |
-| 已同步基线 | tag **v0.1.173** |
-| 当前 VERSION | `backend/cmd/server/VERSION` = **0.1.173** |
+| 已同步基线 | tag **v0.1.175**（官方无 v0.1.174 tag） |
+| 当前 VERSION | `backend/cmd/server/VERSION` = **0.1.175** |
 | 完整差异文档 | **`docs/FORK_VS_UPSTREAM.md`**（相对历史基线；含 Fork 扩展见文档 §8.2 / §12；快捷清单见 `FORK_CUSTOMIZATIONS.md`） |
 | 快捷索引 | `FORK_CUSTOMIZATIONS.md` |
 
@@ -127,6 +127,7 @@ Access Ban 迁移顺序：`159` 建表 → `160` 扩展 rule_type / ua_pattern�
 - v0.1.171：腾讯天御/阿里云验证码 2.0 三选一门禁、Codex 身份与版本同步、composite 推理强度、OpenAI reset credit 缓存、退款强制确认与 Stripe 幂等、订阅并发锁、token refresh 单飞、计费失败留痕、Messages/WS/调度/模型广场等修复；Fork 叠加保留全部既有定制
 - v0.1.172：安全加固、上游响应模型审计（迁移 `194`/`195`）、订阅日额度午夜重置、金额 `NUMERIC(20,8)` 量化，以及网关、模型、验证码、Ops 等修复；官方 tag 内 VERSION 仍为 0.1.171，本 Fork 按 release tag 设为 0.1.172，并保留全部 Fork 定制
 - v0.1.173：Grok SSO/refresh/跨实例会话，媒体 Voice、搜索计费与调度，渠道监控 V2，邮箱域名限量注册，以及 Gemini/OpenAI 集中修复；包含迁移 `194`–`206`、`217`–`220` 和安全默认变化，并继续保留 Kiro/XorPay/Access Ban、Kiro→Claude、VersionBadge、GLM 与支付定制
+- v0.1.175：Codex OAuth 设备指纹收敛、按上游响应模型计费、大文件备份分卷上传/恢复，以及 OpenAI/Grok/Gemini/WS/审计等集中修复；官方无 v0.1.174 tag。官方 tag 内 VERSION 仍为 0.1.173，本 Fork 按 release tag 设为 0.1.175，并继续保留全部 Fork 定制
 
 ---
 
@@ -147,7 +148,7 @@ Access Ban 迁移顺序：`159` 建表 → `160` 扩展 rule_type / ua_pattern�
 
 见 `docs/FORK_VS_UPSTREAM.md` §14。原则：**Kiro + XorPay + Access Ban + Grok 定制全部保留**。
 
-`upstream/main` 可能领先于 v0.1.173；merge 时以 tag 为基线，逐文件保留 Fork 模块。
+`upstream/main` 可能领先于 v0.1.175；merge 时以 tag 为基线，逐文件保留 Fork 模块。
 
 ---
 

@@ -1,7 +1,7 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.1.173**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.1.173**，并保留本 Fork
+当前整合版本为 **v0.1.175**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.1.175**（官方无独立 v0.1.174 tag），并保留本 Fork
 的全部定制能力。
 
 ## 必须保留的模块
@@ -17,6 +17,16 @@
 | Fork UI | 首页、品牌、VersionBadge、支付体验和管理端定制必须保留 |
 | Ops | 管理端筛选删除错误日志能力必须保留 |
 | 套餐续期 | 活跃套餐叠加、过期套餐续期、日卡重置额度和备注追加必须保留 |
+
+## v0.1.175 整合内容
+
+- 合入 Codex OAuth 设备指纹收敛（off/device/session/full），减少上游可见的设备数和会话数。
+- 合入按上游响应模型计费，渠道可选择以上游实际返回的模型作为计费基准，并保留官方对准入过宽的安全收紧。
+- 合入大文件备份分卷上传与恢复；管理端备份页保留 Fork 的 ConfirmDialog / 密码弹窗，同时支持分卷下载列表。
+- 合入简单模式下显示安全审计菜单、Composite 分组图片生成权限开关、API Key 配额/到期输入校验，以及运营监控内存容量显示优化。
+- 合入 HTML 403 不再误罚账号、OpenAI 个人订阅到期不被 workspace 覆盖、Responses 空 completed 流 failover、确定性 400 透传、嵌套 usage 解析、TTFT、Codex 容量退避、Grok usage 守卫、User-Agent 指纹校验等修复。
+- 官方无 v0.1.174 tag；官方 v0.1.175 tag 内 `backend/cmd/server/VERSION` 仍为 0.1.173，本 Fork 按 release tag 设为 0.1.175。
+- 无新数据库迁移。Kiro、XorPay、Access Ban、用户端 Kiro→Claude、VersionBadge 禁用在线更新、GLM 套餐分类和支付定制全部保留。
 
 ## v0.1.173 整合内容
 
@@ -114,4 +124,4 @@
 - Access Ban 的服务、路由和网关中间件不得因官方安全中间件更新而被移除。
 - `wire.go`、`wire_gen.go`、网关路由、套餐服务、Ops 服务和设置页属于高冲突文件，合并后必须运行对应测试。
 
-*最后更新：2026-08-09*
+*最后更新：2026-08-13*
