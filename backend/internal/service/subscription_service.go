@@ -507,7 +507,7 @@ func classifyManualDailyResetSubscription(sub *UserSubscription, request ManualD
 	if sub.ManualResetCredits <= 0 {
 		return ErrManualResetNoCredits
 	}
-	if sub.Status != SubscriptionStatusActive && !(request.RestartTerm && sub.Status == SubscriptionStatusExpired) {
+	if sub.Status != SubscriptionStatusActive && (!request.RestartTerm || sub.Status != SubscriptionStatusExpired) {
 		return ErrManualResetStateNotAllowed
 	}
 	if !request.Now.Before(sub.ExpiresAt) && !request.RestartTerm {

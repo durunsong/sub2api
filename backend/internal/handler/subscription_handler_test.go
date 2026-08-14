@@ -67,8 +67,11 @@ func performResetDailyHTTP(t *testing.T, repo *resetDailyHandlerRepo, userID int
 	handler.ResetDaily(c)
 	var body resetDailyHTTPEnvelope
 	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &body))
-	extra, _ := c.Get("audit_extra")
-	return recorder.Code, body, extra.(map[string]any)
+	extra, ok := c.Get("audit_extra")
+	require.True(t, ok)
+	auditExtra, ok := extra.(map[string]any)
+	require.True(t, ok)
+	return recorder.Code, body, auditExtra
 }
 
 func TestSubscriptionHandlerResetDaily_HidesCrossUserSubscriptionExistence(t *testing.T) {

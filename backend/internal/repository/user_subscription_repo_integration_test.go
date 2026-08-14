@@ -558,7 +558,8 @@ func (s *UserSubscriptionRepoSuite) TestResetDailyQuota_RejectsRevokedSuspendedA
 		s.Require().Equal(30.0, got.MonthlyUsageUSD)
 	}
 
-	softDeleted := s.mustCreateSubscription(user.ID, group.ID, func(c *dbent.UserSubscriptionCreate) {
+	softDeletedGroup := s.mustCreateGroup("g-manual-reset-states-soft-deleted")
+	softDeleted := s.mustCreateSubscription(user.ID, softDeletedGroup.ID, func(c *dbent.UserSubscriptionCreate) {
 		c.SetManualResetCredits(1).SetDailyUsageUsd(10)
 	})
 	s.Require().NoError(s.repo.Delete(s.ctx, softDeleted.ID))

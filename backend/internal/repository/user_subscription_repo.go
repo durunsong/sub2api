@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
@@ -442,7 +443,7 @@ const resetDailyQuotaSQL = `
 func (r *userSubscriptionRepository) ResetDailyQuota(
 	ctx context.Context,
 	request service.ManualDailyResetRequest,
-) (service.ManualDailyResetResult, error) {
+) (result service.ManualDailyResetResult, err error) {
 	const updateSQL = resetDailyQuotaSQL
 	rows, err := clientFromContext(ctx, r.client).QueryContext(ctx, updateSQL,
 		request.SubscriptionID, request.UserID, request.CurrentStatus,
@@ -452,14 +453,16 @@ func (r *userSubscriptionRepository) ResetDailyQuota(
 	if err != nil {
 		return service.ManualDailyResetResult{}, err
 	}
-	defer rows.Close()
+	defer func() {
+		err = errors.Join(err, rows.Close())
+	}()
 	if !rows.Next() {
 		if err := rows.Err(); err != nil {
 			return service.ManualDailyResetResult{}, err
 		}
 		return service.ManualDailyResetResult{CreditsBefore: -1, CreditsAfter: -1}, service.ErrManualResetConflict
 	}
-	result := service.ManualDailyResetResult{MutationApplied: true, RestartedTerm: request.RestartTerm}
+	result = service.ManualDailyResetResult{MutationApplied: true, RestartedTerm: request.RestartTerm}
 	if err := rows.Scan(&result.CreditsBefore, &result.CreditsAfter); err != nil {
 		return service.ManualDailyResetResult{}, err
 	}
