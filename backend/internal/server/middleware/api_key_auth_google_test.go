@@ -234,8 +234,8 @@ func (f fakeGoogleSubscriptionRepo) UpdateNotes(ctx context.Context, subscriptio
 func (f fakeGoogleSubscriptionRepo) AddManualResetCredits(ctx context.Context, subscriptionID int64, delta int) error {
 	return errors.New("not implemented")
 }
-func (f fakeGoogleSubscriptionRepo) ConsumeManualResetCreditAndResetDaily(ctx context.Context, id, userID int64, newWindowStart time.Time, restartTerm bool, newStartsAt, newExpiresAt time.Time) error {
-	return errors.New("not implemented")
+func (f fakeGoogleSubscriptionRepo) ResetDailyQuota(context.Context, service.ManualDailyResetRequest) (service.ManualDailyResetResult, error) {
+	return service.ManualDailyResetResult{}, errors.New("not implemented")
 }
 func (f fakeGoogleSubscriptionRepo) ActivateWindows(ctx context.Context, id int64, dailyStart, periodicStart time.Time) error {
 

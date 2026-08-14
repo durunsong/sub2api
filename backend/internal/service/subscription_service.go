@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"math/rand/v2"
@@ -26,22 +27,25 @@ var MaxExpiresAt = time.Date(2099, 12, 31, 23, 59, 59, 0, time.UTC)
 const MaxValidityDays = 36500
 
 var (
-	ErrSubscriptionNotFound        = infraerrors.NotFound("SUBSCRIPTION_NOT_FOUND", "subscription not found")
-	ErrSubscriptionExpired         = infraerrors.Forbidden("SUBSCRIPTION_EXPIRED", "subscription has expired")
-	ErrSubscriptionSuspended       = infraerrors.Forbidden("SUBSCRIPTION_SUSPENDED", "subscription is suspended")
-	ErrSubscriptionAlreadyExists   = infraerrors.Conflict("SUBSCRIPTION_ALREADY_EXISTS", "subscription already exists for this user and group")
-	ErrSubscriptionAssignConflict  = infraerrors.Conflict("SUBSCRIPTION_ASSIGN_CONFLICT", "subscription exists but request conflicts with existing assignment semantics")
-	ErrSubscriptionNotRevoked      = infraerrors.Conflict("SUBSCRIPTION_NOT_REVOKED", "subscription is not revoked")
-	ErrSubscriptionRestoreConflict = infraerrors.Conflict("SUBSCRIPTION_RESTORE_CONFLICT", "subscription already exists for this user and group")
-	ErrGroupNotSubscriptionType    = infraerrors.BadRequest("GROUP_NOT_SUBSCRIPTION_TYPE", "group is not a subscription type")
-	ErrInvalidInput                = infraerrors.BadRequest("INVALID_INPUT", "at least one of resetDaily, resetWeekly, or resetMonthly must be true")
-	ErrDailyLimitExceeded          = infraerrors.TooManyRequests("DAILY_LIMIT_EXCEEDED", "daily usage limit exceeded")
-	ErrWeeklyLimitExceeded         = infraerrors.TooManyRequests("WEEKLY_LIMIT_EXCEEDED", "weekly usage limit exceeded")
-	ErrMonthlyLimitExceeded        = infraerrors.TooManyRequests("MONTHLY_LIMIT_EXCEEDED", "monthly usage limit exceeded")
-	ErrSubscriptionNilInput        = infraerrors.BadRequest("SUBSCRIPTION_NIL_INPUT", "subscription input cannot be nil")
-	ErrAdjustWouldExpire           = infraerrors.BadRequest("ADJUST_WOULD_EXPIRE", "adjustment would result in expired subscription (remaining days must be > 0)")
-	ErrManualResetNoCredits        = infraerrors.Conflict("MANUAL_RESET_NO_CREDITS", "no manual reset credits remaining")
-	ErrManualResetNotAllowed       = infraerrors.Forbidden("MANUAL_RESET_NOT_ALLOWED", "subscription is not active; cannot reset daily quota")
+	ErrSubscriptionNotFound            = infraerrors.NotFound("SUBSCRIPTION_NOT_FOUND", "subscription not found")
+	ErrSubscriptionExpired             = infraerrors.Forbidden("SUBSCRIPTION_EXPIRED", "subscription has expired")
+	ErrSubscriptionSuspended           = infraerrors.Forbidden("SUBSCRIPTION_SUSPENDED", "subscription is suspended")
+	ErrSubscriptionAlreadyExists       = infraerrors.Conflict("SUBSCRIPTION_ALREADY_EXISTS", "subscription already exists for this user and group")
+	ErrSubscriptionAssignConflict      = infraerrors.Conflict("SUBSCRIPTION_ASSIGN_CONFLICT", "subscription exists but request conflicts with existing assignment semantics")
+	ErrSubscriptionNotRevoked          = infraerrors.Conflict("SUBSCRIPTION_NOT_REVOKED", "subscription is not revoked")
+	ErrSubscriptionRestoreConflict     = infraerrors.Conflict("SUBSCRIPTION_RESTORE_CONFLICT", "subscription already exists for this user and group")
+	ErrGroupNotSubscriptionType        = infraerrors.BadRequest("GROUP_NOT_SUBSCRIPTION_TYPE", "group is not a subscription type")
+	ErrInvalidInput                    = infraerrors.BadRequest("INVALID_INPUT", "at least one of resetDaily, resetWeekly, or resetMonthly must be true")
+	ErrDailyLimitExceeded              = infraerrors.TooManyRequests("DAILY_LIMIT_EXCEEDED", "daily usage limit exceeded")
+	ErrWeeklyLimitExceeded             = infraerrors.TooManyRequests("WEEKLY_LIMIT_EXCEEDED", "weekly usage limit exceeded")
+	ErrMonthlyLimitExceeded            = infraerrors.TooManyRequests("MONTHLY_LIMIT_EXCEEDED", "monthly usage limit exceeded")
+	ErrSubscriptionNilInput            = infraerrors.BadRequest("SUBSCRIPTION_NIL_INPUT", "subscription input cannot be nil")
+	ErrAdjustWouldExpire               = infraerrors.BadRequest("ADJUST_WOULD_EXPIRE", "adjustment would result in expired subscription (remaining days must be > 0)")
+	ErrManualResetNoCredits            = infraerrors.Conflict("MANUAL_RESET_NO_CREDITS", "no manual reset credits remaining")
+	ErrManualResetConflict             = infraerrors.Conflict("MANUAL_RESET_CONFLICT", "subscription changed while resetting daily quota")
+	ErrManualResetStateNotAllowed      = infraerrors.Forbidden("MANUAL_RESET_STATE_NOT_ALLOWED", "subscription status does not allow manual reset")
+	ErrManualResetResponseReloadFailed = infraerrors.InternalServer("RESPONSE_RELOAD_FAILED", "daily quota reset succeeded but latest subscription could not be loaded")
+	ErrManualResetSubscriptionExpired  = infraerrors.Forbidden("MANUAL_RESET_SUBSCRIPTION_EXPIRED", "subscription has expired")
 )
 
 // SubscriptionService 订阅服务
@@ -435,47 +439,105 @@ func renewedSubscriptionTerm(existingSub *UserSubscription, notes string, starts
 // restartActiveOneTimeDailyTerm removed: pending daily reset credits are granted on
 // repurchase; the 24h term starts when the user clicks reset (UserResetDailyQuota).
 
+type UserManualDailyResetResult struct {
+	MutationApplied bool
+	Subscription    *UserSubscription
+	CreditsBefore   int
+	CreditsAfter    int
+}
+
 // UserResetDailyQuota consumes one paid manual reset credit and clears daily usage.
 // For one-time daily cards the new 24h window starts at click time. Unused credits
 // from repurchase remain redeemable even after the previous term expired.
-func (s *SubscriptionService) UserResetDailyQuota(ctx context.Context, userID, subscriptionID int64) (*UserSubscription, error) {
-	sub, err := s.userSubRepo.GetByID(ctx, subscriptionID)
-	if err != nil {
-		return nil, err
+func (s *SubscriptionService) UserResetDailyQuota(ctx context.Context, userID, subscriptionID int64) (*UserManualDailyResetResult, error) {
+	now := s.now()
+	request := ManualDailyResetRequest{
+		SubscriptionID: subscriptionID,
+		UserID:         userID,
+		Now:            now,
+		WindowStart:    startOfDay(now),
+		NewStartsAt:    now,
+		NewExpiresAt:   now.AddDate(0, 0, 1),
 	}
-	if sub.UserID != userID {
-		return nil, ErrSubscriptionNotFound
+	if request.NewExpiresAt.After(MaxExpiresAt) {
+		request.NewExpiresAt = MaxExpiresAt
+	}
+
+	current, err := s.userSubRepo.GetByID(ctx, subscriptionID)
+	if err != nil {
+		return nil, withManualResetCreditMetadata(err, -1, -1)
+	}
+	request.RestartTerm = current.HasOneTimeDailyQuota() && !current.ExpiresAt.After(now)
+	if err := classifyManualDailyResetSubscription(current, request); err != nil {
+		if errors.Is(err, ErrSubscriptionNotFound) {
+			return nil, withManualResetCreditMetadata(ErrSubscriptionNotFound, -1, -1)
+		}
+		return nil, withManualResetCreditMetadata(err, current.ManualResetCredits, current.ManualResetCredits)
+	}
+	request.CurrentStatus = current.Status
+	request.CurrentStartsAt = current.StartsAt
+	request.CurrentExpiresAt = current.ExpiresAt
+	request.CreditsBefore = current.ManualResetCredits
+
+	resetResult, err := s.userSubRepo.ResetDailyQuota(ctx, request)
+	if err != nil {
+		if !errors.Is(err, ErrManualResetConflict) {
+			return nil, err
+		}
+		return nil, s.classifyManualDailyResetFailure(ctx, request)
+	}
+
+	s.InvalidateSubCacheSync(current.UserID, current.GroupID)
+	if s.billingCacheService != nil {
+		_ = s.billingCacheService.InvalidateSubscription(ctx, current.UserID, current.GroupID)
+	}
+	result := &UserManualDailyResetResult{MutationApplied: resetResult.MutationApplied, CreditsBefore: resetResult.CreditsBefore, CreditsAfter: resetResult.CreditsAfter}
+	updated, err := s.userSubRepo.GetByID(ctx, subscriptionID)
+	if err != nil {
+		return result, ErrManualResetResponseReloadFailed.WithCause(err)
+	}
+	result.Subscription = updated
+	return result, nil
+}
+
+func classifyManualDailyResetSubscription(sub *UserSubscription, request ManualDailyResetRequest) error {
+	if sub == nil || sub.UserID != request.UserID || sub.DeletedAt != nil {
+		return ErrSubscriptionNotFound
 	}
 	if sub.ManualResetCredits <= 0 {
-		return nil, ErrManualResetNoCredits
+		return ErrManualResetNoCredits
 	}
+	if sub.Status != SubscriptionStatusActive && !(request.RestartTerm && sub.Status == SubscriptionStatusExpired) {
+		return ErrManualResetStateNotAllowed
+	}
+	if !request.Now.Before(sub.ExpiresAt) && !request.RestartTerm {
+		return ErrManualResetSubscriptionExpired
+	}
+	return nil
+}
 
-	isOneTimeDaily := sub.HasOneTimeDailyQuota()
-	if !sub.IsActive() && !isOneTimeDaily {
-		// 多日卡过期后不再允许仅靠重置次数复活整段订阅
-		return nil, ErrManualResetNotAllowed
+func (s *SubscriptionService) classifyManualDailyResetFailure(ctx context.Context, request ManualDailyResetRequest) error {
+	sub, err := s.userSubRepo.GetByID(ctx, request.SubscriptionID)
+	if err != nil {
+		return withManualResetCreditMetadata(ErrSubscriptionNotFound, -1, -1)
 	}
-
-	now := time.Now()
-	windowStart := startOfDay(now)
-	restartTerm := isOneTimeDaily
-	newStartsAt := now
-	newExpiresAt := now.AddDate(0, 0, 1)
-	if newExpiresAt.After(MaxExpiresAt) {
-		newExpiresAt = MaxExpiresAt
+	if err := classifyManualDailyResetSubscription(sub, request); err != nil {
+		if errors.Is(err, ErrSubscriptionNotFound) {
+			return withManualResetCreditMetadata(ErrSubscriptionNotFound, -1, -1)
+		}
+		return withManualResetCreditMetadata(err, sub.ManualResetCredits, sub.ManualResetCredits)
 	}
-
-	if err := s.userSubRepo.ConsumeManualResetCreditAndResetDaily(
-		ctx, subscriptionID, userID, windowStart, restartTerm, newStartsAt, newExpiresAt,
-	); err != nil {
-		return nil, err
+	return withManualResetCreditMetadata(ErrManualResetConflict, sub.ManualResetCredits, sub.ManualResetCredits)
+}
+func withManualResetCreditMetadata(err error, before, after int) error {
+	var appErr *infraerrors.ApplicationError
+	if !errors.As(err, &appErr) {
+		return err
 	}
-
-	s.InvalidateSubCacheSync(sub.UserID, sub.GroupID)
-	if s.billingCacheService != nil {
-		_ = s.billingCacheService.InvalidateSubscription(ctx, sub.UserID, sub.GroupID)
-	}
-	return s.userSubRepo.GetByID(ctx, subscriptionID)
+	return appErr.WithMetadata(map[string]string{
+		"credits_before": strconv.Itoa(before),
+		"credits_after":  strconv.Itoa(after),
+	})
 }
 
 func appendSubscriptionNotes(existingNotes, newNotes string) string {

@@ -1757,8 +1757,8 @@ func (r *stubUserSubscriptionRepo) AddManualResetCredits(ctx context.Context, su
 	return errors.New("not implemented")
 }
 
-func (r *stubUserSubscriptionRepo) ConsumeManualResetCreditAndResetDaily(ctx context.Context, id, userID int64, newWindowStart time.Time, restartTerm bool, newStartsAt, newExpiresAt time.Time) error {
-	return errors.New("not implemented")
+func (r *stubUserSubscriptionRepo) ResetDailyQuota(context.Context, service.ManualDailyResetRequest) (service.ManualDailyResetResult, error) {
+	return service.ManualDailyResetResult{}, errors.New("not implemented")
 }
 
 func (r *stubUserSubscriptionRepo) ActivateWindows(ctx context.Context, id int64, dailyStart, periodicStart time.Time) error {

@@ -7,6 +7,27 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 )
 
+type ManualDailyResetRequest struct {
+	SubscriptionID   int64
+	UserID           int64
+	Now              time.Time
+	WindowStart      time.Time
+	RestartTerm      bool
+	CurrentStatus    string
+	CurrentStartsAt  time.Time
+	CurrentExpiresAt time.Time
+	CreditsBefore    int
+	NewStartsAt      time.Time
+	NewExpiresAt     time.Time
+}
+
+type ManualDailyResetResult struct {
+	MutationApplied bool
+	CreditsBefore   int
+	CreditsAfter    int
+	RestartedTerm   bool
+}
+
 type UserSubscriptionRepository interface {
 	Create(ctx context.Context, sub *UserSubscription) error
 	GetByID(ctx context.Context, id int64) (*UserSubscription, error)
@@ -29,11 +50,10 @@ type UserSubscriptionRepository interface {
 	UpdateStatus(ctx context.Context, subscriptionID int64, status string) error
 	UpdateNotes(ctx context.Context, subscriptionID int64, notes string) error
 	AddManualResetCredits(ctx context.Context, subscriptionID int64, delta int) error
-	// ConsumeManualResetCreditAndResetDaily atomically decrements one credit and
-	// clears daily usage. When restartTerm is true, also reactivates the subscription
-	// with starts_at/expires_at for a fresh one-time daily window from now.
-	// Returns ErrManualResetNoCredits when no row matched.
-	ConsumeManualResetCreditAndResetDaily(ctx context.Context, id, userID int64, newWindowStart time.Time, restartTerm bool, newStartsAt, newExpiresAt time.Time) error
+	// ResetDailyQuota atomically consumes one credit and clears daily usage only.
+	// It returns ErrManualResetConflict when no row satisfies ownership, credit,
+	// soft-delete, status, and validity predicates.
+	ResetDailyQuota(ctx context.Context, request ManualDailyResetRequest) (ManualDailyResetResult, error)
 
 	// ActivateWindows 首次使用时激活用量窗口。日窗口按日历日对齐，锚点为当天 0 点
 	// （dailyStart）；周/月窗口为期限对齐滚动窗口，锚点为激活时刻（periodicStart）。

@@ -91,8 +91,8 @@ func (r *subscriptionExpiryRepoStub) AddManualResetCredits(context.Context, int6
 	return nil
 }
 
-func (r *subscriptionExpiryRepoStub) ConsumeManualResetCreditAndResetDaily(context.Context, int64, int64, time.Time, bool, time.Time, time.Time) error {
-	return nil
+func (r *subscriptionExpiryRepoStub) ResetDailyQuota(context.Context, ManualDailyResetRequest) (ManualDailyResetResult, error) {
+	return ManualDailyResetResult{}, nil
 }
 
 func (r *subscriptionExpiryRepoStub) ActivateWindows(context.Context, int64, time.Time, time.Time) error {

@@ -5,12 +5,14 @@ package repository
 import (
 	"context"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	"github.com/Wei-Shaw/sub2api/internal/service"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -487,6 +489,250 @@ func (s *UserSubscriptionRepoSuite) TestActivateWindows_StaleActivationPreserves
 	s.Require().WithinDuration(manualDailyStart, *got.DailyWindowStart, time.Microsecond)
 	s.Require().WithinDuration(manualResetAt, *got.WeeklyWindowStart, time.Microsecond)
 	s.Require().WithinDuration(manualResetAt, *got.MonthlyWindowStart, time.Microsecond)
+}
+
+func (s *UserSubscriptionRepoSuite) TestResetDailyQuota_ActiveMonthlyPreservesMonthlyUsage() {
+	user := s.mustCreateUser("manual-reset-monthly@test.com", service.RoleUser)
+	group := s.mustCreateGroup("g-manual-reset-monthly")
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	monthlyStart := now.Add(-7 * 24 * time.Hour)
+	sub := s.mustCreateSubscription(user.ID, group.ID, func(c *dbent.UserSubscriptionCreate) {
+		c.SetStartsAt(now.Add(-7 * 24 * time.Hour)).SetExpiresAt(now.Add(23 * 24 * time.Hour)).
+			SetManualResetCredits(1).SetDailyUsageUsd(10).SetDailyUsageTokens(100).
+			SetMonthlyUsageUsd(30).SetMonthlyUsageTokens(300).SetMonthlyWindowStart(monthlyStart)
+	})
+
+	_, err := s.repo.ResetDailyQuota(s.ctx, service.ManualDailyResetRequest{SubscriptionID: sub.ID, UserID: user.ID, Now: now, WindowStart: now, RestartTerm: false, CurrentStatus: service.SubscriptionStatusActive, CurrentStartsAt: sub.StartsAt, CurrentExpiresAt: sub.ExpiresAt, NewStartsAt: time.Time{}, NewExpiresAt: time.Time{}})
+	s.Require().NoError(err)
+	got, err := s.repo.GetByID(s.ctx, sub.ID)
+	s.Require().NoError(err)
+	s.Require().Equal(0, got.ManualResetCredits)
+	s.Require().Zero(got.DailyUsageUSD)
+	s.Require().Zero(got.DailyUsageTokens)
+	s.Require().Equal(30.0, got.MonthlyUsageUSD)
+	s.Require().Equal(int64(300), got.MonthlyUsageTokens)
+	s.Require().WithinDuration(monthlyStart, *got.MonthlyWindowStart, time.Microsecond)
+}
+
+func (s *UserSubscriptionRepoSuite) TestResetDailyQuota_ActiveOneTimeCardDoesNotRestartTerm() {
+	user := s.mustCreateUser("manual-reset-active-daily@test.com", service.RoleUser)
+	group := s.mustCreateGroup("g-manual-reset-active-daily")
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	startsAt := now.Add(-6 * time.Hour)
+	expiresAt := startsAt.Add(24 * time.Hour)
+	sub := s.mustCreateSubscription(user.ID, group.ID, func(c *dbent.UserSubscriptionCreate) {
+		c.SetStartsAt(startsAt).SetExpiresAt(expiresAt).SetManualResetCredits(1).SetDailyUsageUsd(10)
+	})
+
+	result, err := s.repo.ResetDailyQuota(s.ctx, service.ManualDailyResetRequest{SubscriptionID: sub.ID, UserID: user.ID, Now: now, WindowStart: now, RestartTerm: false, CurrentStatus: sub.Status, CurrentStartsAt: sub.StartsAt, CurrentExpiresAt: sub.ExpiresAt, CreditsBefore: 1})
+	s.Require().NoError(err)
+	s.Require().Equal(1, result.CreditsBefore)
+	s.Require().Equal(0, result.CreditsAfter)
+	got, err := s.repo.GetByID(s.ctx, sub.ID)
+	s.Require().NoError(err)
+	s.Require().WithinDuration(startsAt, got.StartsAt, time.Microsecond)
+	s.Require().WithinDuration(expiresAt, got.ExpiresAt, time.Microsecond)
+	s.Require().Zero(got.ManualResetCredits)
+	s.Require().Zero(got.DailyUsageUSD)
+}
+
+func (s *UserSubscriptionRepoSuite) TestResetDailyQuota_RejectsRevokedSuspendedAndSoftDeleted() {
+	user := s.mustCreateUser("manual-reset-states@test.com", service.RoleUser)
+	group := s.mustCreateGroup("g-manual-reset-states")
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	for i, status := range []string{service.SubscriptionStatusRevoked, service.SubscriptionStatusSuspended} {
+		statusGroup := group
+		if i > 0 {
+			statusGroup = s.mustCreateGroup("g-manual-reset-states-suspended")
+		}
+		sub := s.mustCreateSubscription(user.ID, statusGroup.ID, func(c *dbent.UserSubscriptionCreate) {
+			c.SetStatus(status).SetManualResetCredits(1).SetDailyUsageUsd(10).SetDailyUsageTokens(100).SetMonthlyUsageUsd(30)
+		})
+		_, err := s.repo.ResetDailyQuota(s.ctx, service.ManualDailyResetRequest{SubscriptionID: sub.ID, UserID: user.ID, Now: now, WindowStart: now, CurrentStatus: status, CurrentStartsAt: sub.StartsAt, CurrentExpiresAt: sub.ExpiresAt, CreditsBefore: 1})
+		s.Require().ErrorIs(err, service.ErrManualResetConflict)
+		got, getErr := s.repo.GetByID(s.ctx, sub.ID)
+		s.Require().NoError(getErr)
+		s.Require().Equal(1, got.ManualResetCredits)
+		s.Require().Equal(10.0, got.DailyUsageUSD)
+		s.Require().Equal(int64(100), got.DailyUsageTokens)
+		s.Require().Equal(30.0, got.MonthlyUsageUSD)
+	}
+
+	softDeleted := s.mustCreateSubscription(user.ID, group.ID, func(c *dbent.UserSubscriptionCreate) {
+		c.SetManualResetCredits(1).SetDailyUsageUsd(10)
+	})
+	s.Require().NoError(s.repo.Delete(s.ctx, softDeleted.ID))
+	_, err := s.repo.ResetDailyQuota(s.ctx, service.ManualDailyResetRequest{SubscriptionID: softDeleted.ID, UserID: user.ID, Now: now, WindowStart: now, CurrentStatus: softDeleted.Status, CurrentStartsAt: softDeleted.StartsAt, CurrentExpiresAt: softDeleted.ExpiresAt, CreditsBefore: 1})
+	s.Require().ErrorIs(err, service.ErrManualResetConflict)
+}
+func (s *UserSubscriptionRepoSuite) TestResetDailyQuota_TwoCreditsConsumesOnlyOne() {
+	user := s.mustCreateUser("manual-reset-two@test.com", service.RoleUser)
+	group := s.mustCreateGroup("g-manual-reset-two")
+	sub := s.mustCreateSubscription(user.ID, group.ID, func(c *dbent.UserSubscriptionCreate) {
+		c.SetManualResetCredits(2).SetDailyUsageUsd(10)
+	})
+
+	_, err := s.repo.ResetDailyQuota(s.ctx, service.ManualDailyResetRequest{SubscriptionID: sub.ID, UserID: user.ID, Now: time.Now(), WindowStart: time.Now(), RestartTerm: false, CurrentStatus: service.SubscriptionStatusActive, CurrentStartsAt: sub.StartsAt, CurrentExpiresAt: sub.ExpiresAt, NewStartsAt: time.Time{}, NewExpiresAt: time.Time{}})
+	s.Require().NoError(err)
+	got, err := s.repo.GetByID(s.ctx, sub.ID)
+	s.Require().NoError(err)
+	s.Require().Equal(1, got.ManualResetCredits)
+}
+
+func (s *UserSubscriptionRepoSuite) TestResetDailyQuota_ZeroCreditAndForeignUserDoNotMutate() {
+	user := s.mustCreateUser("manual-reset-zero@test.com", service.RoleUser)
+	group := s.mustCreateGroup("g-manual-reset-zero")
+	sub := s.mustCreateSubscription(user.ID, group.ID, func(c *dbent.UserSubscriptionCreate) {
+		c.SetDailyUsageUsd(10)
+	})
+
+	_, err := s.repo.ResetDailyQuota(s.ctx, service.ManualDailyResetRequest{SubscriptionID: sub.ID, UserID: user.ID, Now: time.Now(), WindowStart: time.Now(), RestartTerm: false, CurrentStatus: service.SubscriptionStatusActive, CurrentStartsAt: sub.StartsAt, CurrentExpiresAt: sub.ExpiresAt, NewStartsAt: time.Time{}, NewExpiresAt: time.Time{}})
+	s.Require().ErrorIs(err, service.ErrManualResetConflict)
+	_, err = s.repo.ResetDailyQuota(s.ctx, service.ManualDailyResetRequest{SubscriptionID: sub.ID, UserID: user.ID + 1, Now: time.Now(), WindowStart: time.Now(), RestartTerm: false, CurrentStatus: service.SubscriptionStatusActive, CurrentStartsAt: sub.StartsAt, CurrentExpiresAt: sub.ExpiresAt, NewStartsAt: time.Time{}, NewExpiresAt: time.Time{}})
+	s.Require().ErrorIs(err, service.ErrManualResetConflict)
+	got, getErr := s.repo.GetByID(s.ctx, sub.ID)
+	s.Require().NoError(getErr)
+	s.Require().Zero(got.ManualResetCredits)
+	s.Require().Equal(10.0, got.DailyUsageUSD)
+}
+
+func createConcurrentResetFixture(t *testing.T, credits int) (*dbent.UserSubscription, service.ManualDailyResetRequest) {
+	t.Helper()
+	client := testEntClient(t)
+	ctx := context.Background()
+	suffix := fmt.Sprintf("%d", time.Now().UnixNano())
+	user, err := client.User.Create().SetEmail("manual-reset-" + suffix + "@test.com").SetPasswordHash("test").SetStatus(service.StatusActive).SetRole(service.RoleUser).Save(ctx)
+	require.NoError(t, err)
+	group, err := client.Group.Create().SetName("g-manual-reset-" + suffix).SetStatus(service.StatusActive).Save(ctx)
+	require.NoError(t, err)
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	sub, err := client.UserSubscription.Create().SetUserID(user.ID).SetGroupID(group.ID).
+		SetStartsAt(now.Add(-time.Hour)).SetExpiresAt(now.Add(time.Hour)).SetStatus(service.SubscriptionStatusActive).
+		SetAssignedAt(now).SetNotes("").SetManualResetCredits(credits).SetDailyUsageUsd(10).SetMonthlyUsageUsd(30).Save(ctx)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_, _ = integrationDB.ExecContext(context.Background(), "DELETE FROM user_subscriptions WHERE id = $1", sub.ID)
+		_, _ = integrationDB.ExecContext(context.Background(), "DELETE FROM groups WHERE id = $1", group.ID)
+		_, _ = integrationDB.ExecContext(context.Background(), "DELETE FROM users WHERE id = $1", user.ID)
+	})
+	return sub, service.ManualDailyResetRequest{SubscriptionID: sub.ID, UserID: user.ID, Now: now, WindowStart: now, CurrentStatus: sub.Status, CurrentStartsAt: sub.StartsAt, CurrentExpiresAt: sub.ExpiresAt}
+}
+
+func runResetInIndependentTx(ctx context.Context, request service.ManualDailyResetRequest) (service.ManualDailyResetResult, error) {
+	tx, err := integrationEntClient.Tx(ctx)
+	if err != nil {
+		return service.ManualDailyResetResult{}, err
+	}
+	repo := NewUserSubscriptionRepository(tx.Client())
+	result, err := repo.ResetDailyQuota(ctx, request)
+	if err != nil {
+		_ = tx.Rollback()
+		return result, err
+	}
+	if err := tx.Commit(); err != nil {
+		return service.ManualDailyResetResult{}, err
+	}
+	return result, nil
+}
+
+func TestResetDailyQuota_ConcurrentTwoCreditsUseIndependentTransactions(t *testing.T) {
+	sub, request := createConcurrentResetFixture(t, 2)
+	results := make(chan service.ManualDailyResetResult, 2)
+	errs := make(chan error, 2)
+	var wg sync.WaitGroup
+	for range 2 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			result, err := runResetInIndependentTx(context.Background(), request)
+			results <- result
+			errs <- err
+		}()
+	}
+	wg.Wait()
+	close(results)
+	close(errs)
+	for err := range errs {
+		require.NoError(t, err)
+	}
+	transitions := map[[2]int]bool{}
+	for result := range results {
+		transitions[[2]int{result.CreditsBefore, result.CreditsAfter}] = true
+	}
+	require.True(t, transitions[[2]int{2, 1}])
+	require.True(t, transitions[[2]int{1, 0}])
+	got, err := NewUserSubscriptionRepository(testEntClient(t)).GetByID(context.Background(), sub.ID)
+	require.NoError(t, err)
+	require.Zero(t, got.ManualResetCredits)
+	require.Zero(t, got.DailyUsageUSD)
+	require.Equal(t, 30.0, got.MonthlyUsageUSD)
+}
+
+func TestResetDailyQuota_ConcurrentOneCreditUsesIndependentTransactions(t *testing.T) {
+	sub, request := createConcurrentResetFixture(t, 1)
+	type outcome struct {
+		result service.ManualDailyResetResult
+		err    error
+	}
+	outcomes := make(chan outcome, 2)
+	var wg sync.WaitGroup
+	for range 2 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			result, err := runResetInIndependentTx(context.Background(), request)
+			outcomes <- outcome{result: result, err: err}
+		}()
+	}
+	wg.Wait()
+	close(outcomes)
+	var successes, conflicts int
+	for outcome := range outcomes {
+		if outcome.err == nil {
+			successes++
+			require.Equal(t, 1, outcome.result.CreditsBefore)
+			require.Equal(t, 0, outcome.result.CreditsAfter)
+		} else {
+			require.ErrorIs(t, outcome.err, service.ErrManualResetConflict)
+			conflicts++
+		}
+	}
+	require.Equal(t, 1, successes)
+	require.Equal(t, 1, conflicts)
+	got, err := NewUserSubscriptionRepository(testEntClient(t)).GetByID(context.Background(), sub.ID)
+	require.NoError(t, err)
+	require.Zero(t, got.ManualResetCredits)
+	require.Zero(t, got.DailyUsageUSD)
+	require.Equal(t, 30.0, got.MonthlyUsageUSD)
+}
+func (s *UserSubscriptionRepoSuite) TestResetDailyQuota_ExpiredMonthlyRejectedAndExpiredDailyRestarted() {
+	user := s.mustCreateUser("manual-reset-expiry@test.com", service.RoleUser)
+	group := s.mustCreateGroup("g-manual-reset-expiry")
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	expiredMonthly := s.mustCreateSubscription(user.ID, group.ID, func(c *dbent.UserSubscriptionCreate) {
+		c.SetStartsAt(now.Add(-31 * 24 * time.Hour)).SetExpiresAt(now.Add(-time.Hour)).
+			SetStatus(service.SubscriptionStatusExpired).SetManualResetCredits(1)
+	})
+	_, err := s.repo.ResetDailyQuota(s.ctx, service.ManualDailyResetRequest{SubscriptionID: expiredMonthly.ID, UserID: user.ID, Now: now, WindowStart: now, RestartTerm: false, CurrentStatus: service.SubscriptionStatusExpired, CurrentStartsAt: expiredMonthly.StartsAt, CurrentExpiresAt: expiredMonthly.ExpiresAt})
+	s.Require().ErrorIs(err, service.ErrManualResetConflict)
+
+	dailyGroup := s.mustCreateGroup("g-manual-reset-expiry-daily")
+	monthlyStart := now.Add(-24 * time.Hour)
+	expiredDaily := s.mustCreateSubscription(user.ID, dailyGroup.ID, func(c *dbent.UserSubscriptionCreate) {
+		c.SetStartsAt(now.Add(-48 * time.Hour)).SetExpiresAt(now.Add(-24 * time.Hour)).
+			SetStatus(service.SubscriptionStatusExpired).SetManualResetCredits(1).SetDailyUsageUsd(10).
+			SetMonthlyUsageUsd(25).SetMonthlyUsageTokens(250).SetMonthlyWindowStart(monthlyStart)
+	})
+	_, err = s.repo.ResetDailyQuota(s.ctx, service.ManualDailyResetRequest{SubscriptionID: expiredDaily.ID, UserID: user.ID, Now: now, WindowStart: now, RestartTerm: true, CurrentStatus: service.SubscriptionStatusExpired, CurrentStartsAt: expiredDaily.StartsAt, CurrentExpiresAt: expiredDaily.ExpiresAt, NewStartsAt: now, NewExpiresAt: now.Add(24 * time.Hour)})
+	s.Require().NoError(err)
+	got, getErr := s.repo.GetByID(s.ctx, expiredDaily.ID)
+	s.Require().NoError(getErr)
+	s.Require().Equal(service.SubscriptionStatusActive, got.Status)
+	s.Require().WithinDuration(now, got.StartsAt, time.Microsecond)
+	s.Require().WithinDuration(now.Add(24*time.Hour), got.ExpiresAt, time.Microsecond)
+	s.Require().Equal(25.0, got.MonthlyUsageUSD)
+	s.Require().Equal(int64(250), got.MonthlyUsageTokens)
+	s.Require().WithinDuration(monthlyStart, *got.MonthlyWindowStart, time.Microsecond)
 }
 
 func (s *UserSubscriptionRepoSuite) TestResetDailyUsage() {

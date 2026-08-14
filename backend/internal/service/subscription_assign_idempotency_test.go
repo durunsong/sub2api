@@ -161,8 +161,8 @@ func (userSubRepoNoop) UpdateNotes(context.Context, int64, string) error {
 func (userSubRepoNoop) AddManualResetCredits(context.Context, int64, int) error {
 	panic("unexpected AddManualResetCredits call")
 }
-func (userSubRepoNoop) ConsumeManualResetCreditAndResetDaily(context.Context, int64, int64, time.Time, bool, time.Time, time.Time) error {
-	panic("unexpected ConsumeManualResetCreditAndResetDaily call")
+func (userSubRepoNoop) ResetDailyQuota(context.Context, ManualDailyResetRequest) (ManualDailyResetResult, error) {
+	panic("unexpected ResetDailyQuota call")
 }
 func (userSubRepoNoop) ActivateWindows(context.Context, int64, time.Time, time.Time) error {
 	panic("unexpected ActivateWindows call")
@@ -299,30 +299,24 @@ func (s *subscriptionUserSubRepoStub) AddManualResetCredits(_ context.Context, s
 	return nil
 }
 
-func (s *subscriptionUserSubRepoStub) ConsumeManualResetCreditAndResetDaily(_ context.Context, id, userID int64, newWindowStart time.Time, restartTerm bool, newStartsAt, newExpiresAt time.Time) error {
-	sub := s.byID[id]
-	if sub == nil || sub.UserID != userID {
-		return ErrSubscriptionNotFound
+func (s *subscriptionUserSubRepoStub) ResetDailyQuota(_ context.Context, request ManualDailyResetRequest) (ManualDailyResetResult, error) {
+	sub := s.byID[request.SubscriptionID]
+	if sub == nil || sub.UserID != request.UserID {
+		return ManualDailyResetResult{}, ErrManualResetConflict
 	}
 	if sub.ManualResetCredits <= 0 {
-		return ErrManualResetNoCredits
+		return ManualDailyResetResult{}, ErrManualResetConflict
 	}
 	sub.ManualResetCredits--
 	sub.DailyUsageUSD = 0
 	sub.DailyUsageTokens = 0
-	sub.DailyWindowStart = &newWindowStart
-	sub.Status = SubscriptionStatusActive
-	if restartTerm {
-		sub.StartsAt = newStartsAt
-		sub.ExpiresAt = newExpiresAt
-		sub.WeeklyWindowStart = &newWindowStart
-		sub.MonthlyWindowStart = &newWindowStart
-		sub.WeeklyUsageUSD = 0
-		sub.MonthlyUsageUSD = 0
-		sub.WeeklyUsageTokens = 0
-		sub.MonthlyUsageTokens = 0
+	sub.DailyWindowStart = &request.WindowStart
+	if request.RestartTerm {
+		sub.StartsAt = request.NewStartsAt
+		sub.ExpiresAt = request.NewExpiresAt
+		sub.Status = SubscriptionStatusActive
 	}
-	return nil
+	return ManualDailyResetResult{MutationApplied: true, CreditsBefore: request.CreditsBefore, CreditsAfter: request.CreditsBefore - 1, RestartedTerm: request.RestartTerm}, nil
 }
 
 func (s *subscriptionUserSubRepoStub) UpdateStatus(_ context.Context, subscriptionID int64, status string) error {

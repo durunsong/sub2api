@@ -402,49 +402,68 @@ func (r *userSubscriptionRepository) AddManualResetCredits(ctx context.Context, 
 	return translatePersistenceError(err, service.ErrSubscriptionNotFound, nil)
 }
 
-// ConsumeManualResetCreditAndResetDaily decrements one credit and clears daily usage
-// in a single conditional UPDATE. When restartTerm is true (one-time daily card),
-// also reactivates starts_at/expires_at from the reset click. Frontend cannot bypass credits.
-func (r *userSubscriptionRepository) ConsumeManualResetCreditAndResetDaily(
+// ResetDailyQuota consumes one credit and returns the database-observed transition
+// from the same UPDATE statement. The CTE locks the eligible row so concurrent
+// reset/repurchase operations report the actual serialized before/after values.
+const resetDailyQuotaSQL = `
+		WITH eligible AS (
+			SELECT id, manual_reset_credits AS credits_before
+			FROM user_subscriptions
+			WHERE id = $1
+			  AND user_id = $2
+			  AND deleted_at IS NULL
+			  AND manual_reset_credits > 0
+			  AND status = $3
+			  AND starts_at = $4
+			  AND expires_at = $5
+			  AND (
+				($9 = FALSE AND status = 'active' AND expires_at > $6)
+				OR
+				($9 = TRUE AND status IN ('active', 'expired') AND expires_at <= $6 AND expires_at <= starts_at + INTERVAL '1 day')
+			  )
+			FOR UPDATE
+		), updated AS (
+			UPDATE user_subscriptions AS us
+			SET manual_reset_credits = eligible.credits_before - 1,
+				daily_usage_usd = 0,
+				daily_usage_tokens = 0,
+				daily_window_start = $7,
+				status = CASE WHEN $9 THEN 'active' ELSE us.status END,
+				starts_at = CASE WHEN $9 THEN $8 ELSE us.starts_at END,
+				expires_at = CASE WHEN $9 THEN $10 ELSE us.expires_at END,
+				updated_at = NOW()
+			FROM eligible
+			WHERE us.id = eligible.id
+			RETURNING eligible.credits_before, us.manual_reset_credits
+		)
+		SELECT credits_before, manual_reset_credits FROM updated
+	`
+
+func (r *userSubscriptionRepository) ResetDailyQuota(
 	ctx context.Context,
-	id, userID int64,
-	newWindowStart time.Time,
-	restartTerm bool,
-	newStartsAt, newExpiresAt time.Time,
-) error {
-	client := clientFromContext(ctx, r.client)
-	update := client.UserSubscription.Update().
-		Where(
-			usersubscription.IDEQ(id),
-			usersubscription.UserIDEQ(userID),
-			usersubscription.ManualResetCreditsGT(0),
-		).
-		AddManualResetCredits(-1).
-		SetDailyUsageUsd(0).
-		SetDailyUsageTokens(0).
-		SetDailyWindowStart(newWindowStart).
-		SetStatus(service.SubscriptionStatusActive)
-
-	if restartTerm {
-		update = update.
-			SetStartsAt(newStartsAt).
-			SetExpiresAt(newExpiresAt).
-			SetWeeklyWindowStart(newWindowStart).
-			SetMonthlyWindowStart(newWindowStart).
-			SetWeeklyUsageUsd(0).
-			SetMonthlyUsageUsd(0).
-			SetWeeklyUsageTokens(0).
-			SetMonthlyUsageTokens(0)
-	}
-
-	n, err := update.Save(ctx)
+	request service.ManualDailyResetRequest,
+) (service.ManualDailyResetResult, error) {
+	const updateSQL = resetDailyQuotaSQL
+	rows, err := clientFromContext(ctx, r.client).QueryContext(ctx, updateSQL,
+		request.SubscriptionID, request.UserID, request.CurrentStatus,
+		request.CurrentStartsAt, request.CurrentExpiresAt, request.Now,
+		request.WindowStart, request.NewStartsAt, request.RestartTerm, request.NewExpiresAt,
+	)
 	if err != nil {
-		return err
+		return service.ManualDailyResetResult{}, err
 	}
-	if n == 0 {
-		return service.ErrManualResetNoCredits
+	defer rows.Close()
+	if !rows.Next() {
+		if err := rows.Err(); err != nil {
+			return service.ManualDailyResetResult{}, err
+		}
+		return service.ManualDailyResetResult{CreditsBefore: -1, CreditsAfter: -1}, service.ErrManualResetConflict
 	}
-	return nil
+	result := service.ManualDailyResetResult{MutationApplied: true, RestartedTerm: request.RestartTerm}
+	if err := rows.Scan(&result.CreditsBefore, &result.CreditsAfter); err != nil {
+		return service.ManualDailyResetResult{}, err
+	}
+	return result, rows.Err()
 }
 
 func (r *userSubscriptionRepository) ActivateWindows(ctx context.Context, id int64, dailyStart, periodicStart time.Time) error {

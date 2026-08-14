@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"github.com/Wei-Shaw/sub2api/internal/handler/dto"
+	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
 	middleware2 "github.com/Wei-Shaw/sub2api/internal/server/middleware"
 	"github.com/Wei-Shaw/sub2api/internal/service"
@@ -192,6 +193,7 @@ func (h *SubscriptionHandler) GetSummary(c *gin.Context) {
 // ResetDaily handles user-initiated daily quota reset using a purchased credit.
 // POST /api/v1/subscriptions/:id/reset-daily
 func (h *SubscriptionHandler) ResetDaily(c *gin.Context) {
+	middleware2.SetAuditAction(c, "user.subscription.daily_reset")
 	subject, ok := middleware2.GetAuthSubjectFromContext(c)
 	if !ok {
 		response.Unauthorized(c, "User not found in context")
@@ -200,15 +202,46 @@ func (h *SubscriptionHandler) ResetDaily(c *gin.Context) {
 
 	subscriptionID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || subscriptionID <= 0 {
+		setManualResetAudit(c, subject.UserID, -1, -1, -1, "failed", "INVALID_SUBSCRIPTION_ID")
 		response.BadRequest(c, "Invalid subscription ID")
 		return
 	}
 
-	sub, err := h.subscriptionService.UserResetDailyQuota(c.Request.Context(), subject.UserID, subscriptionID)
+	result, err := h.subscriptionService.UserResetDailyQuota(c.Request.Context(), subject.UserID, subscriptionID)
 	if err != nil {
+		if result != nil && result.MutationApplied {
+			setManualResetAudit(c, subject.UserID, subscriptionID, result.CreditsBefore, result.CreditsAfter, "success", infraerrors.Reason(err))
+			response.ErrorFrom(c, err)
+			return
+		}
+		before, after := manualResetAuditCredits(err)
+		errorCode := infraerrors.Reason(err)
+		if errorCode == "" {
+			errorCode = "INTERNAL_ERROR"
+		}
+		setManualResetAudit(c, subject.UserID, subscriptionID, before, after, "failed", errorCode)
 		response.ErrorFrom(c, err)
 		return
 	}
 
-	response.Success(c, dto.UserSubscriptionFromService(sub))
+	setManualResetAudit(c, subject.UserID, subscriptionID, result.CreditsBefore, result.CreditsAfter, "success", "")
+	response.Success(c, dto.UserSubscriptionFromService(result.Subscription))
+}
+
+func setManualResetAudit(c *gin.Context, userID, subscriptionID int64, before, after int, result, errorCode string) {
+	middleware2.SetAuditExtra(c, map[string]any{
+		"user_id": userID, "subscription_id": subscriptionID,
+		"credits_before": before, "credits_after": after,
+		"result": result, "error_code": errorCode,
+	})
+}
+
+func manualResetAuditCredits(err error) (int, int) {
+	status := infraerrors.FromError(err)
+	before, beforeErr := strconv.Atoi(status.Metadata["credits_before"])
+	after, afterErr := strconv.Atoi(status.Metadata["credits_after"])
+	if beforeErr != nil || afterErr != nil {
+		return -1, -1
+	}
+	return before, after
 }

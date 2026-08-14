@@ -188,3 +188,58 @@ func TestOllamaCloudUsageSessionRouteOmitsAuditBody(t *testing.T) {
 	require.Equal(t, "<credential-bearing body omitted>", logs[0].RequestBody)
 	require.NotContains(t, logs[0].RequestBody, "audit-canary")
 }
+
+func TestSetAuditExtraAllowsOnlyDailyResetScalars(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	SetAuditExtra(c, map[string]any{
+		"user_id": int64(7), "subscription_id": int64(42),
+		"credits_before": -1, "credits_after": -1,
+		"result": "failed", "error_code": "MANUAL_RESET_CONFLICT",
+		"token": "audit-canary-secret", "password": "audit-canary-password",
+		"nested": map[string]any{"secret": true},
+	})
+	require.Equal(t, map[string]any{
+		"user_id": int64(7), "subscription_id": int64(42),
+		"credits_before": -1, "credits_after": -1,
+		"result": "failed", "error_code": "MANUAL_RESET_CONFLICT",
+	}, c.MustGet(auditCtxKeyExtra))
+}
+
+func TestDailyResetAuditPersistsSuccessfulMutationEvenWhenResponseReloadFails(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repository := &auditCaptureRepository{}
+	auditService := service.NewAuditLogService(repository, nil)
+	auditService.Start()
+
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set(string(ContextKeyUser), AuthSubject{UserID: 7})
+		c.Next()
+	})
+	router.Use(gin.HandlerFunc(NewAuditLogMiddleware(auditService)))
+	router.POST("/api/v1/subscriptions/:id/reset-daily", func(c *gin.Context) {
+		SetAuditAction(c, "user.subscription.daily_reset")
+		SetAuditExtra(c, map[string]any{
+			"user_id": int64(7), "subscription_id": int64(42),
+			"credits_before": 2, "credits_after": 1,
+			"result": "success", "error_code": "RESPONSE_RELOAD_FAILED",
+		})
+		c.JSON(http.StatusInternalServerError, gin.H{"reason": "RESPONSE_RELOAD_FAILED"})
+	})
+
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodPost, "/api/v1/subscriptions/42/reset-daily", nil))
+	require.Equal(t, http.StatusInternalServerError, recorder.Code)
+	auditService.Stop()
+
+	repository.mu.Lock()
+	logs := append([]*service.AuditLog(nil), repository.logs...)
+	repository.mu.Unlock()
+	require.Len(t, logs, 1)
+	require.Equal(t, "user.subscription.daily_reset", logs[0].Action)
+	require.Equal(t, "success", logs[0].Extra["result"])
+	require.Equal(t, "RESPONSE_RELOAD_FAILED", logs[0].Extra["error_code"])
+	require.EqualValues(t, 2, logs[0].Extra["credits_before"])
+	require.EqualValues(t, 1, logs[0].Extra["credits_after"])
+}

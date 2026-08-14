@@ -120,6 +120,19 @@ func TestAdminResetQuota_ResetBoth(t *testing.T) {
 	require.Equal(t, resetAt, *result.WeeklyWindowStart)
 }
 
+func TestAdminResetQuota_DoesNotChangeManualResetCredits(t *testing.T) {
+	stub := &resetQuotaUserSubRepoStub{
+		sub: &UserSubscription{ID: 11, UserID: 10, GroupID: 20, ManualResetCredits: 2},
+	}
+	svc := newResetQuotaSvc(stub)
+
+	result, err := svc.AdminResetQuota(context.Background(), 11, true, true, true)
+
+	require.NoError(t, err)
+	require.Equal(t, 2, result.ManualResetCredits)
+	require.Equal(t, 2, stub.sub.ManualResetCredits)
+}
+
 func TestAdminResetQuota_ResetDailyOnly(t *testing.T) {
 	stub := &resetQuotaUserSubRepoStub{
 		sub: &UserSubscription{ID: 2, UserID: 10, GroupID: 20},

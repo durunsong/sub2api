@@ -146,7 +146,7 @@
 
             <!-- Manual daily reset (credits granted on active repurchase) -->
             <div
-              v-if="subscription.group?.daily_limit_usd"
+              v-if="Object.prototype.hasOwnProperty.call(subscription, 'manual_reset_credits')"
               class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200/80 bg-emerald-50/80 px-3 py-2.5 dark:border-emerald-800/60 dark:bg-emerald-950/30"
             >
               <div class="min-w-0 space-y-0.5 text-xs leading-relaxed">
@@ -328,6 +328,7 @@ import type { UserSubscription } from '@/types'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Icon from '@/components/icons/Icon.vue'
 import { formatDateTimeToMinute } from '@/utils/format'
+import { extractApiErrorMessage } from '@/utils/apiError'
 import {
   platformBorderClass,
   platformBadgeClass,
@@ -361,13 +362,13 @@ const subscriptions = ref<UserSubscription[]>([])
 const loading = ref(true)
 const resettingId = ref<number | null>(null)
 
-async function loadSubscriptions() {
+async function loadSubscriptions(showLoadError = true) {
   try {
     loading.value = true
     subscriptions.value = await subscriptionsAPI.getMySubscriptions()
   } catch (error) {
     console.error('Failed to load subscriptions:', error)
-    appStore.showError(t('userSubscriptions.failedToLoad'))
+    if (showLoadError) appStore.showError(t('userSubscriptions.failedToLoad'))
   } finally {
     loading.value = false
   }
@@ -381,9 +382,13 @@ function isSubscriptionExpired(subscription: UserSubscription): boolean {
 
 function canManualReset(subscription: UserSubscription): boolean {
   const credits = subscription.manual_reset_credits || 0
-  if (credits <= 0) return false
-  // 日卡：有付费待激活次数时，即使展示已过期也可点重置起算新 24h
-  if (isOneTimeDailyQuota(subscription)) return true
+  if (credits <= 0 || subscription.status === 'revoked' || subscription.status === 'suspended') {
+    return false
+  }
+  // 日卡仅在有效期内或已过期时可用待激活次数；普通订阅必须 active 且未过期。
+  if (isOneTimeDailyQuota(subscription)) {
+    return subscription.status === 'active' || subscription.status === 'expired'
+  }
   return subscription.status === 'active' && !isSubscriptionExpired(subscription)
 }
 
@@ -419,14 +424,15 @@ async function handleResetDaily(subscription: UserSubscription) {
     const updated = await subscriptionsAPI.resetDailyQuota(subscription.id)
     const idx = subscriptions.value.findIndex((s) => s.id === subscription.id)
     if (idx >= 0) {
-      subscriptions.value[idx] = { ...subscriptions.value[idx], ...updated }
+      subscriptions.value[idx] = updated
     }
     appStore.showSuccess(t('userSubscriptions.manualReset.success'))
   } catch (error) {
     console.error('Failed to reset daily quota:', error)
-    // Refresh from server so button/credits cannot drift after a rejected attempt
-    await loadSubscriptions()
-    appStore.showError(t('userSubscriptions.manualReset.failed'))
+    const message = extractApiErrorMessage(error, t('userSubscriptions.manualReset.failed'))
+    // 静默刷新服务端状态；刷新失败不得覆盖原始重置错误。
+    await loadSubscriptions(false)
+    appStore.showError(message)
   } finally {
     resettingId.value = null
   }
