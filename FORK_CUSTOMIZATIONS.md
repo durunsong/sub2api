@@ -1,7 +1,7 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.1.176**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.1.176**（官方无独立 v0.1.174 tag），并保留本 Fork
+当前整合版本为 **v0.1.177**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.1.177**（官方无独立 v0.1.174 tag），并保留本 Fork
 的全部定制能力。
 
 ## 必须保留的模块
@@ -17,6 +17,15 @@
 | Fork UI | 首页、品牌、VersionBadge、支付体验和管理端定制必须保留 |
 | Ops | 管理端筛选删除错误日志能力必须保留 |
 | 套餐续期 | 活跃套餐叠加、过期套餐续期、日卡重置额度和备注追加必须保留 |
+
+## v0.1.177 整合内容
+
+- 合入迁移 `222_group_usage_daily_rollups.sql` / `223_group_usage_rollup_timezone.sql`，为分组用量建立日汇总并跟随服务端配置时区；分组页与仪表盘统计提供 `today` / `yesterday` / `total`，避免大数据量下重复扫描明细。
+- 合入 Codex remote compaction v2：OAuth 会话请求补齐 `remote_compaction_v2` beta header，原生 v2 保留 `/responses` 路由，账号压缩测试改用 v2 原生探测。
+- 合入 `x-codex-turn-state` 的 HTTP/SSE/WS 回传与来源记录，已知状态若由另一账号签发则在上游请求前剥离，防止跨账号回显；Codex 指纹收敛默认改为关闭、仅显式配置后 opt-in，并覆盖透传路径。
+- 修复 Grok 长上下文阶梯仅受分组开关控制，以及带版本号的 image/video/audio 媒体模型不再误继承文本 token 价；修复账号页自动刷新偏好在页面加载时被覆盖。
+- 官方 v0.1.177 tag 内 `backend/cmd/server/VERSION` 是 0.1.176；本 Fork 按 release tag 设为 0.1.177。
+- Kiro、XorPay、Access Ban、用户端 Kiro→Claude、提示词安全审计、套餐续期、Ops 扩展、VersionBadge 禁用在线更新、GLM 套餐分类、支付体验及 UI 品牌等全部定制继续保留。
 
 ## v0.1.176 整合内容
 
@@ -133,4 +142,4 @@
 - Access Ban 的服务、路由和网关中间件不得因官方安全中间件更新而被移除。
 - `wire.go`、`wire_gen.go`、网关路由、套餐服务、Ops 服务和设置页属于高冲突文件，合并后必须运行对应测试。
 
-*最后更新：2026-08-13*
+*最后更新：2026-08-16*

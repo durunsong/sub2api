@@ -2,10 +2,10 @@
 
 > **上游官方仓库**：[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api)
 > **本 Fork 远程**：`origin` → `durunsong/sub2api`（中转/部署用）
-> **对比基准**：官方 tag **`v0.1.176`**（2026-08-13；官方无 v0.1.174 tag）
-> **本 Fork 当前版本**：`backend/cmd/server/VERSION` = **0.1.176**
-> **统计**：历史相对 v0.1.164 的大盘差异见下文；v0.1.165–v0.1.176 增量以根目录 `FORK_CUSTOMIZATIONS.md` 为准
-> **当前工作区**：已合入官方 v0.1.176，并保留 Kiro / XorPay / Access Ban / UI / 支付定制
+> **对比基准**：官方 tag **`v0.1.177`**（2026-08-15；官方无 v0.1.174 tag）
+> **本 Fork 当前版本**：`backend/cmd/server/VERSION` = **0.1.177**
+> **统计**：历史相对 v0.1.164 的大盘差异见下文；v0.1.165–v0.1.177 增量以根目录 `FORK_CUSTOMIZATIONS.md` 为准
+> **当前工作区**：已合入官方 v0.1.177，并保留 Kiro / XorPay / Access Ban / 提示词审计 / 套餐续期 / Ops / UI 品牌等全部定制
 > **维护**：新增 Fork 定制后，请同步更新本文与根目录 `AGENTS.md` 摘要。
 
 ---
@@ -20,7 +20,7 @@
 | **`AGENTS.md`**（项目根） | AI 协作**强制摘要**与禁区，改代码前必读 |
 | **`FORK_CUSTOMIZATIONS.md`**（项目根） | 历史清单，已收敛到本文；保留作快捷索引 |
 
-**注意**：本 Fork 已同步官方至 **v0.1.176**，但 **`upstream/main` 仍可能领先**。与官方同步时以目标 **tag** 为准；merge `main` 前务必先读本文 Fork 定制章节，禁止 blindly 采用上游覆盖 Kiro / XorPay / Access Ban 等模块。
+**注意**：本 Fork 已同步官方至 **v0.1.177**，但 **`upstream/main` 仍可能领先**。与官方同步时以目标 release **tag** 为准，不带入 tag 后的 `main` 内容；merge `main` 前务必先读本文 Fork 定制章节，禁止 blindly 采用上游覆盖 Kiro / XorPay / Access Ban 等模块。
 
 ---
 
@@ -78,6 +78,7 @@
 - v0.1.173 官方能力：Grok 邮箱密码 SSO、refresh token 重认证与 Redis 跨实例会话，媒体 Voice、视频/搜索计费和调度，渠道监控 V2、邮箱域名限量注册，以及 Gemini/OpenAI 集中修复；新增迁移 `194`–`206`、`217`–`220`，默认启用 Grok 免费额度软门禁、默认隐藏 V2 吞吐量并由迁移 `220` 备份后清理非 Grok/非 composite 视频价格，渠道监控则保持 V1、V2 显式启用；本 Fork 继续保留 Kiro/XorPay/Access Ban、Kiro→Claude、VersionBadge、GLM 与支付定制
 - v0.1.175 官方能力：Codex OAuth 设备指纹收敛、按上游响应模型计费、大文件备份分卷上传与恢复，以及 OpenAI/Grok/Gemini/WS/审计/调度等集中修复；官方无 v0.1.174 tag，官方 tag 内 VERSION 仍为 0.1.173；本 Fork 按 release tag 设为 0.1.175，备份页保留 ConfirmDialog/密码弹窗并叠加分卷下载，同时完整保留 Kiro/XorPay/Access Ban、Kiro→Claude、VersionBadge、GLM 与支付定制
 - v0.1.176 官方能力：Grok 4.6 / JWT 订阅档位识别、分组逐模型定价与长上下文阶梯开关、原生 `POST /x_search`，以及备份 leader 锁、渠道缓存、定价冲突、Responses 探测、Realtime 音频计费等修复；新增迁移 `221`。官方 tag 内 VERSION 仍为 0.1.175；本 Fork 按 release tag 设为 0.1.176。Gateway `/x_search` 保留 Access Ban，分组 `oneof` 仍含 `kiro`，Kiro 缓存模拟 UI 与逐模型定价 UI 并存，并完整保留 Kiro/XorPay/Access Ban、Kiro→Claude、VersionBadge、GLM 与支付定制
+- v0.1.177 官方能力：迁移 `222`/`223` 建立分组用量日汇总并切换为服务端配置时区，分组页与仪表盘统计提供 `today` / `yesterday` / `total`；Codex remote compaction v2 使用会话级 `remote_compaction_v2` beta header，原生 v2 保留 `/responses` 路由，`x-codex-turn-state` 跨 HTTP/SSE/WS 回传并通过来源记录阻止跨账号回显，指纹收敛默认关闭且仅显式 opt-in；同时修复 Grok 长上下文计费、带版本媒体模型识别和账号页自动刷新偏好。官方 tag 内 VERSION 是 0.1.176；本 Fork 按 release tag 设为 0.1.177，并完整保留 Kiro/XorPay/Access Ban、提示词审计、套餐续期、Ops、UI 品牌及既有支付定制
 
 v0.1.160 同步时额外补齐 `securityaudit.ProviderSet` 中 `*PromptService` 到 `PromptAdminService` 的 Wire 接口绑定，确保当前 Fork 可重新生成 `wire_gen.go`；其余提示词审计实现保持官方版本。
 
@@ -811,4 +812,4 @@ deploy/docker-compose.yml
 
 ---
 
-*最后更新：2026-08-13 · 基准：官方 v0.1.176 · 增量清单见 `FORK_CUSTOMIZATIONS.md` · 工作区：`git status --short`*
+*最后更新：2026-08-16 · 基准：官方 v0.1.177 · 增量清单见 `FORK_CUSTOMIZATIONS.md` · 工作区：`git status --short`*
