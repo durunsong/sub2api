@@ -102,6 +102,26 @@ func TestConsumeResetCardLocksSubscriptionBeforeConsuming(t *testing.T) {
 	require.Equal(t, []string{"lock", "consume"}, repo.calls)
 }
 
+func TestAdminActiveAssignmentGrantsCardWithoutChangingTerm(t *testing.T) {
+	now := time.Date(2026, 8, 16, 2, 0, 0, 0, time.UTC)
+	start := now.Add(-3 * 24 * time.Hour)
+	expires := now.Add(23 * 24 * time.Hour)
+	repo := &resetCardRepoStub{subscriptionUserSubRepoStub: newSubscriptionUserSubRepoStub()}
+	repo.seed(&UserSubscription{ID: 1, UserID: 2, GroupID: 3, StartsAt: start, ExpiresAt: expires, Status: SubscriptionStatusActive, MonthlyUsageUSD: 1.16})
+	svc := NewSubscriptionService(&subscriptionGroupRepoStub{group: &Group{ID: 3, SubscriptionType: SubscriptionTypeSubscription}}, repo, nil, nil, nil)
+	svc.now = func() time.Time { return now }
+
+	sub, err := svc.AssignSubscription(context.Background(), &AssignSubscriptionInput{UserID: 2, GroupID: 3, ValidityDays: 30, AssignedBy: 9, Notes: "admin"})
+	require.NoError(t, err)
+	require.Equal(t, start, sub.StartsAt)
+	require.Equal(t, expires, sub.ExpiresAt)
+	require.Equal(t, float64(1.16), sub.MonthlyUsageUSD)
+	require.Equal(t, 1, sub.ManualResetCredits)
+	require.Len(t, repo.cards, 1)
+	require.Equal(t, 30, repo.cards[0].ValidityDays)
+	require.Equal(t, PurchaseSourceAssignment, repo.cards[0].SourceType)
+}
+
 func TestPaidActiveRepurchaseGrantsCardWithoutChangingTermOrUsage(t *testing.T) {
 	now := time.Date(2026, 8, 16, 2, 0, 0, 0, time.UTC)
 	start := now.Add(-48 * time.Hour)

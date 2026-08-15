@@ -299,6 +299,13 @@ func (s *subscriptionUserSubRepoStub) AddManualResetCredits(_ context.Context, s
 	return nil
 }
 
+func (s *subscriptionUserSubRepoStub) GrantResetCard(ctx context.Context, subscriptionID int64, _ int, _ PurchaseSource) (bool, error) {
+	if err := s.AddManualResetCredits(ctx, subscriptionID, 1); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 func (s *subscriptionUserSubRepoStub) ResetDailyQuota(_ context.Context, request ManualDailyResetRequest) (ManualDailyResetResult, error) {
 	sub := s.byID[request.SubscriptionID]
 	if sub == nil || sub.UserID != request.UserID {
@@ -337,7 +344,7 @@ func (s *subscriptionUserSubRepoStub) UpdateNotes(_ context.Context, subscriptio
 	return nil
 }
 
-func TestAssignSubscriptionExtendsActiveInsteadOfIdempotentReuse(t *testing.T) {
+func TestAssignSubscriptionGrantsResetCardInsteadOfExtendingActive(t *testing.T) {
 	start := time.Now().Add(-12 * time.Hour)
 	oldExpires := start.AddDate(0, 0, 30)
 	groupRepo := &subscriptionGroupRepoStub{
@@ -363,9 +370,9 @@ func TestAssignSubscriptionExtendsActiveInsteadOfIdempotentReuse(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, int64(10), sub.ID)
-	require.Equal(t, 0, subRepo.createCalls, "existing subscription should be extended, not recreated")
-	require.WithinDuration(t, oldExpires.AddDate(0, 0, 30), sub.ExpiresAt, time.Second)
-	require.Zero(t, sub.ManualResetCredits, "ordinary assignment must not mint reset-card entitlement")
+	require.Equal(t, 0, subRepo.createCalls, "existing subscription should be reused, not recreated")
+	require.Equal(t, oldExpires, sub.ExpiresAt)
+	require.Equal(t, 1, sub.ManualResetCredits)
 }
 
 func TestAssignSubscriptionRenewsExpiredDailyCard(t *testing.T) {

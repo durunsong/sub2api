@@ -9,8 +9,9 @@ import (
 const subscriptionDayDuration = 24 * time.Hour
 
 const (
-	PurchaseSourcePayment = "payment_order"
-	PurchaseSourceRedeem  = "redeem_code"
+	PurchaseSourcePayment    = "payment_order"
+	PurchaseSourceRedeem     = "redeem_code"
+	PurchaseSourceAssignment = "assignment"
 )
 
 type PurchaseSource struct {

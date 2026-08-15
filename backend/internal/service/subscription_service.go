@@ -8,6 +8,7 @@ import (
 	"math/rand/v2"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
@@ -219,10 +220,10 @@ func (s *SubscriptionService) AssignSubscription(ctx context.Context, input *Ass
 	return sub, nil
 }
 
-// AssignOrExtendSubscription 分配或续期订阅（用于兑换码等场景）
+// AssignOrExtendSubscription 分配或续期订阅（支付、兑换、管理员分配同一口径）。
 // 如果用户已有同分组的订阅：
-//   - 未过期：从当前过期时间累加天数
-//   - 已过期：从当前时间开始计算新的过期时间，并激活订阅
+//   - 未过期：发放一张 validity_days 快照重置卡，不改到期时间和用量
+//   - 已过期：从当前时间重开完整周期并清零用量，不发卡
 //
 // 如果没有订阅：创建新订阅
 func (s *SubscriptionService) AssignOrExtendSubscription(ctx context.Context, input *AssignSubscriptionInput) (*UserSubscription, bool, error) {
@@ -324,19 +325,15 @@ func (s *SubscriptionService) updateExistingSubscriptionTerm(
 			isExpired = existingSub.Status == SubscriptionStatusExpired ||
 				(existingSub.Status != SubscriptionStatusSuspended && !existingSub.ExpiresAt.After(now))
 		}
-		purchaseRepurchase := purchaseSource != nil && !assignmentSemantics && !isExpired
-		newExpiresAt := existingSub.ExpiresAt.AddDate(0, 0, validityDays)
-		if isExpired {
-			newExpiresAt = now.AddDate(0, 0, validityDays)
-		}
-		if newExpiresAt.After(MaxExpiresAt) {
-			newExpiresAt = MaxExpiresAt
-		}
 		if assignmentSemantics && strings.TrimSpace(existingSub.Notes) == strings.TrimSpace(notes) {
 			notes = ""
 		}
 
 		if isExpired {
+			newExpiresAt := now.AddDate(0, 0, validityDays)
+			if newExpiresAt.After(MaxExpiresAt) {
+				newExpiresAt = MaxExpiresAt
+			}
 			renewed := renewedSubscriptionTerm(existingSub, notes, now, newExpiresAt)
 			if err := s.userSubRepo.Update(txCtx, renewed); err != nil {
 				return fmt.Errorf("renew expired subscription: %w", err)
@@ -344,43 +341,41 @@ func (s *SubscriptionService) updateExistingSubscriptionTerm(
 			return nil
 		}
 
-		if purchaseRepurchase {
-			cardRepo, ok := s.userSubRepo.(UserSubscriptionResetCardRepository)
-			if !ok {
-				return errors.New("subscription repository does not support reset cards")
-			}
-			if _, err := cardRepo.GrantResetCard(txCtx, existingSub.ID, validityDays, *purchaseSource); err != nil {
-				return fmt.Errorf("grant reset card: %w", err)
-			}
-			if notes != "" {
-				if err := s.userSubRepo.UpdateNotes(txCtx, existingSub.ID, appendSubscriptionNotes(existingSub.Notes, notes)); err != nil {
-					return fmt.Errorf("update subscription notes: %w", err)
-				}
-			}
-			return nil
+		granter, ok := s.userSubRepo.(resetCardGrantRepository)
+		if !ok {
+			return errors.New("subscription repository does not support reset cards")
 		}
-
-		// 更新过期时间
-		if err := s.userSubRepo.ExtendExpiry(txCtx, existingSub.ID, newExpiresAt); err != nil {
-			return fmt.Errorf("extend subscription: %w", err)
+		source := resolveResetCardSource(purchaseSource, existingSub.ID, now)
+		if _, err := granter.GrantResetCard(txCtx, existingSub.ID, validityDays, source); err != nil {
+			return fmt.Errorf("grant reset card: %w", err)
 		}
-
-		// 如果订阅被暂停，恢复为 active 状态
-		if existingSub.Status != SubscriptionStatusActive {
-			if err := s.userSubRepo.UpdateStatus(txCtx, existingSub.ID, SubscriptionStatusActive); err != nil {
-				return fmt.Errorf("update subscription status: %w", err)
-			}
-		}
-
-		// 追加备注
 		if notes != "" {
 			if err := s.userSubRepo.UpdateNotes(txCtx, existingSub.ID, appendSubscriptionNotes(existingSub.Notes, notes)); err != nil {
 				return fmt.Errorf("update subscription notes: %w", err)
 			}
 		}
-
 		return nil
 	})
+}
+
+type resetCardGrantRepository interface {
+	GrantResetCard(ctx context.Context, subscriptionID int64, validityDays int, source PurchaseSource) (bool, error)
+}
+
+var assignmentResetCardSeq atomic.Int64
+
+func resolveResetCardSource(source *PurchaseSource, subscriptionID int64, now time.Time) PurchaseSource {
+	if source != nil {
+		sourceType := strings.TrimSpace(source.Type)
+		reference := strings.TrimSpace(source.Reference)
+		if sourceType != "" && reference != "" {
+			return PurchaseSource{Type: sourceType, Reference: reference}
+		}
+	}
+	return PurchaseSource{
+		Type:      PurchaseSourceAssignment,
+		Reference: fmt.Sprintf("%d:%d:%d", subscriptionID, now.UnixNano(), assignmentResetCardSeq.Add(1)),
+	}
 }
 
 func (s *SubscriptionService) withSubscriptionUpdateTx(ctx context.Context, fn func(context.Context) error) error {

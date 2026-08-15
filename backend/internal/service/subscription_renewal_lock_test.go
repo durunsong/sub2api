@@ -62,6 +62,10 @@ func (r *lockingRenewalRepo) AddManualResetCredits(_ context.Context, _ int64, d
 	return nil
 }
 
+func (r *lockingRenewalRepo) GrantResetCard(ctx context.Context, subscriptionID int64, _ int, _ PurchaseSource) (bool, error) {
+	return true, r.AddManualResetCredits(ctx, subscriptionID, 1)
+}
+
 func (r *lockingRenewalRepo) UpdateNotes(_ context.Context, _ int64, notes string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -97,8 +101,9 @@ func TestAssignOrExtendSubscriptionUsesLockedCurrentRow(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, extended)
 	require.Equal(t, 1, repo.lockReads)
-	require.Equal(t, lockedExpiry.AddDate(0, 0, 5), sub.ExpiresAt)
-	require.Equal(t, SubscriptionStatusActive, sub.Status)
+	require.Equal(t, lockedExpiry, sub.ExpiresAt)
+	require.Equal(t, SubscriptionStatusSuspended, sub.Status)
+	require.Equal(t, 1, sub.ManualResetCredits)
 	require.Equal(t, "current\nrenewed", sub.Notes)
 	require.Equal(t, windowStart, *sub.DailyWindowStart)
 	require.Equal(t, float64(4), sub.DailyUsageUSD)
@@ -119,7 +124,8 @@ func TestAssignOrExtendSubscriptionSerializedRenewalsAccumulateDays(t *testing.T
 	require.NoError(t, err)
 
 	require.Equal(t, 2, repo.lockReads)
-	require.Equal(t, initialExpiry.AddDate(0, 0, 14), second.ExpiresAt)
+	require.Equal(t, initialExpiry, second.ExpiresAt)
+	require.Equal(t, 2, second.ManualResetCredits)
 }
 
 func TestAssignSubscriptionDoesNotReactivateRowSuspendedAfterStaleRead(t *testing.T) {

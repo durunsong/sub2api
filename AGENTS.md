@@ -53,7 +53,7 @@ Cursor 场景下还会加载 [`.cursor/rules/sub2api-fork.mdc`](.cursor/rules/su
 - **VersionBadge**：隐藏「立即更新」，保留版本提示与 changelog 链接
 - **支付 UX**：用户端隐藏倍率；二维码 payAmount / creditedAmount 分离
 - **购买页智普筛选**：OpenAI 协议下名称、分组名或描述含 `GLM` 的套餐显示为 `智普-GLM Plan MAX`，普通 OpenAI 分类必须排除这些套餐
-- **订阅重置卡**：迁移 `224`/`225` 保存永久期限明细并按 `group.default_validity_days` 回填旧计数；有效固定期限支付/正数订阅兑换重复购买改发 `validity_days` 快照卡，过期购买直接重开；消费放弃余期、清零日周月 USD/token 并从点击时重开；旧 `reset-daily` 映射 1 天卡，`manual_reset_credits` 仅保留兼容镜像
+- **订阅重置卡**：迁移 `224`/`225` 保存永久期限明细并按 `group.default_validity_days` 回填旧计数；有效固定期限支付/兑换/管理员分配重复获得改发 `validity_days` 快照卡且不改到期时间，过期则直接重开；消费放弃余期、清零日周月 USD/token 并从点击时重开；旧 `reset-daily` 映射 1 天卡，`manual_reset_credits` 仅保留兼容镜像
 - **UI**：首页/登录靛蓝紫罗兰主题、`logo.svg`、Select/ConfirmDialog 替换原生控件
 - **ProxyAdBanner**：已移除
 
@@ -123,7 +123,7 @@ CHECK (platform IN ('anthropic', 'openai', 'gemini', 'antigravity', 'kiro', 'gro
 
 Access Ban 迁移顺序：`159` 建表 → `160` 扩展 rule_type / ua_pattern，**不可删除或回退**。
 
-订阅重置卡迁移顺序：`224` 建永久明细表 → `225` 按分组默认期限回填历史 `manual_reset_credits`；同步时不得恢复有效固定期限购买顺延，也不得删除旧 `reset-daily` → 1 天卡和兼容镜像。
+订阅重置卡迁移顺序：`224` 建永久明细表 → `225` 按分组默认期限回填历史 `manual_reset_credits`；同步时不得恢复有效固定期限购买/分配顺延，也不得删除旧 `reset-daily` → 1 天卡和兼容镜像。
 
 ---
 

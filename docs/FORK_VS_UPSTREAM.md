@@ -362,7 +362,7 @@ backend/migrations/160_extend_access_ban_rules.sql        # rule_type / ua_patte
 
 - 迁移 `224_create_user_subscription_reset_cards.sql` 新建永久明细表 `user_subscription_reset_cards`：记录订阅、`validity_days` 快照、来源类型/引用/序号、创建与消费时间；来源唯一键保证支付订单/兑换码幂等，同一订阅删除受 `ON DELETE RESTRICT` 保护。
 - 迁移 `225_backfill_user_subscription_reset_cards.sql` 将历史 `manual_reset_credits > 0` 按所属 `group.default_validity_days`（限制在 1–36500 天）逐张回填为 `legacy_backfill` 卡；`ON CONFLICT DO NOTHING` 可重放，且不改旧计数。
-- 对仍在有效固定期限内的支付购买或**正数**订阅兑换码重复购买，不再顺延现有到期时间，而是发放一张以本次 `validity_days` 为快照的卡；来源引用保证同一订单/兑换记录只发一次。已过期订阅仍从购买时直接重开对应期限，不发卡；管理分配等非购买语义继续沿用原有续期规则。
+- 对仍在有效固定期限内的支付购买、正数订阅兑换或**管理员分配**，不再顺延现有到期时间，而是发放一张以本次 `validity_days` 为快照的卡；支付/兑换用来源引用保证同一订单只发一次，管理员分配每次发一张。已过期订阅仍从当前时刻直接重开对应期限，不发卡。
 - 消费接口为 `POST /api/v1/subscriptions/:id/reset-cards/consume`，按指定 `validity_days` 取一张未消费卡；同一事务内先锁订阅行，再新语句按幂等键重放或选卡消费，将日/周/月 USD 与 token 用量全部清零、窗口起点改为点击时刻，并放弃原剩余时间，从点击时重开该卡期限。旧 `POST .../:id/reset-daily` 保留并映射为消费 1 天卡。
 - 用户 `/subscriptions` 接口返回按期限聚合的 `reset_cards.total/groups`；页面按期限展示按钮与数量，并标注“永久有效”。`manual_reset_credits` 继续作为兼容镜像：发卡加一、消费减一；新逻辑和 UI 不再以它作为卡期限的事实来源。
 - 订阅订单退款：未消费来源卡与订单 `REFUNDED` 同一事务作废，网关成功后才落盘；`REFUNDING` 重入根据 `REFUND_GATEWAY_SUCCEEDED` 审计或查询网关状态重试本地 finalize，不重复打退款网关。已消费来源卡仍需 force，且不缩短当前周期。
