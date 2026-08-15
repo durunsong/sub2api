@@ -97,6 +97,15 @@ func resetCardAPIContext(method, path string, body []byte, userID int64) (*gin.C
 	c.Set(string(middleware.ContextKeyUser), middleware.AuthSubject{UserID: userID})
 	return c, rec
 }
+
+func auditExtraFromContext(t *testing.T, c *gin.Context) map[string]any {
+	t.Helper()
+	raw, exists := c.Get("audit_extra")
+	require.True(t, exists)
+	extra, ok := raw.(map[string]any)
+	require.True(t, ok)
+	return extra
+}
 func resetCardTestSub(now time.Time, id, userID int64, credits int) *service.UserSubscription {
 	return &service.UserSubscription{ID: id, UserID: userID, GroupID: 3, Status: service.SubscriptionStatusActive, StartsAt: now.Add(-time.Hour), ExpiresAt: now.Add(time.Hour), ManualResetCredits: credits}
 }
@@ -144,7 +153,7 @@ func TestSubscriptionHandlerConsumeResetCardReturnsRemainingGroups(t *testing.T)
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
 	require.Equal(t, 1, body.Data.ResetCards.Total)
 	require.Equal(t, "user.subscription.reset_card.consume", c.GetString("audit_action"))
-	auditExtra := c.MustGet("audit_extra").(map[string]any)
+	auditExtra := auditExtraFromContext(t, c)
 	require.NotContains(t, auditExtra, "idempotency_key")
 	require.NotContains(t, fmt.Sprint(auditExtra), "reset-card-test-key")
 	require.Equal(t, map[string]any{"user_id": int64(7), "subscription_id": int64(42), "validity_days": 30, "result": "success", "error_code": "", "idempotency_key_hash": "34fa89a0977fb956"}, auditExtra)
@@ -212,5 +221,5 @@ func TestSubscriptionHandlerResetDailyMapsToOneDayCard(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 	require.NotNil(t, repo.cards[0].ConsumedAt)
 	require.Equal(t, "user.subscription.reset_card.consume", c.GetString("audit_action"))
-	require.Equal(t, 1, c.MustGet("audit_extra").(map[string]any)["validity_days"])
+	require.Equal(t, 1, auditExtraFromContext(t, c)["validity_days"])
 }

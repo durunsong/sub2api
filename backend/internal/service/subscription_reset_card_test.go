@@ -42,13 +42,13 @@ func (r *resetCardRepoStub) GrantResetCard(_ context.Context, subscriptionID int
 		}
 	}
 	r.cards = append(r.cards, UserSubscriptionResetCard{ID: int64(len(r.cards) + 1), UserSubscriptionID: subscriptionID, ValidityDays: validityDays, SourceType: source.Type, SourceReference: source.Reference, SourceSequence: 1})
-	r.subscriptionUserSubRepoStub.byID[subscriptionID].ManualResetCredits++
+	r.byID[subscriptionID].ManualResetCredits++
 	return true, nil
 }
 
 func (r *resetCardRepoStub) LockResetCardSubscription(_ context.Context, subscriptionID, userID int64) error {
 	r.calls = append(r.calls, "lock")
-	sub := r.subscriptionUserSubRepoStub.byID[subscriptionID]
+	sub := r.byID[subscriptionID]
 	if sub == nil || sub.UserID != userID || sub.DeletedAt != nil ||
 		(sub.Status != SubscriptionStatusActive && sub.Status != SubscriptionStatusExpired) {
 		return ErrResetCardNotFound
@@ -65,7 +65,7 @@ func (r *resetCardRepoStub) ConsumeResetCard(_ context.Context, request ConsumeR
 		}
 		consumedAt := request.Now
 		card.ConsumedAt = &consumedAt
-		sub := r.subscriptionUserSubRepoStub.byID[request.SubscriptionID]
+		sub := r.byID[request.SubscriptionID]
 		actual := request.Now
 		if card.CreatedAt.After(actual) {
 			actual = card.CreatedAt

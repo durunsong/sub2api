@@ -316,7 +316,7 @@ func (s *PaymentService) findPaymentOrderResetCard(ctx context.Context, orderID 
 	if queryErr != nil {
 		return 0, false, false, queryErr
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	if !rows.Next() {
 		return 0, false, false, rows.Err()
 	}
@@ -392,7 +392,7 @@ func (s *PaymentService) inspectResetCardRefundState(ctx context.Context, cardID
 	if queryErr != nil {
 		return false, false, queryErr
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	if !rows.Next() {
 		return false, false, rows.Err()
 	}
