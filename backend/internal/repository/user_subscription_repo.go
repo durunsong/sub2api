@@ -13,6 +13,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/usersubscription"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	"github.com/Wei-Shaw/sub2api/internal/service"
+	"github.com/lib/pq"
 )
 
 type userSubscriptionRepository struct {
@@ -390,6 +391,134 @@ func (r *userSubscriptionRepository) UpdateNotes(ctx context.Context, subscripti
 		SetNotes(notes).
 		Save(ctx)
 	return translatePersistenceError(err, service.ErrSubscriptionNotFound, nil)
+}
+
+func (r *userSubscriptionRepository) GrantResetCard(ctx context.Context, subscriptionID int64, validityDays int, source service.PurchaseSource) (bool, error) {
+	client := clientFromContext(ctx, r.client)
+	result, err := client.ExecContext(ctx, `
+		INSERT INTO user_subscription_reset_cards
+			(user_subscription_id, validity_days, source_type, source_reference, source_sequence, created_at)
+		VALUES ($1, $2, $3, $4, 1, NOW())
+		ON CONFLICT (user_subscription_id, source_type, source_reference, source_sequence) DO NOTHING`,
+		subscriptionID, validityDays, source.Type, source.Reference)
+	if err != nil {
+		return false, err
+	}
+	affected, err := result.RowsAffected()
+	if err != nil || affected == 0 {
+		return false, err
+	}
+	if err := r.AddManualResetCredits(ctx, subscriptionID, 1); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+const lockResetCardSubscriptionSQL = `
+	SELECT id
+	FROM user_subscriptions
+	WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL AND status IN ('active', 'expired')
+	FOR UPDATE`
+
+func (r *userSubscriptionRepository) LockResetCardSubscription(ctx context.Context, subscriptionID, userID int64) error {
+	client := clientFromContext(ctx, r.client)
+	rows, err := client.QueryContext(ctx, lockResetCardSubscriptionSQL, subscriptionID, userID)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = rows.Close() }()
+	if !rows.Next() {
+		if err := rows.Err(); err != nil {
+			return err
+		}
+		return service.ErrResetCardNotFound
+	}
+	var lockedID int64
+	if err := rows.Scan(&lockedID); err != nil {
+		return err
+	}
+	return rows.Err()
+}
+
+const consumeResetCardSQL = `
+	WITH statement_clock AS (
+		SELECT CURRENT_TIMESTAMP AS now
+	), already_consumed AS (
+		SELECT c.id, c.validity_days, c.consumed_at, FALSE AS mutation_applied
+		FROM user_subscription_reset_cards c
+		WHERE c.user_subscription_id = $1 AND c.consume_idempotency_key = $4 AND c.voided_at IS NULL
+	), selected_card AS (
+		SELECT c.id, c.validity_days, GREATEST(clock.now, c.created_at) AS consumed_at,
+			LEAST(GREATEST(clock.now, c.created_at) + make_interval(days => $2), $3) AS expires_at
+		FROM user_subscription_reset_cards c
+		CROSS JOIN statement_clock clock
+		WHERE c.user_subscription_id = $1 AND c.consumed_at IS NULL AND c.voided_at IS NULL AND c.validity_days = $2
+		  AND NOT EXISTS (SELECT 1 FROM already_consumed)
+		ORDER BY c.id FOR UPDATE LIMIT 1
+	), consumed AS (
+		UPDATE user_subscription_reset_cards c
+		SET consumed_at = sc.consumed_at, consume_idempotency_key = $4
+		FROM selected_card sc WHERE c.id = sc.id
+		RETURNING c.id, sc.validity_days, c.consumed_at, sc.expires_at
+	), updated AS (
+		UPDATE user_subscriptions us
+		SET starts_at = consumed.consumed_at,
+			expires_at = consumed.expires_at,
+			status = 'active', daily_window_start = consumed.consumed_at,
+			weekly_window_start = consumed.consumed_at, monthly_window_start = consumed.consumed_at,
+			daily_usage_usd = 0, weekly_usage_usd = 0, monthly_usage_usd = 0,
+			daily_usage_tokens = 0, weekly_usage_tokens = 0, monthly_usage_tokens = 0,
+			manual_reset_credits = GREATEST(manual_reset_credits - 1, 0), updated_at = NOW()
+		FROM consumed WHERE us.id = $1
+		RETURNING consumed.id, consumed.validity_days, consumed.consumed_at, TRUE AS mutation_applied
+	)
+	SELECT id, validity_days, consumed_at, mutation_applied FROM already_consumed
+	UNION ALL
+	SELECT id, validity_days, consumed_at, mutation_applied FROM updated`
+
+func (r *userSubscriptionRepository) ConsumeResetCard(ctx context.Context, request service.ConsumeResetCardRequest) (service.ConsumeResetCardResult, error) {
+	client := clientFromContext(ctx, r.client)
+	rows, err := client.QueryContext(ctx, consumeResetCardSQL, request.SubscriptionID, request.ValidityDays, request.MaxExpiresAt, request.IdempotencyKey)
+	if err != nil {
+		return service.ConsumeResetCardResult{}, err
+	}
+	defer func() { _ = rows.Close() }()
+	if !rows.Next() {
+		return service.ConsumeResetCardResult{}, service.ErrResetCardNotFound
+	}
+	var result service.ConsumeResetCardResult
+	if err := rows.Scan(&result.CardID, &result.ValidityDays, &result.ConsumedAt, &result.MutationApplied); err != nil {
+		return service.ConsumeResetCardResult{}, err
+	}
+	return result, rows.Err()
+}
+
+const listAvailableResetCardGroupsSQL = `
+	SELECT user_subscription_id, validity_days, COUNT(*)
+	FROM user_subscription_reset_cards
+	WHERE user_subscription_id = ANY($1) AND consumed_at IS NULL AND voided_at IS NULL
+	GROUP BY user_subscription_id, validity_days
+	ORDER BY user_subscription_id, validity_days`
+
+func (r *userSubscriptionRepository) ListAvailableResetCardGroups(ctx context.Context, subscriptionIDs []int64) ([]service.ResetCardGroup, error) {
+	if len(subscriptionIDs) == 0 {
+		return []service.ResetCardGroup{}, nil
+	}
+	client := clientFromContext(ctx, r.client)
+	rows, err := client.QueryContext(ctx, listAvailableResetCardGroupsSQL, pq.Array(subscriptionIDs))
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	groups := make([]service.ResetCardGroup, 0)
+	for rows.Next() {
+		var group service.ResetCardGroup
+		if err := rows.Scan(&group.SubscriptionID, &group.ValidityDays, &group.AvailableCount); err != nil {
+			return nil, err
+		}
+		groups = append(groups, group)
+	}
+	return groups, rows.Err()
 }
 
 func (r *userSubscriptionRepository) AddManualResetCredits(ctx context.Context, subscriptionID int64, delta int) error {

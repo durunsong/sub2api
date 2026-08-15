@@ -365,7 +365,7 @@ func TestAssignSubscriptionExtendsActiveInsteadOfIdempotentReuse(t *testing.T) {
 	require.Equal(t, int64(10), sub.ID)
 	require.Equal(t, 0, subRepo.createCalls, "existing subscription should be extended, not recreated")
 	require.WithinDuration(t, oldExpires.AddDate(0, 0, 30), sub.ExpiresAt, time.Second)
-	require.Equal(t, 1, sub.ManualResetCredits)
+	require.Zero(t, sub.ManualResetCredits, "ordinary assignment must not mint reset-card entitlement")
 }
 
 func TestAssignSubscriptionRenewsExpiredDailyCard(t *testing.T) {

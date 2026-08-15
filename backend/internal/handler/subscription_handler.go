@@ -1,7 +1,12 @@
 package handler
 
 import (
+	"crypto/sha256"
+	"errors"
+	"fmt"
+	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/Wei-Shaw/sub2api/internal/handler/dto"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
@@ -190,58 +195,85 @@ func (h *SubscriptionHandler) GetSummary(c *gin.Context) {
 	response.Success(c, summary)
 }
 
-// ResetDaily handles user-initiated daily quota reset using a purchased credit.
-// POST /api/v1/subscriptions/:id/reset-daily
-func (h *SubscriptionHandler) ResetDaily(c *gin.Context) {
-	middleware2.SetAuditAction(c, "user.subscription.daily_reset")
+// ConsumeResetCard consumes a purchased reset card with the requested validity.
+// POST /api/v1/subscriptions/:id/reset-cards/consume
+func (h *SubscriptionHandler) ConsumeResetCard(c *gin.Context) {
+	middleware2.SetAuditAction(c, "user.subscription.reset_card.consume")
 	subject, ok := middleware2.GetAuthSubjectFromContext(c)
 	if !ok {
 		response.Unauthorized(c, "User not found in context")
 		return
 	}
-
-	subscriptionID, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil || subscriptionID <= 0 {
-		setManualResetAudit(c, subject.UserID, -1, -1, -1, "failed", "INVALID_SUBSCRIPTION_ID")
-		response.BadRequest(c, "Invalid subscription ID")
+	var req struct {
+		ValidityDays int `json:"validity_days"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil || req.ValidityDays <= 0 || req.ValidityDays > service.MaxValidityDays {
+		subscriptionID, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+		setResetCardAudit(c, subject.UserID, subscriptionID, req.ValidityDays, "failed", "INVALID_VALIDITY_DAYS")
+		response.ErrorFrom(c, infraerrors.BadRequest("INVALID_VALIDITY_DAYS", "validity_days must be a positive integer"))
 		return
 	}
+	h.consumeResetCard(c, req.ValidityDays)
+}
 
-	result, err := h.subscriptionService.UserResetDailyQuota(c.Request.Context(), subject.UserID, subscriptionID)
+// ResetDaily is the compatibility endpoint for consuming a one-day reset card.
+// POST /api/v1/subscriptions/:id/reset-daily
+func (h *SubscriptionHandler) ResetDaily(c *gin.Context) {
+	h.consumeResetCard(c, 1)
+}
+
+var resetCardIdempotencyKeyPattern = regexp.MustCompile(`^[A-Za-z0-9._:-]{8,128}$`)
+
+func (h *SubscriptionHandler) consumeResetCard(c *gin.Context, validityDays int) {
+	middleware2.SetAuditAction(c, "user.subscription.reset_card.consume")
+	subject, ok := middleware2.GetAuthSubjectFromContext(c)
+	if !ok {
+		response.Unauthorized(c, "User not found in context")
+		return
+	}
+	idempotencyKey := strings.TrimSpace(c.GetHeader("Idempotency-Key"))
+	if !resetCardIdempotencyKeyPattern.MatchString(idempotencyKey) {
+		response.ErrorFrom(c, infraerrors.BadRequest("INVALID_IDEMPOTENCY_KEY", "Idempotency-Key must be 8-128 URL-safe characters"))
+		return
+	}
+	subscriptionID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || subscriptionID <= 0 {
+		setResetCardAudit(c, subject.UserID, -1, validityDays, "failed", "INVALID_SUBSCRIPTION_ID")
+		response.ErrorFrom(c, infraerrors.BadRequest("INVALID_SUBSCRIPTION_ID", "invalid subscription ID"))
+		return
+	}
+	updated, err := h.subscriptionService.ConsumeResetCard(c.Request.Context(), service.ConsumeResetCardInput{UserID: subject.UserID, SubscriptionID: subscriptionID, ValidityDays: validityDays, IdempotencyKey: idempotencyKey})
 	if err != nil {
-		if result != nil && result.MutationApplied {
-			setManualResetAudit(c, subject.UserID, subscriptionID, result.CreditsBefore, result.CreditsAfter, "success", infraerrors.Reason(err))
-			response.ErrorFrom(c, err)
-			return
-		}
-		before, after := manualResetAuditCredits(err)
 		errorCode := infraerrors.Reason(err)
 		if errorCode == "" {
 			errorCode = "INTERNAL_ERROR"
 		}
-		setManualResetAudit(c, subject.UserID, subscriptionID, before, after, "failed", errorCode)
+		result := "failed"
+		if errors.Is(err, service.ErrResetCardResponseReloadFailed) {
+			result = "success"
+		}
+		setResetCardAudit(c, subject.UserID, subscriptionID, validityDays, result, errorCode)
 		response.ErrorFrom(c, err)
 		return
 	}
-
-	setManualResetAudit(c, subject.UserID, subscriptionID, result.CreditsBefore, result.CreditsAfter, "success", "")
-	response.Success(c, dto.UserSubscriptionFromService(result.Subscription))
-}
-
-func setManualResetAudit(c *gin.Context, userID, subscriptionID int64, before, after int, result, errorCode string) {
-	middleware2.SetAuditExtra(c, map[string]any{
-		"user_id": userID, "subscription_id": subscriptionID,
-		"credits_before": before, "credits_after": after,
-		"result": result, "error_code": errorCode,
-	})
-}
-
-func manualResetAuditCredits(err error) (int, int) {
-	status := infraerrors.FromError(err)
-	before, beforeErr := strconv.Atoi(status.Metadata["credits_before"])
-	after, afterErr := strconv.Atoi(status.Metadata["credits_after"])
-	if beforeErr != nil || afterErr != nil {
-		return -1, -1
+	if err := h.subscriptionService.AttachResetCards(c.Request.Context(), updated); err != nil {
+		errorCode := infraerrors.Reason(err)
+		if errorCode == "" {
+			errorCode = "INTERNAL_ERROR"
+		}
+		setResetCardAudit(c, subject.UserID, subscriptionID, validityDays, "success", errorCode)
+		response.ErrorFrom(c, err)
+		return
 	}
-	return before, after
+	setResetCardAudit(c, subject.UserID, subscriptionID, validityDays, "success", "")
+	response.Success(c, dto.UserSubscriptionFromService(updated))
+}
+
+func setResetCardAudit(c *gin.Context, userID, subscriptionID int64, validityDays int, result, errorCode string) {
+	keyHash := sha256.Sum256([]byte(strings.TrimSpace(c.GetHeader("Idempotency-Key"))))
+	middleware2.SetAuditExtra(c, map[string]any{
+		"user_id": userID, "subscription_id": subscriptionID, "validity_days": validityDays,
+		"result": result, "error_code": errorCode,
+		"idempotency_key_hash": fmt.Sprintf("%x", keyHash[:8]),
+	})
 }

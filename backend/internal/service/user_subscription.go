@@ -8,6 +8,40 @@ import (
 
 const subscriptionDayDuration = 24 * time.Hour
 
+const (
+	PurchaseSourcePayment = "payment_order"
+	PurchaseSourceRedeem  = "redeem_code"
+)
+
+type PurchaseSource struct {
+	Type      string
+	Reference string
+}
+
+type UserSubscriptionResetCard struct {
+	ID                    int64
+	UserSubscriptionID    int64
+	ValidityDays          int
+	SourceType            string
+	SourceReference       string
+	SourceSequence        int
+	CreatedAt             time.Time
+	ConsumedAt            *time.Time
+	ConsumeIdempotencyKey *string
+	VoidedAt              *time.Time
+}
+
+type ResetCardGroup struct {
+	SubscriptionID int64
+	ValidityDays   int
+	AvailableCount int
+}
+
+type ResetCardSummary struct {
+	Total  int
+	Groups []ResetCardGroup
+}
+
 type UserSubscription struct {
 	ID      int64
 	UserID  int64
@@ -31,6 +65,7 @@ type UserSubscription struct {
 
 	// ManualResetCredits is granted on active repurchase and consumed by user daily reset.
 	ManualResetCredits int
+	ResetCards         ResetCardSummary
 
 	AssignedBy *int64
 	AssignedAt time.Time

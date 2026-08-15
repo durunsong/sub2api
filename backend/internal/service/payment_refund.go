@@ -26,7 +26,11 @@ import (
 
 var createPaymentProviderFromInstance = provider.CreateProvider
 
-const refundBalanceCacheInvalidationTimeout = 5 * time.Second
+const (
+	refundBalanceCacheInvalidationTimeout = 5 * time.Second
+	refundGatewaySucceededAudit           = "REFUND_GATEWAY_SUCCEEDED"
+	refundResetCardVoidedAudit            = "REFUND_RESET_CARD_VOIDED"
+)
 
 // getOrderProviderInstance looks up the provider instance that processed this order.
 // For legacy orders without provider_instance_id, it resolves only when the
@@ -259,6 +263,24 @@ func (s *PaymentService) PrepareRefund(ctx context.Context, oid int64, amt float
 func (s *PaymentService) prepDeduct(ctx context.Context, o *dbent.PaymentOrder, p *RefundPlan, force bool) *RefundResult {
 	if o.OrderType == payment.OrderTypeSubscription {
 		p.DeductionType = payment.DeductionTypeSubscription
+		cardID, consumed, found, err := s.findPaymentOrderResetCard(ctx, o.ID)
+		if err != nil {
+			if !force {
+				return &RefundResult{Success: false, Warning: "cannot inspect reset card for refund, use force", RequireForce: true}
+			}
+		} else if found {
+			p.ResetCardID = cardID
+			p.SubDaysToDeduct = 0
+			if consumed {
+				if !force {
+					return &RefundResult{Success: false, Warning: "reset card was already consumed; use force to refund without shortening the current subscription", RequireForce: true}
+				}
+				s.writeAuditLog(ctx, o.ID, "REFUND_CONSUMED_RESET_CARD_FORCED", "admin", map[string]any{"resetCardID": cardID})
+			} else {
+				p.ResetCardToVoid = true
+			}
+			return nil
+		}
 		if o.SubscriptionGroupID != nil && o.SubscriptionDays != nil {
 			p.SubDaysToDeduct = *o.SubscriptionDays
 			sub, err := s.subscriptionSvc.GetActiveSubscription(ctx, o.UserID, *o.SubscriptionGroupID)
@@ -287,6 +309,97 @@ func (s *PaymentService) prepDeduct(ctx context.Context, o *dbent.PaymentOrder, 
 
 type availableBalanceDeductor interface {
 	DeductAvailableBalance(ctx context.Context, id int64, amount float64) (float64, error)
+}
+
+func (s *PaymentService) findPaymentOrderResetCard(ctx context.Context, orderID int64) (id int64, consumed, found bool, err error) {
+	rows, queryErr := s.entClient.QueryContext(ctx, `SELECT id, consumed_at IS NOT NULL FROM user_subscription_reset_cards WHERE source_type = $2 AND source_reference = $1 AND voided_at IS NULL ORDER BY id LIMIT 1`, strconv.FormatInt(orderID, 10), PurchaseSourcePayment)
+	if queryErr != nil {
+		return 0, false, false, queryErr
+	}
+	defer rows.Close()
+	if !rows.Next() {
+		return 0, false, false, rows.Err()
+	}
+	if err = rows.Scan(&id, &consumed); err != nil {
+		return 0, false, false, err
+	}
+	return id, consumed, true, nil
+}
+
+func (s *PaymentService) setResetCardVoided(ctx context.Context, p *RefundPlan, void bool) (bool, error) {
+	if p == nil || p.ResetCardID == 0 {
+		return false, nil
+	}
+	client := s.entClient
+	if tx := dbent.TxFromContext(ctx); tx != nil {
+		client = tx.Client()
+	}
+	var cardSQL, creditSQL string
+	if void {
+		cardSQL = `UPDATE user_subscription_reset_cards SET voided_at = CURRENT_TIMESTAMP WHERE id = $1 AND consumed_at IS NULL AND voided_at IS NULL`
+		creditSQL = `UPDATE user_subscriptions SET manual_reset_credits = CASE WHEN manual_reset_credits > 0 THEN manual_reset_credits - 1 ELSE 0 END WHERE id = (SELECT user_subscription_id FROM user_subscription_reset_cards WHERE id = $1)`
+	} else {
+		cardSQL = `UPDATE user_subscription_reset_cards SET voided_at = NULL WHERE id = $1 AND voided_at IS NOT NULL`
+		creditSQL = `UPDATE user_subscriptions SET manual_reset_credits = manual_reset_credits + 1 WHERE id = (SELECT user_subscription_id FROM user_subscription_reset_cards WHERE id = $1)`
+	}
+	result, err := client.ExecContext(ctx, cardSQL, p.ResetCardID)
+	if err != nil {
+		return false, err
+	}
+	affected, err := result.RowsAffected()
+	if err != nil || affected == 0 {
+		return false, err
+	}
+	_, err = client.ExecContext(ctx, creditSQL, p.ResetCardID)
+	return true, err
+}
+
+func (s *PaymentService) voidResetCardForRefund(ctx context.Context, p *RefundPlan) error {
+	if p == nil || !p.ResetCardToVoid || p.ResetCardID == 0 || p.ResetCardVoided {
+		return nil
+	}
+	voided, err := s.setResetCardVoided(ctx, p, true)
+	if err != nil {
+		return fmt.Errorf("void reset card: %w", err)
+	}
+	if voided {
+		p.ResetCardVoided = true
+		s.writeAuditLog(ctx, p.OrderID, refundResetCardVoidedAudit, "admin", map[string]any{"resetCardID": p.ResetCardID})
+		return nil
+	}
+	consumed, alreadyVoided, err := s.inspectResetCardRefundState(ctx, p.ResetCardID)
+	if err != nil {
+		return fmt.Errorf("inspect reset card: %w", err)
+	}
+	if alreadyVoided {
+		p.ResetCardVoided = true
+		return nil
+	}
+	if consumed {
+		p.ResetCardToVoid = false
+		s.writeAuditLog(ctx, p.OrderID, "REFUND_RESET_CARD_ALREADY_CONSUMED", "admin", map[string]any{"resetCardID": p.ResetCardID})
+		return nil
+	}
+	return infraerrors.Conflict("RESET_CARD_REFUND_CONFLICT", "reset card changed before refund finalization")
+}
+
+func (s *PaymentService) inspectResetCardRefundState(ctx context.Context, cardID int64) (consumed, voided bool, err error) {
+	client := s.entClient
+	if tx := dbent.TxFromContext(ctx); tx != nil {
+		client = tx.Client()
+	}
+	rows, queryErr := client.QueryContext(ctx, `SELECT consumed_at IS NOT NULL, voided_at IS NOT NULL FROM user_subscription_reset_cards WHERE id = $1`, cardID)
+	if queryErr != nil {
+		return false, false, queryErr
+	}
+	defer rows.Close()
+	if !rows.Next() {
+		return false, false, rows.Err()
+	}
+	if err = rows.Scan(&consumed, &voided); err != nil {
+		return false, false, err
+	}
+	return consumed, voided, rows.Err()
 }
 
 func (s *PaymentService) deductAvailableBalance(ctx context.Context, userID int64, amount float64) (float64, error) {
@@ -323,7 +436,7 @@ func (s *PaymentService) ExecuteRefund(ctx context.Context, p *RefundPlan) (*Ref
 		return nil, fmt.Errorf("lock: %w", err)
 	}
 	if c == 0 {
-		return nil, infraerrors.Conflict("CONFLICT", "order status changed")
+		return s.resumeRefunding(ctx, p)
 	}
 	if p.DeductionType == payment.DeductionTypeBalance && p.BalanceToDeduct > 0 {
 		// Skip balance deduction on retry if previous attempt already deducted
@@ -433,6 +546,7 @@ func (s *PaymentService) finishRefund(ctx context.Context, p *RefundPlan, resp *
 	}
 	switch strings.TrimSpace(resp.Status) {
 	case payment.ProviderStatusSuccess, payment.ProviderStatusRefunded:
+		s.noteGatewayRefundSuccess(ctx, p, resp)
 		return s.markRefundOk(ctx, p)
 	case payment.ProviderStatusPending:
 		return s.markRefundPending(ctx, p, resp)
@@ -441,13 +555,81 @@ func (s *PaymentService) finishRefund(ctx context.Context, p *RefundPlan, resp *
 	}
 }
 
+func (s *PaymentService) resumeRefunding(ctx context.Context, p *RefundPlan) (*RefundResult, error) {
+	o, err := s.entClient.PaymentOrder.Get(ctx, p.OrderID)
+	if err != nil {
+		return nil, infraerrors.NotFound("NOT_FOUND", "order not found")
+	}
+	if o.Status != OrderStatusRefunding {
+		return nil, infraerrors.Conflict("CONFLICT", "order status changed")
+	}
+	p.Order = o
+	if s.hasAuditLog(ctx, p.OrderID, refundGatewaySucceededAudit) {
+		return s.finishRefund(ctx, p, &payment.RefundResponse{Status: payment.ProviderStatusSuccess})
+	}
+	return s.queryAndFinishRefunding(ctx, p)
+}
+
+func (s *PaymentService) queryAndFinishRefunding(ctx context.Context, p *RefundPlan) (*RefundResult, error) {
+	prov, err := s.getRefundProvider(ctx, p.Order)
+	if err != nil {
+		return nil, fmt.Errorf("get refund provider: %w", err)
+	}
+	queryProvider, ok := prov.(payment.RefundQueryProvider)
+	if !ok {
+		return nil, infraerrors.Conflict("REFUNDING_IN_PROGRESS", "order is already refunding; query the provider refund status to finalize without creating another refund")
+	}
+	pendingDetail := s.latestRefundPendingDetail(ctx, p.OrderID)
+	finishProviderCall := servertiming.ObserveDependency(ctx, "payment")
+	resp, err := queryProvider.QueryRefund(ctx, payment.RefundQueryRequest{
+		TradeNo:  p.Order.PaymentTradeNo,
+		OrderID:  p.Order.OutTradeNo,
+		RefundID: pendingDetail.RefundID,
+		Amount:   formatGatewayRefundAmount(p.GatewayAmount, p.Order),
+	})
+	finishProviderCall()
+	if err != nil {
+		return nil, fmt.Errorf("query refund: %w", err)
+	}
+	if err := validateRefundProviderResponse(resp); err != nil {
+		return s.handleGwFail(ctx, p, err)
+	}
+	return s.finishRefund(ctx, p, resp)
+}
+
+func (s *PaymentService) noteGatewayRefundSuccess(ctx context.Context, p *RefundPlan, resp *payment.RefundResponse) {
+	if p == nil || resp == nil {
+		return
+	}
+	status := strings.TrimSpace(resp.Status)
+	if status != payment.ProviderStatusSuccess && status != payment.ProviderStatusRefunded {
+		return
+	}
+	if s.hasAuditLog(ctx, p.OrderID, refundGatewaySucceededAudit) {
+		return
+	}
+	s.writeAuditLog(ctx, p.OrderID, refundGatewaySucceededAudit, "admin", map[string]any{
+		"refundID": refundResponseID(resp),
+		"status":   status,
+	})
+}
+
 func (s *PaymentService) QueryAndFinalizeRefund(ctx context.Context, oid int64) (*RefundResult, error) {
 	o, err := s.entClient.PaymentOrder.Get(ctx, oid)
 	if err != nil {
 		return nil, infraerrors.NotFound("NOT_FOUND", "order not found")
 	}
+	if o.Status == OrderStatusRefunding {
+		plan := s.refundFinalizePlan(o)
+		if o.OrderType == payment.OrderTypeSubscription {
+			if early := s.prepDeduct(ctx, o, plan, true); early != nil {
+				return early, nil
+			}
+		}
+		return s.resumeRefunding(ctx, plan)
+	}
 	if o.Status != OrderStatusRefundPending {
-		return nil, infraerrors.BadRequest("INVALID_STATUS", "only refund pending orders can be finalized")
+		return nil, infraerrors.BadRequest("INVALID_STATUS", "only refunding or refund pending orders can be finalized")
 	}
 
 	prov, err := s.getRefundProvider(ctx, o)
@@ -536,6 +718,9 @@ func (s *PaymentService) finalizePendingRefundSuccess(ctx context.Context, p *Re
 
 func (s *PaymentService) refundFinalizePlan(o *dbent.PaymentOrder) *RefundPlan {
 	refundAmount := o.RefundAmount
+	if refundAmount <= 0 {
+		refundAmount = o.Amount
+	}
 	reason := strings.TrimSpace(psStringValue(o.RefundReason))
 	if reason == "" {
 		reason = fmt.Sprintf("refund order:%d", o.ID)
@@ -559,6 +744,9 @@ func (s *PaymentService) refundFinalizePlan(o *dbent.PaymentOrder) *RefundPlan {
 }
 
 func (s *PaymentService) applyRefundFinalDeduction(ctx context.Context, p *RefundPlan) error {
+	if err := s.voidResetCardForRefund(ctx, p); err != nil {
+		return err
+	}
 	if p.DeductionType == payment.DeductionTypeBalance && p.BalanceToDeduct > 0 {
 		deducted, err := s.deductAvailableBalance(ctx, p.Order.UserID, p.BalanceToDeduct)
 		if err != nil {
@@ -631,18 +819,35 @@ func (s *PaymentService) handleGwFail(ctx context.Context, p *RefundPlan, gErr e
 	return nil, infraerrors.InternalServer("REFUND_FAILED", psErrMsg(gErr))
 }
 
-func (s *PaymentService) markRefundOk(ctx context.Context, p *RefundPlan) (*RefundResult, error) {
-	fs := OrderStatusRefunded
-	if p.RefundAmount < p.Order.Amount {
-		fs = OrderStatusPartiallyRefunded
+func (s *PaymentService) markRefundOk(ctx context.Context, p *RefundPlan) (_ *RefundResult, err error) {
+	if existing := dbent.TxFromContext(ctx); existing != nil {
+		if err = s.voidResetCardForRefund(ctx, p); err != nil {
+			return nil, err
+		}
+		return s.markRefundOkTx(ctx, existing.Client(), p)
 	}
-	now := time.Now()
-	_, err := s.entClient.PaymentOrder.UpdateOneID(p.OrderID).SetStatus(fs).SetRefundAmount(p.RefundAmount).SetRefundReason(p.Reason).SetRefundAt(now).SetForceRefund(p.Force).Save(ctx)
+	tx, err := s.entClient.Tx(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("mark refund: %w", err)
+		return nil, fmt.Errorf("begin refund finalization: %w", err)
 	}
-	s.writeAuditLog(ctx, p.OrderID, "REFUND_SUCCESS", "admin", map[string]any{"refundAmount": p.RefundAmount, "reason": p.Reason, "balanceDeducted": p.BalanceToDeduct, "force": p.Force})
-	return &RefundResult{Success: true, BalanceDeducted: p.BalanceToDeduct, SubDaysDeducted: p.SubDaysToDeduct}, nil
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+	txCtx := dbent.NewTxContext(ctx, tx)
+	if err = s.voidResetCardForRefund(txCtx, p); err != nil {
+		return nil, err
+	}
+	var result *RefundResult
+	result, err = s.markRefundOkTx(txCtx, tx.Client(), p)
+	if err != nil {
+		return nil, err
+	}
+	if err = tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit refund finalization: %w", err)
+	}
+	return result, nil
 }
 
 func (s *PaymentService) markRefundOkTx(ctx context.Context, client *dbent.Client, p *RefundPlan) (*RefundResult, error) {
@@ -720,6 +925,14 @@ func refundResponseID(resp *payment.RefundResponse) string {
 }
 
 func (s *PaymentService) RollbackRefund(ctx context.Context, p *RefundPlan, gErr error) bool {
+	if p.ResetCardVoided {
+		restored, err := s.setResetCardVoided(ctx, p, false)
+		if err != nil || !restored {
+			s.writeAuditLog(ctx, p.OrderID, "REFUND_ROLLBACK_FAILED", "admin", map[string]any{"gatewayError": psErrMsg(gErr), "rollbackError": psErrMsg(err), "resetCardID": p.ResetCardID})
+			return false
+		}
+		p.ResetCardVoided = false
+	}
 	if p.DeductionType == payment.DeductionTypeBalance && p.BalanceToDeduct > 0 {
 		if err := s.userRepo.UpdateBalance(ctx, p.Order.UserID, p.BalanceToDeduct); err != nil {
 			slog.Error("[CRITICAL] rollback failed", "orderID", p.OrderID, "amount", p.BalanceToDeduct, "error", err)

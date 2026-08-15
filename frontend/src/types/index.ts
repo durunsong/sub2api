@@ -2022,6 +2022,16 @@ export interface ChangePasswordRequest {
 
 // ==================== User Subscription Types ====================
 
+export interface SubscriptionResetCardGroup {
+  validity_days: number
+  count: number
+}
+
+export interface SubscriptionResetCards {
+  total: number
+  groups: SubscriptionResetCardGroup[]
+}
+
 export interface UserSubscription {
   id: number
   user_id: number
@@ -2034,7 +2044,8 @@ export interface UserSubscription {
   daily_usage_tokens?: number
   weekly_usage_tokens?: number
   monthly_usage_tokens?: number
-  manual_reset_credits?: number
+  manual_reset_credits?: number // Legacy compatibility only.
+  reset_cards?: SubscriptionResetCards
   daily_window_start: string | null
   weekly_window_start: string | null
   monthly_window_start: string | null

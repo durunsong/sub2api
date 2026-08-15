@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestAssignOrExtendSubscription_ActiveDailyCardGrantsPendingResetWithoutRestartingClock(t *testing.T) {
+func TestAssignOrExtendSubscription_OrdinaryDailyAssignmentExtendsWithoutGrantingResetCard(t *testing.T) {
 	groupRepo := &subscriptionGroupRepoStub{
 		group: &Group{ID: 1, SubscriptionType: SubscriptionTypeSubscription},
 	}
@@ -46,15 +46,15 @@ func TestAssignOrExtendSubscription_ActiveDailyCardGrantsPendingResetWithoutRest
 	require.NoError(t, err)
 	require.True(t, reused)
 	require.Equal(t, int64(100), renewed.ID)
-	require.Equal(t, 50.0, renewed.DailyUsageUSD, "再买日卡不应自动清零用量")
+	require.Equal(t, 50.0, renewed.DailyUsageUSD, "普通分配不应清零用量")
 	require.Equal(t, int64(1234), renewed.DailyUsageTokens)
-	require.Equal(t, 1, renewed.ManualResetCredits, "再买应发放 1 次付费重置机会")
-	require.Equal(t, boughtAt, renewed.StartsAt, "再买不改 starts_at，24h 应从点击重置起算")
-	require.Equal(t, oldExpires, renewed.ExpiresAt, "再买不改 expires_at")
+	require.Zero(t, renewed.ManualResetCredits, "普通分配不得凭空增加重置卡权益")
+	require.Equal(t, boughtAt, renewed.StartsAt)
+	require.Equal(t, oldExpires.AddDate(0, 0, 1), renewed.ExpiresAt)
 	require.Equal(t, "first\nsecond", renewed.Notes)
 }
 
-func TestAssignOrExtendSubscription_ActiveMultiDayGrantsResetCreditAndExtends(t *testing.T) {
+func TestAssignOrExtendSubscription_OrdinaryMultiDayAssignmentExtendsWithoutResetCredit(t *testing.T) {
 	groupRepo := &subscriptionGroupRepoStub{
 		group: &Group{ID: 1, SubscriptionType: SubscriptionTypeSubscription},
 	}
@@ -81,7 +81,7 @@ func TestAssignOrExtendSubscription_ActiveMultiDayGrantsResetCreditAndExtends(t 
 	require.True(t, reused)
 	require.Equal(t, start, renewed.StartsAt, "多日卡再买不应改 starts_at")
 	require.WithinDuration(t, oldExpires.AddDate(0, 0, 30), renewed.ExpiresAt, time.Second)
-	require.Equal(t, 1, renewed.ManualResetCredits)
+	require.Zero(t, renewed.ManualResetCredits)
 }
 
 func TestUserResetDailyQuota_ActiveOneTimeCardDoesNotRestartTerm(t *testing.T) {

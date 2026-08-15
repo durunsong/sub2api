@@ -41,6 +41,7 @@
 | 11 | **构建与部署** | 修改 | Docker 使用 npmmirror、Kiro 环境变量、`.dockerignore` 文档打包调整 |
 | 12 | **资源与文档** | 新增 | Kiro 截图、微信群二维码；`docs/FORK_VS_UPSTREAM.md`、`AGENTS.md`；`docs/legal/` 合规文案 |
 | 13 | **管理端批量删用户** | 新增 | `POST /api/v1/admin/users/batch-delete`，UsersView 多选批量删除（跳过 admin） |
+| 14 | **订阅重置卡** | 新增 | 固定期限支付/正数订阅兑换重复购买改发永久重置卡；按购买时 `validity_days` 快照消费并从点击时重开周期 |
 
 **以下能力已在官方 v0.1.142+ 中，本 Fork 通过同步拥有，不算 Fork 独有开发**（合并时保留了 Kiro/XorPay 定制）：
 
@@ -357,6 +358,39 @@ backend/migrations/160_extend_access_ban_rules.sql        # rule_type / ua_patte
 - 中间件注册位置在 `routes` / `middleware` 链 — merge 后确认 `IPBanGuard` 仍在 Gateway 与 Auth 路由上
 - 勿将 `IPBanService` 从 `AuthService` 构造中移除
 
+### 8.4 订阅重置卡（Fork 新增，2026-08-16）
+
+- 迁移 `224_create_user_subscription_reset_cards.sql` 新建永久明细表 `user_subscription_reset_cards`：记录订阅、`validity_days` 快照、来源类型/引用/序号、创建与消费时间；来源唯一键保证支付订单/兑换码幂等，同一订阅删除受 `ON DELETE RESTRICT` 保护。
+- 迁移 `225_backfill_user_subscription_reset_cards.sql` 将历史 `manual_reset_credits > 0` 按所属 `group.default_validity_days`（限制在 1–36500 天）逐张回填为 `legacy_backfill` 卡；`ON CONFLICT DO NOTHING` 可重放，且不改旧计数。
+- 对仍在有效固定期限内的支付购买或**正数**订阅兑换码重复购买，不再顺延现有到期时间，而是发放一张以本次 `validity_days` 为快照的卡；来源引用保证同一订单/兑换记录只发一次。已过期订阅仍从购买时直接重开对应期限，不发卡；管理分配等非购买语义继续沿用原有续期规则。
+- 消费接口为 `POST /api/v1/subscriptions/:id/reset-cards/consume`，按指定 `validity_days` 取一张未消费卡；同一事务内先锁订阅行，再新语句按幂等键重放或选卡消费，将日/周/月 USD 与 token 用量全部清零、窗口起点改为点击时刻，并放弃原剩余时间，从点击时重开该卡期限。旧 `POST .../:id/reset-daily` 保留并映射为消费 1 天卡。
+- 用户 `/subscriptions` 接口返回按期限聚合的 `reset_cards.total/groups`；页面按期限展示按钮与数量，并标注“永久有效”。`manual_reset_credits` 继续作为兼容镜像：发卡加一、消费减一；新逻辑和 UI 不再以它作为卡期限的事实来源。
+- 订阅订单退款：未消费来源卡与订单 `REFUNDED` 同一事务作废，网关成功后才落盘；`REFUNDING` 重入根据 `REFUND_GATEWAY_SUCCEEDED` 审计或查询网关状态重试本地 finalize，不重复打退款网关。已消费来源卡仍需 force，且不缩短当前周期。
+
+**高危同步文件（订阅重置卡）**：
+
+```
+backend/internal/service/subscription_service.go
+backend/internal/service/user_subscription.go
+backend/internal/service/user_subscription_port.go
+backend/internal/repository/user_subscription_repo.go
+backend/internal/service/payment_fulfillment.go
+backend/internal/service/payment_refund.go
+backend/internal/service/redeem_service.go
+backend/internal/handler/subscription_handler.go
+backend/internal/handler/dto/types.go
+backend/internal/handler/dto/mappers.go
+backend/internal/server/routes/user.go
+backend/internal/server/middleware/audit_log.go
+backend/migrations/224_create_user_subscription_reset_cards.sql
+backend/migrations/225_backfill_user_subscription_reset_cards.sql
+frontend/src/api/subscriptions.ts
+frontend/src/types/index.ts
+frontend/src/views/user/SubscriptionsView.vue
+frontend/src/i18n/locales/zh/misc.ts
+frontend/src/i18n/locales/en/misc.ts
+```
+
 ---
 
 ## 9. 迁移红线（必守）
@@ -398,6 +432,13 @@ backend/migrations/160_extend_access_ban_rules.sql        # rule_type / ua_patte
 | `frontend/src/views/admin/IpBansView.vue` | 封禁规则管理 UI |
 | `backend/internal/server/routes/gateway.go` | Access Ban 中间件；官方新增 `/x_search` 须同步挂 `ipBanAnthropic` |
 | `backend/internal/handler/admin/group_handler.go` | 分组 `oneof` 含 `kiro`；合入官方字段时不可丢掉 |
+| `backend/internal/service/subscription_service.go` / `user_subscription_port.go` | 固定期限重复购买发卡、过期重开、按期限消费与兼容镜像 |
+| `backend/internal/repository/user_subscription_repo.go` | 重置卡幂等发放、行锁消费、用量/窗口原子重开与聚合查询 |
+| `backend/internal/service/payment_fulfillment.go` / `redeem_service.go` | 支付订单与正数订阅兑换的来源引用、`validity_days` 快照 |
+| `backend/internal/service/payment_refund.go` | 未消费来源卡与 REFUNDED 同事务作废；REFUNDING 重入不重复打网关 |
+| `backend/internal/handler/subscription_handler.go` / `server/routes/user.go` | 新消费接口及旧 `reset-daily` → 1 天卡兼容映射 |
+| `backend/migrations/224_create_user_subscription_reset_cards.sql` / `225_backfill_user_subscription_reset_cards.sql` | 永久卡明细、历史兼容计数按分组默认期限回填 |
+| `frontend/src/views/user/SubscriptionsView.vue` / `api/subscriptions.ts` / `types/index.ts` | `/subscriptions` 按期限展示永久重置卡与消费动作 |
 
 ---
 
@@ -780,7 +821,7 @@ deploy/docker-compose.yml
 1. `git fetch upstream tag vX.Y.Z`
 2. `git merge vX.Y.Z`（建议 `--no-commit` 先解决冲突）
 3. **冲突原则**：Kiro / XorPay / Access Ban / Grok 定制**全部保留**；wire 注入顺序 **kiro 在前、grok 在后**
-4. **必查**：`157` 迁移 CHECK、`159`/`160` Access Ban、`wire_gen.go`、`account_handler.go`、支付相关、`VersionBadge.vue`、`auth_service.go`
+4. **必查**：`157` 迁移 CHECK、`159`/`160` Access Ban、`224`/`225` 重置卡迁移、`wire_gen.go`、`account_handler.go`、支付/兑换来源传递、订阅服务/仓储/路由、`SubscriptionsView.vue`、`VersionBadge.vue`、`auth_service.go`
 5. 验证：
    - 后端：`go build ./... && go vet ./... && go test -tags=unit ./internal/...`
    - 前端：`pnpm install --frozen-lockfile && pnpm vitest run && pnpm typecheck`
@@ -795,6 +836,7 @@ deploy/docker-compose.yml
 - **不要**恢复 `VersionBadge` 的「立即更新」按钮（Fork 禁用在线升级）
 - **不要**把迁移 `157` 改回仅含 `grok`
 - **不要**删除 `159`/`160` 迁移或回退为仅 IP 封禁
+- **不要**删除 `224`/`225` 重置卡迁移、恢复有效固定期限重复购买顺延，或把 `manual_reset_credits` 当作卡期限事实来源
 - **不要**在 merge 时用上游版本覆盖 `ProvideAccountUsageService` 而丢掉 Kiro 注入
 - **不要**从 `AuthService` 移除 `accessBanService` 或注册邮箱格式校验
 - **不要**猜测 Kiro credits 或 cache_read 计费口径；见第 3 节

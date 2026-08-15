@@ -136,18 +136,14 @@ export default {
     quotaEnded: '额度已结束',
     oneTimeDailyHint: '24小时有效，日卡不自动重置；再买同套餐后需点击重置才起算新周期',
     usageOf: '已用 {used} / {limit}',
-    manualReset: {
-      remaining: '剩余 {count} 次手动重置机会',
-      inactive: '订阅未生效，暂不可重置',
-      expired: '订阅已过期，暂不可重置',
-      expiredNoCredits: '订阅已过期，暂无重置机会，再次购买同套餐可获得',
-      revoked: '订阅已撤销，不可重置',
-      noCredits: '暂无重置机会，再次购买同套餐可获得',
-      pendingActivate: '已购买待激活：点击重置后清零日额度，并从此刻起算 24 小时',
-      button: '重置日额度',
-      confirm: '确认消耗 1 次重置机会？将清零日额度，并从现在起重新计算 24 小时有效期。',
-      success: '日额度已重置，新的 24 小时已开始',
-      failed: '重置失败'
+    resetCards: {
+      title: '重置卡 ×{count}',
+      permanent: '永久有效',
+      action: '重置 {days} 天 ×{count}',
+      processing: '处理中…',
+      confirm: '确认消耗 1 张重置卡？当前剩余时间将作废，日、周、月全部额度会清零，并从现在起开始新的 {days} 天周期。',
+      success: '重置成功，新的 {days} 天周期已开始',
+      failed: '重置卡使用失败'
     }
   },
 

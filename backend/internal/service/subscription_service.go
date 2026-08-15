@@ -46,6 +46,9 @@ var (
 	ErrManualResetStateNotAllowed      = infraerrors.Forbidden("MANUAL_RESET_STATE_NOT_ALLOWED", "subscription status does not allow manual reset")
 	ErrManualResetResponseReloadFailed = infraerrors.InternalServer("RESPONSE_RELOAD_FAILED", "daily quota reset succeeded but latest subscription could not be loaded")
 	ErrManualResetSubscriptionExpired  = infraerrors.Forbidden("MANUAL_RESET_SUBSCRIPTION_EXPIRED", "subscription has expired")
+	ErrResetCardNotFound               = infraerrors.Conflict("RESET_CARD_NOT_FOUND", "no matching reset card available")
+	ErrResetCardIdempotencyConflict    = infraerrors.Conflict("RESET_CARD_IDEMPOTENCY_CONFLICT", "Idempotency-Key was already used with different reset card parameters")
+	ErrResetCardResponseReloadFailed   = infraerrors.InternalServer("RESET_CARD_RESPONSE_RELOAD_FAILED", "reset card consumed but latest subscription could not be loaded")
 )
 
 // SubscriptionService 订阅服务
@@ -198,11 +201,12 @@ func (s *SubscriptionService) invalidateSubscriptionCaches(userID, groupID int64
 
 // AssignSubscriptionInput 分配订阅输入
 type AssignSubscriptionInput struct {
-	UserID       int64
-	GroupID      int64
-	ValidityDays int
-	AssignedBy   int64
-	Notes        string
+	UserID         int64
+	GroupID        int64
+	ValidityDays   int
+	AssignedBy     int64
+	Notes          string
+	PurchaseSource *PurchaseSource
 }
 
 // AssignSubscription 分配订阅给用户。
@@ -252,7 +256,7 @@ func (s *SubscriptionService) assignOrExtendSubscription(ctx context.Context, in
 
 	// 已有订阅，执行续期（在事务中锁定并重新读取，避免并发覆盖）
 	if existingSub != nil {
-		if err := s.updateExistingSubscriptionTerm(ctx, existingSub.ID, validityDays, input.Notes, false); err != nil {
+		if err := s.updateExistingSubscriptionTerm(ctx, existingSub.ID, validityDays, input.Notes, false, input.PurchaseSource); err != nil {
 			return nil, false, err
 		}
 
@@ -300,6 +304,7 @@ func (s *SubscriptionService) updateExistingSubscriptionTerm(
 	validityDays int,
 	notes string,
 	assignmentSemantics bool,
+	purchaseSource *PurchaseSource,
 ) error {
 	return s.withSubscriptionUpdateTx(ctx, func(txCtx context.Context) error {
 		existingSub, err := s.userSubRepo.GetByIDForUpdate(txCtx, subscriptionID)
@@ -319,17 +324,13 @@ func (s *SubscriptionService) updateExistingSubscriptionTerm(
 			isExpired = existingSub.Status == SubscriptionStatusExpired ||
 				(existingSub.Status != SubscriptionStatusSuspended && !existingSub.ExpiresAt.After(now))
 		}
-		// Fork 日卡续期语义：活跃日卡只发放一次待激活重置，不改到期时间。
-		grantPendingDailyReset := !assignmentSemantics && !isExpired && validityDays == 1
-		newExpiresAt := existingSub.ExpiresAt
-		if !grantPendingDailyReset {
-			newExpiresAt = existingSub.ExpiresAt.AddDate(0, 0, validityDays)
-			if isExpired {
-				newExpiresAt = now.AddDate(0, 0, validityDays)
-			}
-			if newExpiresAt.After(MaxExpiresAt) {
-				newExpiresAt = MaxExpiresAt
-			}
+		purchaseRepurchase := purchaseSource != nil && !assignmentSemantics && !isExpired
+		newExpiresAt := existingSub.ExpiresAt.AddDate(0, 0, validityDays)
+		if isExpired {
+			newExpiresAt = now.AddDate(0, 0, validityDays)
+		}
+		if newExpiresAt.After(MaxExpiresAt) {
+			newExpiresAt = MaxExpiresAt
 		}
 		if assignmentSemantics && strings.TrimSpace(existingSub.Notes) == strings.TrimSpace(notes) {
 			notes = ""
@@ -343,15 +344,13 @@ func (s *SubscriptionService) updateExistingSubscriptionTerm(
 			return nil
 		}
 
-		if grantPendingDailyReset {
-			// 再买日卡 = 买到一次待激活重置；点重置后才清零并起算 24h
-			if err := s.userSubRepo.AddManualResetCredits(txCtx, existingSub.ID, 1); err != nil {
-				return fmt.Errorf("grant manual reset credit: %w", err)
+		if purchaseRepurchase {
+			cardRepo, ok := s.userSubRepo.(UserSubscriptionResetCardRepository)
+			if !ok {
+				return errors.New("subscription repository does not support reset cards")
 			}
-			if existingSub.Status != SubscriptionStatusActive {
-				if err := s.userSubRepo.UpdateStatus(txCtx, existingSub.ID, SubscriptionStatusActive); err != nil {
-					return fmt.Errorf("update subscription status: %w", err)
-				}
+			if _, err := cardRepo.GrantResetCard(txCtx, existingSub.ID, validityDays, *purchaseSource); err != nil {
+				return fmt.Errorf("grant reset card: %w", err)
 			}
 			if notes != "" {
 				if err := s.userSubRepo.UpdateNotes(txCtx, existingSub.ID, appendSubscriptionNotes(existingSub.Notes, notes)); err != nil {
@@ -364,11 +363,6 @@ func (s *SubscriptionService) updateExistingSubscriptionTerm(
 		// 更新过期时间
 		if err := s.userSubRepo.ExtendExpiry(txCtx, existingSub.ID, newExpiresAt); err != nil {
 			return fmt.Errorf("extend subscription: %w", err)
-		}
-
-		// 未过期再买多日卡：发放一次手动重置机会（用量不清零）
-		if err := s.userSubRepo.AddManualResetCredits(txCtx, existingSub.ID, 1); err != nil {
-			return fmt.Errorf("grant manual reset credit: %w", err)
 		}
 
 		// 如果订阅被暂停，恢复为 active 状态
@@ -540,6 +534,67 @@ func withManualResetCreditMetadata(err error, before, after int) error {
 	})
 }
 
+type ConsumeResetCardInput struct {
+	UserID         int64
+	SubscriptionID int64
+	ValidityDays   int
+	IdempotencyKey string
+}
+
+func (s *SubscriptionService) ConsumeResetCard(ctx context.Context, input ConsumeResetCardInput) (*UserSubscription, error) {
+	if input.ValidityDays <= 0 || input.ValidityDays > MaxValidityDays {
+		return nil, ErrInvalidInput
+	}
+	cardRepo, ok := s.userSubRepo.(UserSubscriptionResetCardRepository)
+	if !ok {
+		return nil, errors.New("subscription repository does not support reset cards")
+	}
+	now := s.now()
+	var current *UserSubscription
+	err := s.withSubscriptionUpdateTx(ctx, func(txCtx context.Context) error {
+		if err := cardRepo.LockResetCardSubscription(txCtx, input.SubscriptionID, input.UserID); err != nil {
+			return err
+		}
+		consumed, err := cardRepo.ConsumeResetCard(txCtx, ConsumeResetCardRequest{
+			SubscriptionID: input.SubscriptionID, UserID: input.UserID, ValidityDays: input.ValidityDays,
+			Now: now, MaxExpiresAt: MaxExpiresAt, IdempotencyKey: input.IdempotencyKey,
+		})
+		if err != nil {
+			return err
+		}
+		if consumed.ValidityDays != input.ValidityDays {
+			return ErrResetCardIdempotencyConflict
+		}
+		current, err = s.userSubRepo.GetByID(txCtx, input.SubscriptionID)
+		if errors.Is(err, ErrSubscriptionNotFound) {
+			return ErrResetCardNotFound
+		}
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	if err := s.invalidateSubscriptionCaches(current.UserID, current.GroupID); err != nil {
+		return nil, fmt.Errorf("reset card consumed but cache invalidation failed: %w", err)
+	}
+	updated, err := s.userSubRepo.GetByID(ctx, input.SubscriptionID)
+	if err != nil {
+		return nil, ErrResetCardResponseReloadFailed.WithCause(err)
+	}
+	return updated, nil
+}
+
+func (s *SubscriptionService) ListAvailableResetCardGroups(ctx context.Context, subscriptionIDs []int64) ([]ResetCardGroup, error) {
+	if len(subscriptionIDs) == 0 {
+		return []ResetCardGroup{}, nil
+	}
+	cardRepo, ok := s.userSubRepo.(UserSubscriptionResetCardRepository)
+	if !ok {
+		return nil, errors.New("subscription repository does not support reset cards")
+	}
+	return cardRepo.ListAvailableResetCardGroups(ctx, subscriptionIDs)
+}
+
 func appendSubscriptionNotes(existingNotes, newNotes string) string {
 	if newNotes == "" {
 		return existingNotes
@@ -670,7 +725,7 @@ func (s *SubscriptionService) assignSubscriptionWithReuse(ctx context.Context, i
 		if sub.Status == SubscriptionStatusExpired ||
 			(sub.Status != SubscriptionStatusSuspended && !sub.ExpiresAt.After(now)) {
 			validityDays := normalizeAssignValidityDays(input.ValidityDays)
-			if err := s.updateExistingSubscriptionTerm(ctx, sub.ID, validityDays, input.Notes, true); err != nil {
+			if err := s.updateExistingSubscriptionTerm(ctx, sub.ID, validityDays, input.Notes, true, nil); err != nil {
 				return nil, false, err
 			}
 			s.maybeInvalidateAssignmentCaches(input.UserID, input.GroupID, false)
@@ -949,6 +1004,9 @@ func (s *SubscriptionService) ListUserSubscriptions(ctx context.Context, userID 
 	}
 	normalizeExpiredWindows(subs)
 	normalizeSubscriptionStatus(subs)
+	if err := s.attachResetCards(ctx, subs); err != nil {
+		return nil, err
+	}
 	return subs, nil
 }
 
@@ -959,7 +1017,50 @@ func (s *SubscriptionService) ListActiveUserSubscriptions(ctx context.Context, u
 		return nil, err
 	}
 	normalizeExpiredWindows(subs)
+	if err := s.attachResetCards(ctx, subs); err != nil {
+		return nil, err
+	}
 	return subs, nil
+}
+
+func (s *SubscriptionService) attachResetCards(ctx context.Context, subs []UserSubscription) error {
+	if _, ok := s.userSubRepo.(UserSubscriptionResetCardRepository); !ok {
+		// Keep existing lightweight test and alternate repositories compatible;
+		// production repositories implement the reset-card extension.
+		return nil
+	}
+	ids := make([]int64, len(subs))
+	for i := range subs {
+		ids[i] = subs[i].ID
+		subs[i].ResetCards.Groups = []ResetCardGroup{}
+	}
+	groups, err := s.ListAvailableResetCardGroups(ctx, ids)
+	if err != nil {
+		return err
+	}
+	byID := make(map[int64]int, len(subs))
+	for i := range subs {
+		byID[subs[i].ID] = i
+	}
+	for _, group := range groups {
+		if i, ok := byID[group.SubscriptionID]; ok {
+			subs[i].ResetCards.Groups = append(subs[i].ResetCards.Groups, group)
+			subs[i].ResetCards.Total += group.AvailableCount
+		}
+	}
+	return nil
+}
+
+func (s *SubscriptionService) AttachResetCards(ctx context.Context, sub *UserSubscription) error {
+	if sub == nil {
+		return nil
+	}
+	subs := []UserSubscription{*sub}
+	if err := s.attachResetCards(ctx, subs); err != nil {
+		return err
+	}
+	*sub = subs[0]
+	return nil
 }
 
 // ListGroupSubscriptions 获取分组的所有订阅

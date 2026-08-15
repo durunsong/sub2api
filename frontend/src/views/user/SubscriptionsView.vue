@@ -74,6 +74,38 @@
             </div>
           </div>
 
+          <!-- Reset card benefits -->
+          <div
+            v-if="subscription.reset_cards && subscription.reset_cards.total > 0"
+            data-test="reset-cards"
+            class="flex flex-wrap items-center justify-between gap-3 border-b border-emerald-100 bg-emerald-50/70 px-4 py-3 dark:border-emerald-900/60 dark:bg-emerald-950/25"
+          >
+            <div class="flex items-center gap-2 text-xs">
+              <span class="font-semibold text-emerald-800 dark:text-emerald-200">
+                {{ t('userSubscriptions.resetCards.title', { count: subscription.reset_cards.total }) }}
+              </span>
+              <span class="text-emerald-700/75 dark:text-emerald-300/75">
+                {{ t('userSubscriptions.resetCards.permanent') }}
+              </span>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button
+                v-for="card in subscription.reset_cards.groups"
+                :key="card.validity_days"
+                type="button"
+                class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+                :disabled="!canConsumeResetCard(subscription) || resettingId !== null"
+                @click="handleConsumeResetCard(subscription, card.validity_days)"
+              >
+                {{
+                  resettingId === subscription.id && resettingValidityDays === card.validity_days
+                    ? t('userSubscriptions.resetCards.processing')
+                    : t('userSubscriptions.resetCards.action', { days: card.validity_days, count: card.count })
+                }}
+              </button>
+            </div>
+          </div>
+
           <!-- Usage Progress -->
           <div class="space-y-4 p-4">
             <!-- Expiration Info -->
@@ -142,45 +174,6 @@
               >
                 {{ t('userSubscriptions.oneTimeDailyHint') }}
               </p>
-            </div>
-
-            <!-- Manual daily reset (credits granted on active repurchase) -->
-            <div
-              v-if="Object.prototype.hasOwnProperty.call(subscription, 'manual_reset_credits')"
-              class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200/80 bg-emerald-50/80 px-3 py-2.5 dark:border-emerald-800/60 dark:bg-emerald-950/30"
-            >
-              <div class="min-w-0 space-y-0.5 text-xs leading-relaxed">
-                <p class="font-medium text-emerald-800 dark:text-emerald-200">
-                  {{
-                    t('userSubscriptions.manualReset.remaining', {
-                      count: subscription.manual_reset_credits || 0
-                    })
-                  }}
-                </p>
-                <p
-                  v-if="manualResetHint(subscription)"
-                  class="text-emerald-700/80 dark:text-emerald-300/80"
-                >
-                  {{ manualResetHint(subscription) }}
-                </p>
-              </div>
-              <button
-                type="button"
-                class="shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-                :class="
-                  canManualReset(subscription)
-                    ? 'bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400'
-                    : 'bg-gray-200 text-gray-500 dark:bg-dark-600 dark:text-dark-300'
-                "
-                :disabled="!canManualReset(subscription) || resettingId === subscription.id"
-                @click="handleResetDaily(subscription)"
-              >
-                {{
-                  resettingId === subscription.id
-                    ? '...'
-                    : t('userSubscriptions.manualReset.button')
-                }}
-              </button>
             </div>
 
             <!-- Weekly Usage -->
@@ -361,16 +354,17 @@ const appStore = useAppStore()
 const subscriptions = ref<UserSubscription[]>([])
 const loading = ref(true)
 const resettingId = ref<number | null>(null)
+const resettingValidityDays = ref<number | null>(null)
 
-async function loadSubscriptions(showLoadError = true) {
+async function loadSubscriptions(showLoadError = true, showLoading = true) {
   try {
-    loading.value = true
+    if (showLoading) loading.value = true
     subscriptions.value = await subscriptionsAPI.getMySubscriptions()
   } catch (error) {
     console.error('Failed to load subscriptions:', error)
     if (showLoadError) appStore.showError(t('userSubscriptions.failedToLoad'))
   } finally {
-    loading.value = false
+    if (showLoading) loading.value = false
   }
 }
 
@@ -380,61 +374,34 @@ function isSubscriptionExpired(subscription: UserSubscription): boolean {
   return new Date(subscription.expires_at).getTime() <= Date.now()
 }
 
-function canManualReset(subscription: UserSubscription): boolean {
-  const credits = subscription.manual_reset_credits || 0
-  if (credits <= 0 || subscription.status === 'revoked' || subscription.status === 'suspended') {
-    return false
-  }
-  // 日卡仅在有效期内或已过期时可用待激活次数；普通订阅必须 active 且未过期。
-  if (isOneTimeDailyQuota(subscription)) {
-    return subscription.status === 'active' || subscription.status === 'expired'
-  }
-  return subscription.status === 'active' && !isSubscriptionExpired(subscription)
+function canConsumeResetCard(subscription: UserSubscription): boolean {
+  return subscription.status === 'active' || subscription.status === 'expired'
 }
 
-function manualResetHint(subscription: UserSubscription): string {
-  const credits = subscription.manual_reset_credits || 0
-  if (credits > 0 && isOneTimeDailyQuota(subscription)) {
-    return t('userSubscriptions.manualReset.pendingActivate')
-  }
-  if (credits <= 0) {
-    if (isSubscriptionExpired(subscription) || subscription.status === 'expired') {
-      return t('userSubscriptions.manualReset.expiredNoCredits')
-    }
-    if (subscription.status === 'revoked') {
-      return t('userSubscriptions.manualReset.revoked')
-    }
-    return t('userSubscriptions.manualReset.noCredits')
-  }
-  if (subscription.status === 'revoked') {
-    return t('userSubscriptions.manualReset.revoked')
-  }
-  if (isSubscriptionExpired(subscription)) {
-    return t('userSubscriptions.manualReset.expired')
-  }
-  return ''
+function createIdempotencyKey(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID()
+  return `reset-${Date.now()}-${Math.random().toString(36).slice(2)}`
 }
 
-async function handleResetDaily(subscription: UserSubscription) {
-  if (!canManualReset(subscription) || resettingId.value != null) return
-  if (!window.confirm(t('userSubscriptions.manualReset.confirm'))) return
+async function handleConsumeResetCard(subscription: UserSubscription, validityDays: number) {
+  if (!canConsumeResetCard(subscription) || resettingId.value != null) return
+  if (!window.confirm(t('userSubscriptions.resetCards.confirm', { days: validityDays }))) return
 
   resettingId.value = subscription.id
+  resettingValidityDays.value = validityDays
   try {
-    const updated = await subscriptionsAPI.resetDailyQuota(subscription.id)
-    const idx = subscriptions.value.findIndex((s) => s.id === subscription.id)
-    if (idx >= 0) {
-      subscriptions.value[idx] = updated
-    }
-    appStore.showSuccess(t('userSubscriptions.manualReset.success'))
+    const updated = await subscriptionsAPI.consumeResetCard(subscription.id, validityDays, createIdempotencyKey())
+    const index = subscriptions.value.findIndex((item) => item.id === subscription.id)
+    if (index >= 0) subscriptions.value[index] = updated
+    appStore.showSuccess(t('userSubscriptions.resetCards.success', { days: validityDays }))
   } catch (error) {
-    console.error('Failed to reset daily quota:', error)
-    const message = extractApiErrorMessage(error, t('userSubscriptions.manualReset.failed'))
-    // 静默刷新服务端状态；刷新失败不得覆盖原始重置错误。
-    await loadSubscriptions(false)
+    console.error('Failed to consume reset card:', error)
+    const message = extractApiErrorMessage(error, t('userSubscriptions.resetCards.failed'))
+    await loadSubscriptions(false, false)
     appStore.showError(message)
   } finally {
     resettingId.value = null
+    resettingValidityDays.value = null
   }
 }
 

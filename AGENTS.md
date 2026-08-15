@@ -53,6 +53,7 @@ Cursor 场景下还会加载 [`.cursor/rules/sub2api-fork.mdc`](.cursor/rules/su
 - **VersionBadge**：隐藏「立即更新」，保留版本提示与 changelog 链接
 - **支付 UX**：用户端隐藏倍率；二维码 payAmount / creditedAmount 分离
 - **购买页智普筛选**：OpenAI 协议下名称、分组名或描述含 `GLM` 的套餐显示为 `智普-GLM Plan MAX`，普通 OpenAI 分类必须排除这些套餐
+- **订阅重置卡**：迁移 `224`/`225` 保存永久期限明细并按 `group.default_validity_days` 回填旧计数；有效固定期限支付/正数订阅兑换重复购买改发 `validity_days` 快照卡，过期购买直接重开；消费放弃余期、清零日周月 USD/token 并从点击时重开；旧 `reset-daily` 映射 1 天卡，`manual_reset_credits` 仅保留兼容镜像
 - **UI**：首页/登录靛蓝紫罗兰主题、`logo.svg`、Select/ConfirmDialog 替换原生控件
 - **ProxyAdBanner**：已移除
 
@@ -86,6 +87,24 @@ frontend/src/views/admin/IpBansView.vue
 frontend/src/components/common/VersionBadge.vue
 backend/internal/server/routes/gateway.go
 backend/internal/handler/admin/group_handler.go
+backend/internal/service/subscription_service.go
+backend/internal/service/user_subscription.go
+backend/internal/service/user_subscription_port.go
+backend/internal/repository/user_subscription_repo.go
+backend/internal/service/payment_fulfillment.go
+backend/internal/service/redeem_service.go
+backend/internal/handler/subscription_handler.go
+backend/internal/handler/dto/types.go
+backend/internal/handler/dto/mappers.go
+backend/internal/server/routes/user.go
+backend/internal/server/middleware/audit_log.go
+backend/migrations/224_create_user_subscription_reset_cards.sql
+backend/migrations/225_backfill_user_subscription_reset_cards.sql
+frontend/src/api/subscriptions.ts
+frontend/src/types/index.ts
+frontend/src/views/user/SubscriptionsView.vue
+frontend/src/i18n/locales/zh/misc.ts
+frontend/src/i18n/locales/en/misc.ts
 ```
 
 **Wire 注入顺序**：`kiroTokenProvider` **在前**，`grokTokenProvider` **在后**；`IPBanService` 须注入 `AuthService`。
@@ -103,6 +122,8 @@ CHECK (platform IN ('anthropic', 'openai', 'gemini', 'antigravity', 'kiro', 'gro
 上游 `157` 原版仅加 `grok` 会**丢掉 kiro** — merge 后必须复核。
 
 Access Ban 迁移顺序：`159` 建表 → `160` 扩展 rule_type / ua_pattern，**不可删除或回退**。
+
+订阅重置卡迁移顺序：`224` 建永久明细表 → `225` 按分组默认期限回填历史 `manual_reset_credits`；同步时不得恢复有效固定期限购买顺延，也不得删除旧 `reset-daily` → 1 天卡和兼容镜像。
 
 ---
 
@@ -163,6 +184,7 @@ Access Ban 迁移顺序：`159` 建表 → `160` 扩展 rule_type / ua_pattern�
 - 不删除 XorPay / Kiro / Access Ban 代码以简化 merge
 - 不自动 `git commit` / `git push`（除非用户要求）
 - 新增 SQL 须遵循项目迁移约定并注意 CHECK / Access Ban 约束顺序
+- 不删除或弱化重置卡期限明细、购买来源幂等、`224`/`225` 回填、旧接口映射和 `manual_reset_credits` 兼容镜像
 
 ---
 

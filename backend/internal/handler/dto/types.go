@@ -642,6 +642,16 @@ type Setting struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+type ResetCardGroup struct {
+	ValidityDays int `json:"validity_days"`
+	Count        int `json:"count"`
+}
+
+type ResetCardSummary struct {
+	Total  int              `json:"total"`
+	Groups []ResetCardGroup `json:"groups"`
+}
+
 type UserSubscription struct {
 	ID      int64 `json:"id"`
 	UserID  int64 `json:"user_id"`
@@ -663,7 +673,8 @@ type UserSubscription struct {
 	WeeklyUsageTokens  int64 `json:"weekly_usage_tokens"`
 	MonthlyUsageTokens int64 `json:"monthly_usage_tokens"`
 
-	ManualResetCredits int `json:"manual_reset_credits"`
+	ManualResetCredits int              `json:"manual_reset_credits"`
+	ResetCards         ResetCardSummary `json:"reset_cards"`
 
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`

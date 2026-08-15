@@ -16,7 +16,16 @@
 | 提示词安全审计 | 独立扫描引擎、策略、事件、管理控制台及迁移必须保留 |
 | Fork UI | 首页、品牌、VersionBadge、支付体验和管理端定制必须保留 |
 | Ops | 管理端筛选删除错误日志能力必须保留 |
-| 套餐续期 | 活跃套餐叠加、过期套餐续期、日卡重置额度和备注追加必须保留 |
+| 套餐续期 | 过期套餐直接重开；管理分配等非购买续期语义继续保留 |
+| 订阅重置卡 | 有效固定期限支付/正数订阅兑换重复购买改发按 `validity_days` 快照的永久卡；消费时放弃余期、清零日周月 USD/token 并从点击时重开；订阅退款作废未消费来源卡与 REFUNDED 同事务；旧计数仅作兼容镜像 |
+
+## feature/subscription-reset-cards（2026-08-16）
+
+- 新增迁移 `224`/`225`：建立 `user_subscription_reset_cards` 永久明细；将历史 `manual_reset_credits` 按 `group.default_validity_days` 回填为可重放的期限卡，保留旧计数不变。
+- 有效固定期限的支付购买和正数订阅兑换重复购买不再顺延，按本次 `validity_days` 快照幂等发卡；过期购买仍从购买时直接重开，不发卡。
+- 消费指定期限卡时放弃原剩余时间，清零日/周/月 USD 与 token、重置三个窗口，并从点击时开始新期限；旧 `reset-daily` 兼容映射为 1 天卡。
+- 用户 `/subscriptions` 按期限返回并展示卡数量和“永久有效”；`manual_reset_credits` 保留为发卡加一、消费减一的兼容镜像，不承载期限事实。
+- 高危同步范围：`subscription_service.go`、`user_subscription{,_port}.go`、`user_subscription_repo.go`、`payment_fulfillment.go`、`redeem_service.go`、订阅 handler/routes/DTO、迁移 `224`/`225`、`SubscriptionsView.vue`、订阅 API/types/i18n。
 
 ## v0.1.177 整合内容
 
@@ -141,5 +150,6 @@
 - `157_user_platform_quotas_add_grok.sql` 相关结构必须同时兼容 Kiro 与 Grok。
 - Access Ban 的服务、路由和网关中间件不得因官方安全中间件更新而被移除。
 - `wire.go`、`wire_gen.go`、网关路由、套餐服务、Ops 服务和设置页属于高冲突文件，合并后必须运行对应测试。
+- 同步订阅链路时必须保留迁移 `224`/`225`、购买来源幂等键、有效期快照、过期重开、旧 `reset-daily` → 1 天卡映射，以及 `manual_reset_credits` 兼容镜像。
 
 *最后更新：2026-08-16*

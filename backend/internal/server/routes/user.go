@@ -134,6 +134,7 @@ func RegisterUserRoutes(
 			subscriptions.GET("/progress", h.Subscription.GetProgress)
 			subscriptions.GET("/summary", h.Subscription.GetSummary)
 			subscriptions.POST("/:id/reset-daily", h.Subscription.ResetDaily)
+			subscriptions.POST("/:id/reset-cards/consume", h.Subscription.ConsumeResetCard)
 		}
 
 		// 渠道监控（用户只读）

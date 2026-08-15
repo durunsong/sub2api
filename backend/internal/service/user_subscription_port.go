@@ -28,6 +28,29 @@ type ManualDailyResetResult struct {
 	RestartedTerm   bool
 }
 
+type ConsumeResetCardRequest struct {
+	SubscriptionID int64
+	UserID         int64
+	ValidityDays   int
+	Now            time.Time
+	MaxExpiresAt   time.Time
+	IdempotencyKey string
+}
+
+type ConsumeResetCardResult struct {
+	CardID          int64
+	ValidityDays    int
+	ConsumedAt      time.Time
+	MutationApplied bool
+}
+
+type UserSubscriptionResetCardRepository interface {
+	GrantResetCard(ctx context.Context, subscriptionID int64, validityDays int, source PurchaseSource) (bool, error)
+	LockResetCardSubscription(ctx context.Context, subscriptionID, userID int64) error
+	ConsumeResetCard(ctx context.Context, request ConsumeResetCardRequest) (ConsumeResetCardResult, error)
+	ListAvailableResetCardGroups(ctx context.Context, subscriptionIDs []int64) ([]ResetCardGroup, error)
+}
+
 type UserSubscriptionRepository interface {
 	Create(ctx context.Context, sub *UserSubscription) error
 	GetByID(ctx context.Context, id int64) (*UserSubscription, error)

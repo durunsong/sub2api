@@ -810,6 +810,10 @@ func UserSubscriptionFromServiceAdmin(sub *service.UserSubscription) *AdminUserS
 }
 
 func userSubscriptionFromServiceBase(sub *service.UserSubscription) UserSubscription {
+	resetCards := ResetCardSummary{Total: sub.ResetCards.Total, Groups: make([]ResetCardGroup, 0, len(sub.ResetCards.Groups))}
+	for _, group := range sub.ResetCards.Groups {
+		resetCards.Groups = append(resetCards.Groups, ResetCardGroup{ValidityDays: group.ValidityDays, Count: group.AvailableCount})
+	}
 	return UserSubscription{
 		ID:                 sub.ID,
 		UserID:             sub.UserID,
@@ -827,6 +831,7 @@ func userSubscriptionFromServiceBase(sub *service.UserSubscription) UserSubscrip
 		WeeklyUsageTokens:  sub.WeeklyUsageTokens,
 		MonthlyUsageTokens: sub.MonthlyUsageTokens,
 		ManualResetCredits: sub.ManualResetCredits,
+		ResetCards:         resetCards,
 		CreatedAt:          sub.CreatedAt,
 		UpdatedAt:          sub.UpdatedAt,
 		RevokedAt:          sub.DeletedAt,

@@ -133,6 +133,9 @@ type RefundPlan struct {
 	BalanceToDeduct float64
 	SubDaysToDeduct int
 	SubscriptionID  int64
+	ResetCardID     int64
+	ResetCardToVoid bool
+	ResetCardVoided bool
 }
 
 type RefundResult struct {

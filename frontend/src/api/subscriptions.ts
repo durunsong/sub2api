@@ -55,13 +55,16 @@ export async function getSubscriptionSummary(): Promise<SubscriptionSummary> {
   return response.data
 }
 
-/**
- * Consume one manual reset credit and clear daily usage.
- * Enforced server-side; frontend button state cannot bypass credit checks.
- */
-export async function resetDailyQuota(subscriptionId: number): Promise<UserSubscription> {
+/** Consume one reset card and restart the subscription for its validity period. */
+export async function consumeResetCard(
+  subscriptionId: number,
+  validityDays: number,
+  idempotencyKey: string
+): Promise<UserSubscription> {
   const response = await apiClient.post<UserSubscription>(
-    `/subscriptions/${subscriptionId}/reset-daily`
+    `/subscriptions/${subscriptionId}/reset-cards/consume`,
+    { validity_days: validityDays },
+    { headers: { 'Idempotency-Key': idempotencyKey } }
   )
   return response.data
 }
@@ -83,6 +86,6 @@ export default {
   getActiveSubscriptions,
   getSubscriptionsProgress,
   getSubscriptionSummary,
-  resetDailyQuota,
+  consumeResetCard,
   getSubscriptionProgress
 }

@@ -410,6 +410,7 @@ func TestAPIContracts(t *testing.T) {
 			setup: func(t *testing.T, deps *contractDeps) {
 				t.Helper()
 				// 普通用户订阅接口不应包含 assigned_* / notes 等管理员字段。
+				deps.userSubRepo.resetCards = []service.ResetCardGroup{{SubscriptionID: 501, ValidityDays: 30, AvailableCount: 2}}
 				deps.userSubRepo.SetByUserID(1, []service.UserSubscription{
 					{
 						ID:              501,
@@ -453,6 +454,7 @@ func TestAPIContracts(t *testing.T) {
 						"weekly_usage_tokens": 0,
 						"monthly_usage_tokens": 0,
 						"manual_reset_credits": 0,
+						"reset_cards": {"total": 2, "groups": [{"validity_days": 30, "count": 2}]},
 						"created_at": "2025-01-02T03:04:05Z",
 						"updated_at": "2025-01-02T03:04:05Z"
 					}
@@ -2199,6 +2201,7 @@ func (stubRedeemCodeRepo) SumPositiveBalanceByUser(ctx context.Context, userID i
 type stubUserSubscriptionRepo struct {
 	byUser       map[int64][]service.UserSubscription
 	activeByUser map[int64][]service.UserSubscription
+	resetCards   []service.ResetCardGroup
 }
 
 func (r *stubUserSubscriptionRepo) SetByUserID(userID int64, subs []service.UserSubscription) {
@@ -2280,6 +2283,18 @@ func (stubUserSubscriptionRepo) AddManualResetCredits(ctx context.Context, subsc
 }
 func (stubUserSubscriptionRepo) ResetDailyQuota(context.Context, service.ManualDailyResetRequest) (service.ManualDailyResetResult, error) {
 	return service.ManualDailyResetResult{}, errors.New("not implemented")
+}
+func (stubUserSubscriptionRepo) GrantResetCard(context.Context, int64, int, service.PurchaseSource) (bool, error) {
+	return false, errors.New("not implemented")
+}
+func (stubUserSubscriptionRepo) LockResetCardSubscription(context.Context, int64, int64) error {
+	return errors.New("not implemented")
+}
+func (stubUserSubscriptionRepo) ConsumeResetCard(context.Context, service.ConsumeResetCardRequest) (service.ConsumeResetCardResult, error) {
+	return service.ConsumeResetCardResult{}, errors.New("not implemented")
+}
+func (r *stubUserSubscriptionRepo) ListAvailableResetCardGroups(context.Context, []int64) ([]service.ResetCardGroup, error) {
+	return append([]service.ResetCardGroup(nil), r.resetCards...), nil
 }
 func (stubUserSubscriptionRepo) ActivateWindows(ctx context.Context, id int64, dailyStart, periodicStart time.Time) error {
 

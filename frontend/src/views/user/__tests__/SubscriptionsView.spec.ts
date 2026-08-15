@@ -4,16 +4,19 @@ import SubscriptionsView from '../SubscriptionsView.vue'
 import type { UserSubscription } from '@/types'
 
 const getMySubscriptions = vi.hoisted(() => vi.fn())
-const resetDailyQuota = vi.hoisted(() => vi.fn())
+const consumeResetCard = vi.hoisted(() => vi.fn())
 const showError = vi.hoisted(() => vi.fn())
 const showSuccess = vi.hoisted(() => vi.fn())
 
-vi.mock('@/api/subscriptions', () => ({ default: { getMySubscriptions, resetDailyQuota } }))
+vi.mock('@/api/subscriptions', () => ({ default: { getMySubscriptions, consumeResetCard } }))
 vi.mock('@/stores/app', () => ({ useAppStore: () => ({ showError, showSuccess }) }))
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }))
 vi.mock('vue-i18n', async () => {
   const actual = await vi.importActual<typeof import('vue-i18n')>('vue-i18n')
-  return { ...actual, useI18n: () => ({ t: (key: string, params?: { count?: number }) => params?.count == null ? key : `${key}:${params.count}` }) }
+  return { ...actual, useI18n: () => ({ t: (key: string, params?: Record<string, number>) => {
+    if (!params) return key
+    return key + ':' + Object.values(params).join(',')
+  } }) }
 })
 
 const now = Date.now()
@@ -24,9 +27,10 @@ function subscription(overrides: Partial<UserSubscription> = {}): UserSubscripti
     expires_at: new Date(now + 30 * 24 * 60 * 60 * 1000).toISOString(),
     daily_usage_usd: 5, weekly_usage_usd: 5, monthly_usage_usd: 5,
     daily_usage_tokens: 50, weekly_usage_tokens: 50, monthly_usage_tokens: 50,
-    manual_reset_credits: 1, daily_window_start: null, weekly_window_start: null, monthly_window_start: null,
+    manual_reset_credits: 9, reset_cards: { total: 3, groups: [{ validity_days: 1, count: 2 }, { validity_days: 30, count: 1 }] },
+    daily_window_start: null, weekly_window_start: null, monthly_window_start: null,
     created_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString(),
-    group: { id: 3, name: 'Plan', description: '', platform: 'openai', daily_limit_usd: 0 } as UserSubscription['group'],
+    group: { id: 3, name: 'Plan', description: '', platform: 'openai', daily_limit_usd: 10, weekly_limit_usd: 20, monthly_limit_usd: 30 } as UserSubscription['group'],
     ...overrides,
   }
 }
@@ -37,88 +41,95 @@ async function mountView(items: UserSubscription[]) {
   await flushPromises()
   return wrapper
 }
-function resetButton(wrapper: Awaited<ReturnType<typeof mountView>>) {
-  return wrapper.findAll('button').find(button => button.text().includes('userSubscriptions.manualReset.button'))
+
+function cardButtons(wrapper: Awaited<ReturnType<typeof mountView>>) {
+  return wrapper.findAll('button').filter(button => button.text().includes('userSubscriptions.resetCards.action'))
 }
 
-describe('SubscriptionsView manual daily reset', () => {
+describe('SubscriptionsView reset cards', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     getMySubscriptions.mockReset()
-    resetDailyQuota.mockReset()
+    consumeResetCard.mockReset()
     vi.spyOn(window, 'confirm').mockReturnValue(true)
   })
 
-  it('shows credits when daily limit is zero, including zero credits as disabled', async () => {
-    const wrapper = await mountView([subscription({ manual_reset_credits: 0 })])
-    expect(wrapper.text()).toContain('userSubscriptions.manualReset.remaining:0')
-    expect(resetButton(wrapper)?.attributes('disabled')).toBeDefined()
-  })
-
-  it('shows null credits as zero and disables reset', async () => {
-    const wrapper = await mountView([
-      subscription({ manual_reset_credits: null as unknown as number }),
+  it('shows the benefit bar after the header and hides it when total is zero', async () => {
+    const wrapper = await mountView([subscription()])
+    expect(wrapper.text()).toContain('userSubscriptions.resetCards.title:3')
+    expect(wrapper.text()).toContain('userSubscriptions.resetCards.permanent')
+    expect(cardButtons(wrapper).map(button => button.text())).toEqual([
+      'userSubscriptions.resetCards.action:1,2',
+      'userSubscriptions.resetCards.action:30,1',
     ])
-    expect(wrapper.text()).toContain('userSubscriptions.manualReset.remaining:0')
-    expect(resetButton(wrapper)?.attributes('disabled')).toBeDefined()
-  })
+    expect(wrapper.find('[data-test=reset-cards]').element.previousElementSibling?.textContent).toContain('Plan')
+    expect(wrapper.find('[data-test=reset-cards]').element.nextElementSibling?.textContent).toContain('userSubscriptions.expires')
 
-  it('hides reset controls only when manual_reset_credits is absent', async () => {
-    const item = subscription(); delete item.manual_reset_credits
-    const wrapper = await mountView([item])
-    expect(wrapper.text()).not.toContain('userSubscriptions.manualReset.remaining')
+    const hidden = await mountView([subscription({ reset_cards: { total: 0, groups: [] } })])
+    expect(hidden.find('[data-test=reset-cards]').exists()).toBe(false)
+    expect(hidden.text()).not.toContain('userSubscriptions.manualReset')
   })
 
   it.each([
-    ['active monthly', subscription(), false],
-    ['expired one-time day card', subscription({ status: 'expired', starts_at: new Date(now - 48 * 60 * 60 * 1000).toISOString(), expires_at: new Date(now - 24 * 60 * 60 * 1000).toISOString() }), false],
-    ['expired monthly card', subscription({ status: 'expired', starts_at: new Date(now - 31 * 24 * 60 * 60 * 1000).toISOString(), expires_at: new Date(now - 60 * 60 * 1000).toISOString() }), true],
-    ['revoked card', subscription({ status: 'revoked' }), true],
-    ['suspended card', subscription({ status: 'suspended' }), true],
-  ])('matches backend reset eligibility for %s', async (_name, item, disabled) => {
-    const wrapper = await mountView([item])
-    expect(resetButton(wrapper)?.attributes('disabled') !== undefined).toBe(disabled)
+    ['active', false], ['expired', false], ['suspended', true], ['revoked', true],
+  ] as const)('sets all card buttons disabled for %s subscriptions', async (status, disabled) => {
+    const wrapper = await mountView([subscription({ status })])
+    expect(cardButtons(wrapper).every(button => (button.attributes('disabled') !== undefined) === disabled)).toBe(true)
   })
 
-  it('replaces with complete server response and prevents double click', async () => {
+  it('confirms the full reset impact, disables the subscription, and replaces the complete response', async () => {
     const updated = subscription({
-      manual_reset_credits: 0,
-      daily_usage_usd: 0,
-      daily_window_start: '2026-08-14T00:00:00Z',
-      monthly_usage_usd: 37.25,
-      monthly_usage_tokens: 98765,
-      group: undefined,
+      starts_at: '2026-08-16T00:00:00Z', expires_at: '2026-09-15T00:00:00Z',
+      daily_usage_usd: 0, weekly_usage_usd: 0, monthly_usage_usd: 0,
+      daily_usage_tokens: 0, weekly_usage_tokens: 0, monthly_usage_tokens: 0,
+      reset_cards: { total: 2, groups: [{ validity_days: 1, count: 2 }] }, group: undefined,
     })
-    let resolveReset!: (value: UserSubscription) => void
-    resetDailyQuota.mockReturnValue(new Promise<UserSubscription>(resolve => { resolveReset = resolve }))
-    const wrapper = await mountView([subscription()]); const button = resetButton(wrapper)!
-    await button.trigger('click'); await button.trigger('click')
-    expect(resetDailyQuota).toHaveBeenCalledTimes(1); expect(button.attributes('disabled')).toBeDefined()
-    resolveReset(updated); await flushPromises()
-    expect(wrapper.text()).toContain('userSubscriptions.manualReset.remaining:0')
-    expect(wrapper.text()).not.toContain('Plan')
-    const rendered = (wrapper.vm as unknown as { subscriptions: UserSubscription[] }).subscriptions[0]
-    expect(rendered.daily_window_start).toBe('2026-08-14T00:00:00Z')
-    expect(rendered.monthly_usage_usd).toBe(37.25)
-    expect(rendered.monthly_usage_tokens).toBe(98765)
-    expect(rendered.monthly_usage_usd).not.toBe(0)
-    expect(rendered.monthly_usage_tokens).not.toBe(0)
-  })
-
-  it('keeps API error message and silently refreshes after failure', async () => {
-    resetDailyQuota.mockRejectedValueOnce({ message: 'server reset rejected' })
+    let resolveConsume!: (value: UserSubscription) => void
+    consumeResetCard.mockReturnValue(new Promise<UserSubscription>(resolve => { resolveConsume = resolve }))
     const wrapper = await mountView([subscription()])
-    getMySubscriptions.mockResolvedValueOnce([subscription({ manual_reset_credits: 0 })])
-    await resetButton(wrapper)!.trigger('click'); await flushPromises()
-    expect(getMySubscriptions).toHaveBeenCalledTimes(2); expect(showError).toHaveBeenCalledWith('server reset rejected')
-    expect(wrapper.text()).toContain('userSubscriptions.manualReset.remaining:0')
+    const buttons = cardButtons(wrapper)
+    await buttons[1].trigger('click')
+    await buttons[0].trigger('click')
+
+    expect(window.confirm).toHaveBeenCalledWith('userSubscriptions.resetCards.confirm:30')
+    expect(consumeResetCard).toHaveBeenCalledTimes(1)
+    expect(consumeResetCard).toHaveBeenCalledWith(1, 30, expect.stringMatching(/^[A-Za-z0-9._:-]{8,128}$/))
+    expect(cardButtons(wrapper).every(button => button.attributes('disabled') !== undefined)).toBe(true)
+    expect(buttons[1].text()).toBe('userSubscriptions.resetCards.processing')
+
+    resolveConsume(updated)
+    await flushPromises()
+    const rendered = (wrapper.vm as unknown as { subscriptions: UserSubscription[] }).subscriptions[0]
+    expect(rendered).toEqual(updated)
+    expect(wrapper.text()).not.toContain('Plan')
+    expect(showSuccess).toHaveBeenCalledWith('userSubscriptions.resetCards.success:30')
   })
 
-  it('does not overwrite original API error when silent refresh fails', async () => {
-    resetDailyQuota.mockRejectedValueOnce({ message: 'original reset error' })
+  it('keeps the backend error and silently refreshes after failure', async () => {
+    consumeResetCard.mockRejectedValueOnce({ message: 'server consume rejected' })
+    const wrapper = await mountView([subscription()])
+    let resolveRefresh!: (value: UserSubscription[]) => void
+    getMySubscriptions.mockReturnValueOnce(new Promise<UserSubscription[]>(resolve => { resolveRefresh = resolve }))
+    await cardButtons(wrapper)[0].trigger('click')
+    await flushPromises()
+
+    expect(getMySubscriptions).toHaveBeenCalledTimes(2)
+    expect(wrapper.text()).toContain('Plan')
+    expect(wrapper.find('[data-test=reset-cards]').exists()).toBe(true)
+
+    resolveRefresh([subscription({ reset_cards: { total: 0, groups: [] } })])
+    await flushPromises()
+    expect(showError).toHaveBeenCalledWith('server consume rejected')
+    expect(wrapper.find('[data-test=reset-cards]').exists()).toBe(false)
+  })
+
+  it('does not overwrite the original error when silent refresh fails', async () => {
+    consumeResetCard.mockRejectedValueOnce({ message: 'original consume error' })
     const wrapper = await mountView([subscription()])
     getMySubscriptions.mockRejectedValueOnce(new Error('refresh failed'))
-    await resetButton(wrapper)!.trigger('click'); await flushPromises()
-    expect(showError).toHaveBeenCalledTimes(1); expect(showError).toHaveBeenCalledWith('original reset error')
+    await cardButtons(wrapper)[0].trigger('click')
+    await flushPromises()
+    expect(showError).toHaveBeenCalledTimes(1)
+    expect(showError).toHaveBeenCalledWith('original consume error')
   })
 })

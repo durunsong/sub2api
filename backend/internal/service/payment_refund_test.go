@@ -801,3 +801,255 @@ type refundQueryProviderTestDouble struct {
 func (p *refundQueryProviderTestDouble) QueryRefund(context.Context, payment.RefundQueryRequest) (*payment.RefundResponse, error) {
 	return p.refundResponse, nil
 }
+
+func TestPrepareRefundVoidsUnconsumedSourceCardInsteadOfDeductingSubscription(t *testing.T) {
+	ctx := context.Background()
+	client := newPaymentConfigServiceTestClient(t)
+	user, err := client.User.Create().SetEmail("refund-card@example.com").SetPasswordHash("hash").SetUsername("refund-card").Save(ctx)
+	require.NoError(t, err)
+	inst, err := client.PaymentProviderInstance.Create().SetProviderKey(payment.TypeStripe).SetName("refund-card-provider").SetConfig("{}").SetSupportedTypes("stripe").SetEnabled(true).SetRefundEnabled(true).Save(ctx)
+	require.NoError(t, err)
+	group, err := client.Group.Create().SetName("refund-card-group").SetPlatform("openai").SetSubscriptionType("subscription").Save(ctx)
+	require.NoError(t, err)
+	sub, err := client.UserSubscription.Create().SetUserID(user.ID).SetGroupID(group.ID).SetStartsAt(time.Now()).SetExpiresAt(time.Now().Add(30 * 24 * time.Hour)).SetStatus(SubscriptionStatusActive).SetManualResetCredits(1).Save(ctx)
+	require.NoError(t, err)
+	days := 30
+	order, err := client.PaymentOrder.Create().SetUserID(user.ID).SetUserEmail(user.Email).SetUserName(user.Username).SetAmount(100).SetPayAmount(100).SetFeeRate(0).SetRechargeCode("REFUND-CARD").SetOutTradeNo("refund_card").SetPaymentType(payment.TypeStripe).SetPaymentTradeNo("").SetOrderType(payment.OrderTypeSubscription).SetStatus(OrderStatusCompleted).SetExpiresAt(time.Now().Add(time.Hour)).SetPaidAt(time.Now()).SetClientIP("127.0.0.1").SetSrcHost("api.example.com").SetProviderInstanceID(strconv.FormatInt(inst.ID, 10)).SetSubscriptionGroupID(group.ID).SetSubscriptionDays(days).Save(ctx)
+	require.NoError(t, err)
+	_, err = client.ExecContext(ctx, `CREATE TABLE user_subscription_reset_cards (id INTEGER PRIMARY KEY AUTOINCREMENT, user_subscription_id INTEGER NOT NULL, validity_days INTEGER NOT NULL, source_type TEXT NOT NULL, source_reference TEXT NOT NULL, consumed_at DATETIME, voided_at DATETIME)`)
+	require.NoError(t, err)
+	_, err = client.ExecContext(ctx, `INSERT INTO user_subscription_reset_cards (user_subscription_id, validity_days, source_type, source_reference) VALUES ($1,$2,'payment_order',$3)`, sub.ID, days, strconv.FormatInt(order.ID, 10))
+	require.NoError(t, err)
+	subRepo := &resetCardRepoStub{subscriptionUserSubRepoStub: newSubscriptionUserSubRepoStub()}
+	subRepo.seed(&UserSubscription{ID: sub.ID, UserID: user.ID, GroupID: group.ID, StartsAt: sub.StartsAt, ExpiresAt: sub.ExpiresAt, Status: sub.Status, ManualResetCredits: 1})
+	subSvc := NewSubscriptionService(groupRepoNoop{}, subRepo, nil, client, nil)
+	svc := &PaymentService{entClient: client, subscriptionSvc: subSvc}
+	plan, early, err := svc.PrepareRefund(ctx, order.ID, 0, "", false, true)
+	require.NoError(t, err)
+	require.Nil(t, early)
+	require.Zero(t, plan.SubDaysToDeduct)
+	require.True(t, plan.ResetCardToVoid)
+}
+
+func TestPrepareRefundConsumedSourceCardRequiresForceWithoutSubscriptionDeduction(t *testing.T) {
+	ctx := context.Background()
+	client := newPaymentConfigServiceTestClient(t)
+	_, err := client.ExecContext(ctx, `CREATE TABLE user_subscription_reset_cards (id INTEGER PRIMARY KEY AUTOINCREMENT, user_subscription_id INTEGER NOT NULL, source_type TEXT NOT NULL, source_reference TEXT NOT NULL, consumed_at DATETIME, voided_at DATETIME)`)
+	require.NoError(t, err)
+	_, err = client.ExecContext(ctx, `INSERT INTO user_subscription_reset_cards (user_subscription_id, source_type, source_reference, consumed_at) VALUES (10,'payment_order','99',CURRENT_TIMESTAMP)`)
+	require.NoError(t, err)
+	days, groupID := 30, int64(3)
+	order := &dbent.PaymentOrder{ID: 99, UserID: 7, OrderType: payment.OrderTypeSubscription, SubscriptionDays: &days, SubscriptionGroupID: &groupID}
+	svc := &PaymentService{entClient: client}
+	plan := &RefundPlan{}
+	result := svc.prepDeduct(ctx, order, plan, false)
+	require.NotNil(t, result)
+	require.True(t, result.RequireForce)
+	require.Zero(t, plan.SubDaysToDeduct)
+	plan = &RefundPlan{}
+	require.Nil(t, svc.prepDeduct(ctx, order, plan, true))
+	require.Zero(t, plan.SubDaysToDeduct)
+	require.False(t, plan.ResetCardToVoid)
+}
+
+type countingRefundProvider struct {
+	refundProviderTestDouble
+	refunds            int
+	queries            int
+	voidedDuringRefund bool
+	inspectVoided      func() bool
+	refundErr          error
+	refundResponse     *payment.RefundResponse
+	queryResponse      *payment.RefundResponse
+}
+
+func (p *countingRefundProvider) Refund(context.Context, payment.RefundRequest) (*payment.RefundResponse, error) {
+	p.refunds++
+	if p.inspectVoided != nil {
+		p.voidedDuringRefund = p.inspectVoided()
+	}
+	if p.refundErr != nil {
+		return nil, p.refundErr
+	}
+	if p.refundResponse != nil {
+		return p.refundResponse, nil
+	}
+	return &payment.RefundResponse{Status: payment.ProviderStatusSuccess, RefundID: "rf_reset_card"}, nil
+}
+
+func (p *countingRefundProvider) QueryRefund(context.Context, payment.RefundQueryRequest) (*payment.RefundResponse, error) {
+	p.queries++
+	if p.queryResponse != nil {
+		return p.queryResponse, nil
+	}
+	return &payment.RefundResponse{Status: payment.ProviderStatusSuccess, RefundID: "rf_reset_card"}, nil
+}
+
+type resetCardRefundFixture struct {
+	client *dbent.Client
+	svc    *PaymentService
+	order  *dbent.PaymentOrder
+	cardID int64
+	plan   *RefundPlan
+}
+
+func createResetCardRefundFixture(t *testing.T, suffix, tradeNo, status string) resetCardRefundFixture {
+	t.Helper()
+	ctx := context.Background()
+	client := newPaymentConfigServiceTestClient(t)
+	user, err := client.User.Create().SetEmail(suffix + "@example.com").SetPasswordHash("hash").SetUsername(suffix).Save(ctx)
+	require.NoError(t, err)
+	inst, err := client.PaymentProviderInstance.Create().SetProviderKey(payment.TypeStripe).SetName(suffix + "-provider").SetConfig("{}").SetSupportedTypes("stripe").SetEnabled(true).SetRefundEnabled(true).Save(ctx)
+	require.NoError(t, err)
+	group, err := client.Group.Create().SetName(suffix + "-group").SetPlatform("openai").SetSubscriptionType("subscription").Save(ctx)
+	require.NoError(t, err)
+	sub, err := client.UserSubscription.Create().SetUserID(user.ID).SetGroupID(group.ID).SetStartsAt(time.Now()).SetExpiresAt(time.Now().Add(30 * 24 * time.Hour)).SetStatus(SubscriptionStatusActive).SetManualResetCredits(1).Save(ctx)
+	require.NoError(t, err)
+	days := 30
+	order, err := client.PaymentOrder.Create().
+		SetUserID(user.ID).SetUserEmail(user.Email).SetUserName(user.Username).
+		SetAmount(100).SetPayAmount(100).SetFeeRate(0).
+		SetRechargeCode("REFUND-" + suffix).SetOutTradeNo("refund_" + suffix).
+		SetPaymentType(payment.TypeStripe).SetPaymentTradeNo(tradeNo).
+		SetOrderType(payment.OrderTypeSubscription).SetStatus(status).
+		SetExpiresAt(time.Now().Add(time.Hour)).SetPaidAt(time.Now()).
+		SetClientIP("127.0.0.1").SetSrcHost("api.example.com").
+		SetProviderInstanceID(strconv.FormatInt(inst.ID, 10)).
+		SetSubscriptionGroupID(group.ID).SetSubscriptionDays(days).
+		Save(ctx)
+	require.NoError(t, err)
+	_, err = client.ExecContext(ctx, `CREATE TABLE user_subscription_reset_cards (id INTEGER PRIMARY KEY AUTOINCREMENT, user_subscription_id INTEGER NOT NULL, validity_days INTEGER NOT NULL, source_type TEXT NOT NULL, source_reference TEXT NOT NULL, consumed_at DATETIME, voided_at DATETIME)`)
+	require.NoError(t, err)
+	_, err = client.ExecContext(ctx, `INSERT INTO user_subscription_reset_cards (user_subscription_id, validity_days, source_type, source_reference) VALUES ($1,$2,'payment_order',$3)`, sub.ID, days, strconv.FormatInt(order.ID, 10))
+	require.NoError(t, err)
+	cardID := scanResetCardID(t, client, ctx, order.ID)
+	svc := &PaymentService{entClient: client, loadBalancer: &captureLoadBalancer{}}
+	return resetCardRefundFixture{
+		client: client,
+		svc:    svc,
+		order:  order,
+		cardID: cardID,
+		plan: &RefundPlan{
+			OrderID:         order.ID,
+			Order:           order,
+			RefundAmount:    100,
+			GatewayAmount:   100,
+			Reason:          "void after gateway",
+			DeductBalance:   true,
+			DeductionType:   payment.DeductionTypeSubscription,
+			ResetCardID:     cardID,
+			ResetCardToVoid: true,
+		},
+	}
+}
+
+func scanResetCardID(t *testing.T, client *dbent.Client, ctx context.Context, orderID int64) int64 {
+	t.Helper()
+	rows, err := client.QueryContext(ctx, `SELECT id FROM user_subscription_reset_cards WHERE source_reference = $1`, strconv.FormatInt(orderID, 10))
+	require.NoError(t, err)
+	defer rows.Close()
+	require.True(t, rows.Next())
+	var cardID int64
+	require.NoError(t, rows.Scan(&cardID))
+	require.NoError(t, rows.Err())
+	return cardID
+}
+
+func resetCardVoided(t *testing.T, client *dbent.Client, cardID int64) bool {
+	t.Helper()
+	rows, err := client.QueryContext(context.Background(), `SELECT voided_at IS NOT NULL FROM user_subscription_reset_cards WHERE id = $1`, cardID)
+	require.NoError(t, err)
+	defer rows.Close()
+	require.True(t, rows.Next())
+	var voided bool
+	require.NoError(t, rows.Scan(&voided))
+	require.NoError(t, rows.Err())
+	return voided
+}
+
+func TestExecuteRefundVoidsResetCardOnlyAfterGatewaySuccess(t *testing.T) {
+	fx := createResetCardRefundFixture(t, "void-after-gw", "pi_void_after_gw", OrderStatusCompleted)
+	prov := &countingRefundProvider{inspectVoided: func() bool { return resetCardVoided(t, fx.client, fx.cardID) }}
+	restore := replacePaymentProviderFactoryForTest(t, prov)
+	defer restore()
+
+	result, err := fx.svc.ExecuteRefund(context.Background(), fx.plan)
+	require.NoError(t, err)
+	require.True(t, result.Success)
+	require.Equal(t, 1, prov.refunds)
+	require.False(t, prov.voidedDuringRefund)
+	require.True(t, resetCardVoided(t, fx.client, fx.cardID))
+	require.True(t, fx.plan.ResetCardVoided)
+
+	reloaded, err := fx.client.PaymentOrder.Get(context.Background(), fx.order.ID)
+	require.NoError(t, err)
+	require.Equal(t, OrderStatusRefunded, reloaded.Status)
+	require.True(t, fx.svc.hasAuditLog(context.Background(), fx.order.ID, refundGatewaySucceededAudit))
+	require.True(t, fx.svc.hasAuditLog(context.Background(), fx.order.ID, refundResetCardVoidedAudit))
+}
+
+func TestExecuteRefundGatewayFailureLeavesResetCardAvailable(t *testing.T) {
+	fx := createResetCardRefundFixture(t, "gw-fail-card", "pi_gw_fail_card", OrderStatusCompleted)
+	prov := &countingRefundProvider{refundErr: errors.New("gateway rejected refund")}
+	restore := replacePaymentProviderFactoryForTest(t, prov)
+	defer restore()
+
+	result, err := fx.svc.ExecuteRefund(context.Background(), fx.plan)
+	require.NoError(t, err)
+	require.False(t, result.Success)
+	require.Contains(t, result.Warning, "gateway failed")
+	require.Equal(t, 1, prov.refunds)
+	require.False(t, fx.plan.ResetCardVoided)
+	require.False(t, resetCardVoided(t, fx.client, fx.cardID))
+
+	reloaded, err := fx.client.PaymentOrder.Get(context.Background(), fx.order.ID)
+	require.NoError(t, err)
+	require.Equal(t, OrderStatusCompleted, reloaded.Status)
+	require.False(t, fx.svc.hasAuditLog(context.Background(), fx.order.ID, refundGatewaySucceededAudit))
+	require.False(t, fx.svc.hasAuditLog(context.Background(), fx.order.ID, refundResetCardVoidedAudit))
+}
+
+func TestExecuteRefundRefundingReentryFinalizesWithoutSecondGatewayCall(t *testing.T) {
+	fx := createResetCardRefundFixture(t, "refunding-resume", "pi_refunding_resume", OrderStatusRefunding)
+	fx.svc.writeAuditLog(context.Background(), fx.order.ID, refundGatewaySucceededAudit, "admin", map[string]any{"status": payment.ProviderStatusSuccess})
+	prov := &countingRefundProvider{refundErr: errors.New("Refund must not be called on REFUNDING resume")}
+	restore := replacePaymentProviderFactoryForTest(t, prov)
+	defer restore()
+
+	result, err := fx.svc.ExecuteRefund(context.Background(), fx.plan)
+	require.NoError(t, err)
+	require.True(t, result.Success)
+	require.Zero(t, prov.refunds)
+	require.Zero(t, prov.queries)
+	require.True(t, resetCardVoided(t, fx.client, fx.cardID))
+
+	reloaded, err := fx.client.PaymentOrder.Get(context.Background(), fx.order.ID)
+	require.NoError(t, err)
+	require.Equal(t, OrderStatusRefunded, reloaded.Status)
+	successAudits, err := fx.client.PaymentAuditLog.Query().
+		Where(paymentauditlog.OrderIDEQ(strconv.FormatInt(fx.order.ID, 10)), paymentauditlog.ActionEQ("REFUND_SUCCESS")).
+		Count(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, 1, successAudits)
+}
+
+func TestQueryAndFinalizeRefundAcceptsRefundingAndDoesNotCreateAnotherRefund(t *testing.T) {
+	fx := createResetCardRefundFixture(t, "query-refunding", "pi_query_refunding", OrderStatusRefunding)
+	prov := &countingRefundProvider{
+		refundErr:     errors.New("Refund must not be called when querying a REFUNDING order"),
+		queryResponse: &payment.RefundResponse{Status: payment.ProviderStatusSuccess, RefundID: "rf_query"},
+	}
+	restore := replacePaymentProviderFactoryForTest(t, prov)
+	defer restore()
+
+	result, err := fx.svc.QueryAndFinalizeRefund(context.Background(), fx.order.ID)
+	require.NoError(t, err)
+	require.True(t, result.Success)
+	require.Zero(t, prov.refunds)
+	require.Equal(t, 1, prov.queries)
+	require.True(t, resetCardVoided(t, fx.client, fx.cardID))
+
+	reloaded, err := fx.client.PaymentOrder.Get(context.Background(), fx.order.ID)
+	require.NoError(t, err)
+	require.Equal(t, OrderStatusRefunded, reloaded.Status)
+}

@@ -706,6 +706,166 @@ func TestResetDailyQuota_ConcurrentOneCreditUsesIndependentTransactions(t *testi
 	require.Zero(t, got.DailyUsageUSD)
 	require.Equal(t, 30.0, got.MonthlyUsageUSD)
 }
+
+type resetCardConsumeOutcome struct {
+	validityDays int
+	err          error
+}
+
+func createConcurrentResetCardFixture(t *testing.T, validityDays ...int) (*service.SubscriptionService, int64, int64) {
+	t.Helper()
+	ctx := context.Background()
+	suffix := fmt.Sprintf("%d", time.Now().UnixNano())
+	user, err := integrationEntClient.User.Create().
+		SetEmail("reset-card-" + suffix + "@test.com").
+		SetPasswordHash("test").
+		SetStatus(service.StatusActive).
+		SetRole(service.RoleUser).
+		Save(ctx)
+	require.NoError(t, err)
+	group, err := integrationEntClient.Group.Create().
+		SetName("g-reset-card-" + suffix).
+		SetStatus(service.StatusActive).
+		Save(ctx)
+	require.NoError(t, err)
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	sub, err := integrationEntClient.UserSubscription.Create().
+		SetUserID(user.ID).
+		SetGroupID(group.ID).
+		SetStartsAt(now.Add(-time.Hour)).
+		SetExpiresAt(now.Add(time.Hour)).
+		SetStatus(service.SubscriptionStatusActive).
+		SetAssignedAt(now).
+		SetNotes("").
+		SetDailyUsageUsd(10).
+		SetWeeklyUsageUsd(20).
+		SetMonthlyUsageUsd(30).
+		Save(ctx)
+	require.NoError(t, err)
+
+	repo := NewUserSubscriptionRepository(integrationEntClient)
+	cardRepo := repo.(service.UserSubscriptionResetCardRepository)
+	for i, days := range validityDays {
+		granted, grantErr := cardRepo.GrantResetCard(ctx, sub.ID, days, service.PurchaseSource{
+			Type:      service.PurchaseSourcePayment,
+			Reference: fmt.Sprintf("%s-%d", suffix, i),
+		})
+		require.NoError(t, grantErr)
+		require.True(t, granted)
+	}
+
+	svc := service.NewSubscriptionService(nil, repo, nil, integrationEntClient, nil)
+	t.Cleanup(func() {
+		svc.Stop()
+		_, _ = integrationDB.ExecContext(context.Background(), "DELETE FROM user_subscription_reset_cards WHERE user_subscription_id = $1", sub.ID)
+		_, _ = integrationDB.ExecContext(context.Background(), "DELETE FROM user_subscriptions WHERE id = $1", sub.ID)
+		_, _ = integrationDB.ExecContext(context.Background(), "DELETE FROM groups WHERE id = $1", group.ID)
+		_, _ = integrationDB.ExecContext(context.Background(), "DELETE FROM users WHERE id = $1", user.ID)
+	})
+	return svc, user.ID, sub.ID
+}
+
+func runConcurrentResetCardConsumes(t *testing.T, svc *service.SubscriptionService, inputs ...service.ConsumeResetCardInput) []resetCardConsumeOutcome {
+	t.Helper()
+	ctx := context.Background()
+	blocker, err := integrationDB.BeginTx(ctx, nil)
+	require.NoError(t, err)
+	var lockedID int64
+	require.NoError(t, blocker.QueryRowContext(ctx, "SELECT id FROM user_subscriptions WHERE id = $1 FOR UPDATE", inputs[0].SubscriptionID).Scan(&lockedID))
+
+	outcomes := make(chan resetCardConsumeOutcome, len(inputs))
+	var wg sync.WaitGroup
+	for _, input := range inputs {
+		wg.Add(1)
+		go func(input service.ConsumeResetCardInput) {
+			defer wg.Done()
+			_, consumeErr := svc.ConsumeResetCard(context.Background(), input)
+			outcomes <- resetCardConsumeOutcome{validityDays: input.ValidityDays, err: consumeErr}
+		}(input)
+	}
+	require.Eventually(t, func() bool {
+		var waiters int
+		queryErr := integrationDB.QueryRowContext(ctx, `
+			SELECT COUNT(*) FROM pg_stat_activity
+			WHERE datname = current_database()
+			  AND wait_event_type = 'Lock'
+			  AND query LIKE '%user_subscriptions%'`).Scan(&waiters)
+		return queryErr == nil && waiters >= len(inputs)
+	}, 5*time.Second, 20*time.Millisecond, "both consumers should be waiting on the subscription row lock")
+	require.NoError(t, blocker.Commit())
+
+	wg.Wait()
+	close(outcomes)
+	result := make([]resetCardConsumeOutcome, 0, len(inputs))
+	for outcome := range outcomes {
+		result = append(result, outcome)
+	}
+	return result
+}
+
+func TestConsumeResetCard_ConcurrentSameKeyConsumesOneCardAndBothSucceed(t *testing.T) {
+	svc, userID, subscriptionID := createConcurrentResetCardFixture(t, 7)
+	input := service.ConsumeResetCardInput{UserID: userID, SubscriptionID: subscriptionID, ValidityDays: 7, IdempotencyKey: "same-reset-card-key"}
+
+	outcomes := runConcurrentResetCardConsumes(t, svc, input, input)
+
+	for _, outcome := range outcomes {
+		require.NoError(t, outcome.err)
+	}
+	var consumed int
+	require.NoError(t, integrationDB.QueryRowContext(context.Background(),
+		"SELECT COUNT(*) FROM user_subscription_reset_cards WHERE user_subscription_id = $1 AND consumed_at IS NOT NULL",
+		subscriptionID).Scan(&consumed))
+	require.Equal(t, 1, consumed)
+}
+
+func TestConsumeResetCard_ConcurrentSameKeyDifferentValidityConflicts(t *testing.T) {
+	svc, userID, subscriptionID := createConcurrentResetCardFixture(t, 7, 30)
+
+	outcomes := runConcurrentResetCardConsumes(t, svc,
+		service.ConsumeResetCardInput{UserID: userID, SubscriptionID: subscriptionID, ValidityDays: 7, IdempotencyKey: "conflicting-reset-card-key"},
+		service.ConsumeResetCardInput{UserID: userID, SubscriptionID: subscriptionID, ValidityDays: 30, IdempotencyKey: "conflicting-reset-card-key"},
+	)
+
+	var successes, conflicts int
+	for _, outcome := range outcomes {
+		if outcome.err == nil {
+			successes++
+		} else {
+			require.ErrorIs(t, outcome.err, service.ErrResetCardIdempotencyConflict)
+			conflicts++
+		}
+	}
+	require.Equal(t, 1, successes)
+	require.Equal(t, 1, conflicts)
+	var consumed int
+	require.NoError(t, integrationDB.QueryRowContext(context.Background(),
+		"SELECT COUNT(*) FROM user_subscription_reset_cards WHERE user_subscription_id = $1 AND consumed_at IS NOT NULL",
+		subscriptionID).Scan(&consumed))
+	require.Equal(t, 1, consumed)
+}
+
+func TestConsumeResetCard_ConcurrentDifferentKeysSingleCardHasOneSuccess(t *testing.T) {
+	svc, userID, subscriptionID := createConcurrentResetCardFixture(t, 7)
+
+	outcomes := runConcurrentResetCardConsumes(t, svc,
+		service.ConsumeResetCardInput{UserID: userID, SubscriptionID: subscriptionID, ValidityDays: 7, IdempotencyKey: "first-reset-card-key"},
+		service.ConsumeResetCardInput{UserID: userID, SubscriptionID: subscriptionID, ValidityDays: 7, IdempotencyKey: "second-reset-card-key"},
+	)
+
+	var successes, missing int
+	for _, outcome := range outcomes {
+		if outcome.err == nil {
+			successes++
+		} else {
+			require.ErrorIs(t, outcome.err, service.ErrResetCardNotFound)
+			missing++
+		}
+	}
+	require.Equal(t, 1, successes)
+	require.Equal(t, 1, missing)
+}
+
 func (s *UserSubscriptionRepoSuite) TestResetDailyQuota_ExpiredMonthlyRejectedAndExpiredDailyRestarted() {
 	user := s.mustCreateUser("manual-reset-expiry@test.com", service.RoleUser)
 	group := s.mustCreateGroup("g-manual-reset-expiry")
