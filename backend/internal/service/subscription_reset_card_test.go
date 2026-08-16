@@ -221,6 +221,28 @@ func TestExpiredPurchaseReopensTermWithoutGrantingCard(t *testing.T) {
 	require.Zero(t, sub.ManualResetCredits)
 }
 
+func TestExpiredStatusWithFutureExpiryRenewsWithoutGrantingCard(t *testing.T) {
+	now := time.Date(2026, 8, 16, 2, 0, 0, 0, time.UTC)
+	repo := &resetCardRepoStub{subscriptionUserSubRepoStub: newSubscriptionUserSubRepoStub()}
+	repo.seed(&UserSubscription{
+		ID: 1, UserID: 2, GroupID: 3,
+		StartsAt: now.AddDate(0, 0, -10), ExpiresAt: now.AddDate(0, 0, 50),
+		Status: SubscriptionStatusExpired, DailyUsageUSD: 9,
+	})
+	svc := NewSubscriptionService(&subscriptionGroupRepoStub{group: &Group{ID: 3, SubscriptionType: SubscriptionTypeSubscription}}, repo, nil, nil, nil)
+	svc.now = func() time.Time { return now }
+
+	sub, reused, err := svc.AssignOrExtendSubscription(context.Background(), &AssignSubscriptionInput{UserID: 2, GroupID: 3, ValidityDays: 30})
+
+	require.NoError(t, err)
+	require.True(t, reused)
+	require.Equal(t, SubscriptionStatusActive, sub.Status)
+	require.Equal(t, now, sub.StartsAt)
+	require.Equal(t, now.AddDate(0, 0, 30), sub.ExpiresAt)
+	require.Zero(t, sub.DailyUsageUSD)
+	require.Empty(t, repo.cards)
+}
+
 func TestConsumeResetCardSelectsRequestedValidity(t *testing.T) {
 	now := time.Date(2026, 8, 16, 2, 0, 0, 0, time.UTC)
 	repo := &resetCardRepoStub{subscriptionUserSubRepoStub: newSubscriptionUserSubRepoStub(), cards: []UserSubscriptionResetCard{

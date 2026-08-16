@@ -320,11 +320,8 @@ func (s *SubscriptionService) updateExistingSubscriptionTerm(
 		if s.now != nil {
 			now = s.now()
 		}
-		isExpired := !existingSub.ExpiresAt.After(now)
-		if assignmentSemantics {
-			isExpired = existingSub.Status == SubscriptionStatusExpired ||
-				(existingSub.Status != SubscriptionStatusSuspended && !existingSub.ExpiresAt.After(now))
-		}
+		// 状态已过期也按过期处理：批量分配可能遇到 status=expired 但 expires_at 仍在未来的脏数据，不能发卡。
+		isExpired := existingSub.Status == SubscriptionStatusExpired || !existingSub.ExpiresAt.After(now)
 		if assignmentSemantics && strings.TrimSpace(existingSub.Notes) == strings.TrimSpace(notes) {
 			notes = ""
 		}
