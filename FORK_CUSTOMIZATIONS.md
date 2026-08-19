@@ -1,7 +1,7 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.1.177**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.1.177**（官方无独立 v0.1.174 tag），并保留本 Fork
+当前整合版本为 **v0.1.178**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.1.178**（官方无独立 v0.1.174 tag），并保留本 Fork
 的全部定制能力。
 
 ## 必须保留的模块
@@ -27,6 +27,13 @@
 - 用户 `/subscriptions` 按期限返回并展示卡数量和“永久有效”；`manual_reset_credits` 保留为发卡加一、消费减一的兼容镜像，不承载期限事实。
 - 高危同步范围：`subscription_service.go`、`user_subscription{,_port}.go`、`user_subscription_repo.go`、`payment_fulfillment.go`、`redeem_service.go`、订阅 handler/routes/DTO、迁移 `224`/`225`、`SubscriptionsView.vue`、订阅 API/types/i18n。
 
+## v0.1.178 整合内容
+
+- 合入 Kimi、智谱、DeepSeek 多协议供应商支持，包含分组、调度、计费、count_tokens、配额/余额监控与前端管理能力。
+- 合入渠道监控配额快照模式、渠道模型分时倍率、OpenAI Team 联动熔断、OpenAI 账号批量设置、Grok 聚合用量与 Ollama 用量查询。
+- 合入 Codex/Gemini/Claude/WS/Ops/i18n 等集中修复；渠道监控配额公开开关默认关闭。
+- 官方迁移 `224_user_platform_quotas_add_cn_providers.sql`、`225_backfill_codex_fingerprint_seed.sql`、`225_channel_model_time_pricing.sql`、`226_channel_monitor_quota_mode.sql` 与 Fork 已部署的订阅重置卡 `224_create_user_subscription_reset_cards.sql`、`225_backfill_user_subscription_reset_cards.sql` 按完整文件名并存，禁止重命名既有迁移。
+- Kiro、XorPay、Access Ban、用户端 Kiro→Claude、提示词安全审计、订阅重置卡、Ops、VersionBadge、GLM 套餐、支付体验及 UI 品牌等全部定制继续保留。
 ## v0.1.177 整合内容
 
 - 合入迁移 `222_group_usage_daily_rollups.sql` / `223_group_usage_rollup_timezone.sql`，为分组用量建立日汇总并跟随服务端配置时区；分组页与仪表盘统计提供 `today` / `yesterday` / `total`，避免大数据量下重复扫描明细。

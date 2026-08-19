@@ -80,6 +80,28 @@ func TestAPIKeyAuthSnapshotProfitControlRoundtrip(t *testing.T) {
 }
 
 // 旧版本快照（v16 及更早，无利润字段保真保证）必须被淘汰回源，不得复用。
+func TestAPIKeyAuthSnapshotKiroPolicyRoundtrip(t *testing.T) {
+	svc := &APIKeyService{}
+	apiKey := profitAuthTestAPIKey()
+	apiKey.Group.Platform = PlatformKiro
+	apiKey.Group.KiroCacheEmulationEnabled = true
+	apiKey.Group.KiroAutoStickyEnabled = true
+	apiKey.Group.KiroStickySessionTTLSeconds = 7200
+	apiKey.Group.KiroCacheEmulationRatio = 0.6
+	apiKey.Group.KiroEndpointMode = KiroEndpointModeKRS
+
+	snapshot := svc.snapshotFromAPIKey(context.Background(), apiKey)
+	require.NotNil(t, snapshot.Group)
+
+	materialized := svc.snapshotToAPIKey(apiKey.Key, snapshot)
+	require.NotNil(t, materialized.Group)
+	require.True(t, materialized.Group.KiroCacheEmulationEnabled)
+	require.True(t, materialized.Group.KiroAutoStickyEnabled)
+	require.Equal(t, 7200, materialized.Group.KiroStickySessionTTLSeconds)
+	require.InDelta(t, 0.6, materialized.Group.KiroCacheEmulationRatio, 1e-12)
+	require.Equal(t, KiroEndpointModeKRS, materialized.Group.KiroEndpointMode)
+}
+
 func TestAPIKeyAuthSnapshotOldVersionEvicted(t *testing.T) {
 	svc := &APIKeyService{}
 	snapshot := svc.snapshotFromAPIKey(context.Background(), profitAuthTestAPIKey())

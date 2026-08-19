@@ -14,8 +14,8 @@ Cursor 场景下还会加载 [`.cursor/rules/sub2api-fork.mdc`](.cursor/rules/su
 | 项 | 值 |
 |----|-----|
 | 上游官方 | https://github.com/Wei-Shaw/sub2api |
-| 已同步基线 | tag **v0.1.177**（官方无 v0.1.174 tag） |
-| 当前 VERSION | `backend/cmd/server/VERSION` = **0.1.177** |
+| 已同步基线 | tag **v0.1.178**（官方无 v0.1.174 tag） |
+| 当前 VERSION | `backend/cmd/server/VERSION` = **0.1.178** |
 | 完整差异文档 | **`docs/FORK_VS_UPSTREAM.md`**（相对历史基线；含 Fork 扩展见文档 §8.2 / §12；快捷清单见 `FORK_CUSTOMIZATIONS.md`） |
 | 快捷索引 | `FORK_CUSTOMIZATIONS.md` |
 
@@ -152,6 +152,7 @@ Access Ban 迁移顺序：`159` 建表 → `160` 扩展 rule_type / ua_pattern�
 - v0.1.173：Grok SSO/refresh/跨实例会话，媒体 Voice、搜索计费与调度，渠道监控 V2，邮箱域名限量注册，以及 Gemini/OpenAI 集中修复；包含迁移 `194`–`206`、`217`–`220` 和安全默认变化，并继续保留 Kiro/XorPay/Access Ban、Kiro→Claude、VersionBadge、GLM 与支付定制
 - v0.1.175：Codex OAuth 设备指纹收敛、按上游响应模型计费、大文件备份分卷上传/恢复，以及 OpenAI/Grok/Gemini/WS/审计等集中修复；官方无 v0.1.174 tag。官方 tag 内 VERSION 仍为 0.1.173，本 Fork 按 release tag 设为 0.1.175，并继续保留全部 Fork 定制
 - v0.1.176：Grok 4.6 / JWT 订阅档位、分组逐模型定价（`model_pricing` + `long_context_pricing_enabled`）、原生 `POST /x_search`，以及备份 leader 锁、渠道缓存、定价冲突、Responses 探测、Realtime 音频计费等修复；新增迁移 `221`。官方 tag 内 VERSION 仍为 0.1.175，本 Fork 按 release tag 设为 0.1.176。Gateway `/x_search` 保留 Access Ban；分组 `oneof` 仍含 `kiro`
+- v0.1.178：新增 Kimi/智谱/DeepSeek 多协议供应商、渠道监控配额模式、渠道模型分时倍率、OpenAI Team 联动熔断和账号批量设置，并集中修复 Codex/Gemini/Claude/Ops；官方迁移 `224_user_platform_quotas_add_cn_providers`、两个 `225_*` 与 `226_channel_monitor_quota_mode` 与 Fork 订阅重置卡 `224`/`225` 按完整文件名并存；全部 Fork 定制继续保留
 - v0.1.177：迁移 `222`/`223` 引入分组用量日汇总并跟随服务端配置时区，分组统计提供 `today` / `yesterday` / `total`；Codex 适配 remote compaction v2 与会话级 beta header，回传 `x-codex-turn-state` 并防止跨账号回显，指纹收敛默认改为 opt-in；修复 Grok 长上下文计费、带版本媒体模型识别和账号页自动刷新偏好。官方 tag 内 VERSION 是 0.1.176，本 Fork 按 release tag 设为 0.1.177，并完整保留 Kiro/XorPay/Access Ban、提示词审计、套餐续期、Ops、UI 品牌等全部定制
 
 ---
@@ -173,7 +174,7 @@ Access Ban 迁移顺序：`159` 建表 → `160` 扩展 rule_type / ua_pattern�
 
 见 `docs/FORK_VS_UPSTREAM.md` §14。原则：**Kiro + XorPay + Access Ban + 提示词审计 + 套餐续期 + Ops + UI 品牌等全部定制保留**。
 
-`upstream/main` 可能领先于 v0.1.177；同步时以 release tag 为基线，不带入 tag 后的 `main` 内容，并逐文件保留 Fork 模块。
+`upstream/main` 可能领先于 v0.1.178；同步时以 release tag 为基线，不带入 tag 后的 `main` 内容，并逐文件保留 Fork 模块。
 
 ---
 

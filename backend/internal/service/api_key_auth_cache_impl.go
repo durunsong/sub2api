@@ -15,7 +15,6 @@ import (
 )
 
 const apiKeyAuthSnapshotVersion = 21 // v21: include Kiro policy plus search/audio/video model pricing and profit control fields
-
 type apiKeyAuthCacheConfig struct {
 	l1Size        int
 	l1TTL         time.Duration
@@ -412,6 +411,8 @@ func (s *APIKeyService) snapshotFromAPIKey(ctx context.Context, apiKey *APIKey) 
 			AudioRealtimePricePerMin:        groupForSnapshot.AudioRealtimePricePerMin,
 			AudioTTSPricePerMillionChars:    groupForSnapshot.AudioTTSPricePerMillionChars,
 			AudioSTTPricePerHour:            groupForSnapshot.AudioSTTPricePerHour,
+			LongContextPricingEnabled:       groupForSnapshot.LongContextPricingEnabled,
+			ModelPricing:                    groupForSnapshot.ModelPricing,
 			ClaudeCodeOnly:                  groupForSnapshot.ClaudeCodeOnly,
 			FallbackGroupID:                 groupForSnapshot.FallbackGroupID,
 			FallbackGroupIDOnInvalidRequest: groupForSnapshot.FallbackGroupIDOnInvalidRequest,
@@ -425,11 +426,11 @@ func (s *APIKeyService) snapshotFromAPIKey(ctx context.Context, apiKey *APIKey) 
 			MessagesDispatchModelConfig:     groupForSnapshot.MessagesDispatchModelConfig,
 			ModelsListConfig:                groupForSnapshot.ModelsListConfig,
 			RPMLimit:                        groupForSnapshot.RPMLimit,
-			KiroCacheEmulationEnabled:       groupForSnapshot.EffectiveKiroCacheEmulationEnabled(),
-			KiroAutoStickyEnabled:           groupForSnapshot.EffectiveKiroAutoStickyEnabled(),
-			KiroStickySessionTTLSeconds:     groupForSnapshot.EffectiveKiroStickySessionTTLSeconds(),
-			KiroCacheEmulationRatio:         groupForSnapshot.EffectiveKiroCacheEmulationRatio(),
-			KiroEndpointMode:                groupForSnapshot.EffectiveKiroEndpointMode(),
+			KiroCacheEmulationEnabled:       groupForSnapshot.KiroCacheEmulationEnabled,
+			KiroAutoStickyEnabled:           groupForSnapshot.KiroAutoStickyEnabled,
+			KiroStickySessionTTLSeconds:     groupForSnapshot.KiroStickySessionTTLSeconds,
+			KiroCacheEmulationRatio:         groupForSnapshot.KiroCacheEmulationRatio,
+			KiroEndpointMode:                groupForSnapshot.KiroEndpointMode,
 			MaxReasoningEffort:              groupForSnapshot.MaxReasoningEffort,
 			ReasoningEffortMappings:         groupForSnapshot.ReasoningEffortMappings,
 			PeakRateEnabled:                 groupForSnapshot.PeakRateEnabled,
@@ -512,6 +513,8 @@ func (s *APIKeyService) snapshotToAPIKey(key string, snapshot *APIKeyAuthSnapsho
 			AudioRealtimePricePerMin:        snapshot.Group.AudioRealtimePricePerMin,
 			AudioTTSPricePerMillionChars:    snapshot.Group.AudioTTSPricePerMillionChars,
 			AudioSTTPricePerHour:            snapshot.Group.AudioSTTPricePerHour,
+			LongContextPricingEnabled:       snapshot.Group.LongContextPricingEnabled,
+			ModelPricing:                    snapshot.Group.ModelPricing,
 			ClaudeCodeOnly:                  snapshot.Group.ClaudeCodeOnly,
 			FallbackGroupID:                 snapshot.Group.FallbackGroupID,
 			FallbackGroupIDOnInvalidRequest: snapshot.Group.FallbackGroupIDOnInvalidRequest,
