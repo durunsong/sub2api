@@ -78,5 +78,7 @@ jobs:
         with:
           # Pin the patch version so the action skips the remote version-mapping lookup.
           version: v2.9.0
+          # Config is validated locally; Action verification fetches a remote schema and can time out.
+          verify: false
           args: --timeout=30m
           working-directory: backend
