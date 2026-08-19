@@ -16,7 +16,7 @@ import (
 //   - 非激活账号完全跳过。
 
 type fakeCNQuotaProber struct {
-	mu sync.Mutex
+	mu     sync.Mutex
 	probed []int64
 }
 
