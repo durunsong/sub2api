@@ -1,7 +1,7 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.1.178**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.1.178**（官方无独立 v0.1.174 tag），并保留本 Fork
+当前整合版本为 **v0.1.179**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.1.179**（官方无独立 v0.1.174 tag），并保留本 Fork
 的全部定制能力。
 
 ## 必须保留的模块
@@ -26,6 +26,14 @@
 - 消费指定期限卡时放弃原剩余时间，清零日/周/月 USD 与 token、重置三个窗口，并从点击时开始新期限；旧 `reset-daily` 兼容映射为 1 天卡。
 - 用户 `/subscriptions` 按期限返回并展示卡数量和“永久有效”；`manual_reset_credits` 保留为发卡加一、消费减一的兼容镜像，不承载期限事实。
 - 高危同步范围：`subscription_service.go`、`user_subscription{,_port}.go`、`user_subscription_repo.go`、`payment_fulfillment.go`、`redeem_service.go`、订阅 handler/routes/DTO、迁移 `224`/`225`、`SubscriptionsView.vue`、订阅 API/types/i18n。
+
+## v0.1.179 整合内容
+
+- 合入国产供应商自适应 API 协议、Composite Codex/Kimi/智谱/DeepSeek 路由、请求头覆写和 `/v1/responses/input_tokens`。
+- 合入渠道 fast/flex 与上下文区间倍率、Anthropic Fast 计费、可配置代理探测目标，以及用量统计单次扫描聚合与索引优化。
+- 新增迁移 `226_add_usage_log_effective_model_indexes_notx.sql`、`227_composite_routes_add_cn_providers.sql`、`228_channel_pricing_multipliers.sql`。
+- 上游长上下文计费门控由“分组且账号开启”改为“任一开启”，升级后需核对存量分组计费配置。
+- Kiro 继续进入共享平台目录、Composite 合法目标、渠道匹配和调度快照；XorPay、Access Ban、Kiro→Claude、提示词审计、订阅重置卡、Ops、VersionBadge、GLM 套餐、支付体验和 UI 品牌全部保留。
 
 ## v0.1.178 整合内容
 

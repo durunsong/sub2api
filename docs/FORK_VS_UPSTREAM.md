@@ -2,10 +2,10 @@
 
 > **上游官方仓库**：[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api)
 > **本 Fork 远程**：`origin` → `durunsong/sub2api`（中转/部署用）
-> **对比基准**：官方 tag **`v0.1.178`**（2026-08-15；官方无 v0.1.174 tag）
-> **本 Fork 当前版本**：`backend/cmd/server/VERSION` = **0.1.178**
-> **统计**：历史相对 v0.1.164 的大盘差异见下文；v0.1.165–v0.1.178 增量以根目录 `FORK_CUSTOMIZATIONS.md` 为准
-> **当前工作区**：已合入官方 v0.1.177，并保留 Kiro / XorPay / Access Ban / 提示词审计 / 套餐续期 / Ops / UI 品牌等全部定制
+> **对比基准**：官方 tag **`v0.1.179`**（2026-08-20；官方无 v0.1.174 tag）
+> **本 Fork 当前版本**：`backend/cmd/server/VERSION` = **0.1.179**
+> **统计**：历史相对 v0.1.164 的大盘差异见下文；v0.1.165–v0.1.179 增量以根目录 `FORK_CUSTOMIZATIONS.md` 为准
+> **当前工作区**：已合入官方 v0.1.179，并保留 Kiro / XorPay / Access Ban / 提示词审计 / 套餐续期 / Ops / UI 品牌等全部定制
 > **维护**：新增 Fork 定制后，请同步更新本文与根目录 `AGENTS.md` 摘要。
 
 ---
@@ -20,7 +20,7 @@
 | **`AGENTS.md`**（项目根） | AI 协作**强制摘要**与禁区，改代码前必读 |
 | **`FORK_CUSTOMIZATIONS.md`**（项目根） | 历史清单，已收敛到本文；保留作快捷索引 |
 
-**注意**：本 Fork 已同步官方至 **v0.1.178**，但 **`upstream/main` 仍可能领先**。与官方同步时以目标 release **tag** 为准，不带入 tag 后的 `main` 内容；merge `main` 前务必先读本文 Fork 定制章节，禁止 blindly 采用上游覆盖 Kiro / XorPay / Access Ban 等模块。
+**注意**：本 Fork 已同步官方至 **v0.1.179**，但 **`upstream/main` 仍可能领先**。与官方同步时以目标 release **tag** 为准，不带入 tag 后的 `main` 内容；merge `main` 前务必先读本文 Fork 定制章节，禁止 blindly 采用上游覆盖 Kiro / XorPay / Access Ban 等模块。
 
 ---
 
@@ -45,6 +45,7 @@
 
 **以下能力已在官方 v0.1.142+ 中，本 Fork 通过同步拥有，不算 Fork 独有开发**（合并时保留了 Kiro/XorPay 定制）：
 
+- v0.1.179 官方能力：国产供应商自适应 API 协议、Composite Codex/Kimi/智谱/DeepSeek 路由、渠道 fast/flex 与上下文区间倍率、Anthropic Fast 计费、可配置代理探测、`/v1/responses/input_tokens` 和用量聚合优化；新增迁移 `226_add_usage_log_effective_model_indexes_notx.sql`、`227_composite_routes_add_cn_providers.sql`、`228_channel_pricing_multipliers.sql`。长上下文计费门控由“分组且账号开启”改为“任一开启”；本 Fork 将 Kiro 合并进共享平台目录、Composite 与调度快照并继续保留全部定制。
 - 用户端用量分析与管理员端对齐（`UsageView` 重构、`request_type` 筛选等）
 - 订阅支付金额显示修复
 - `prefer_soonest_reset` 账号调度可选策略
@@ -854,4 +855,4 @@ deploy/docker-compose.yml
 
 ---
 
-*最后更新：2026-08-19 · 基准：官方 v0.1.178 · 增量清单见 `FORK_CUSTOMIZATIONS.md` · 工作区：`git status --short`*
+*最后更新：2026-08-22 · 基准：官方 v0.1.179 · 增量清单见 `FORK_CUSTOMIZATIONS.md` · 工作区：`git status --short`*
