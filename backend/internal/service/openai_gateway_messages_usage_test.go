@@ -38,6 +38,7 @@ func TestHandleAnthropicStreamingResponseMergesKiroCredits(t *testing.T) {
 
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
 	resp := &http.Response{
 		Header: http.Header{"x-request-id": []string{"rid_messages_stream_kiro_credits"}},
 		Body: io.NopCloser(strings.NewReader(strings.Join([]string{
@@ -60,4 +61,27 @@ func TestHandleAnthropicStreamingResponseMergesKiroCredits(t *testing.T) {
 	require.InDelta(t, 0.41, result.Usage.KiroCredits, 0.000001)
 	require.Contains(t, rec.Body.String(), `message_stop`)
 	require.NotContains(t, rec.Body.String(), `_sub2api_kiro_credits`)
+}
+
+func TestReadOpenAICompatBufferedTerminalMergesKiroCredits(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
+	resp := &http.Response{
+		Body: io.NopCloser(strings.NewReader(strings.Join([]string{
+			`data: {"type":"response.completed","response":{"id":"resp_kiro","object":"response","model":"gpt-5.6-terra","status":"completed","output":[],"usage":{"input_tokens":31,"output_tokens":7,"total_tokens":38,"input_tokens_details":{"cached_tokens":5},"_sub2api_kiro_credits":0.41}}}`,
+			``,
+		}, "\n"))),
+	}
+
+	svc := &OpenAIGatewayService{}
+	finalResponse, usage, _, err := svc.readOpenAICompatBufferedTerminal(resp, c, "test buffered", "rid_buffered_kiro_credits")
+	require.NoError(t, err)
+	require.NotNil(t, finalResponse)
+	require.Equal(t, 31, usage.InputTokens)
+	require.Equal(t, 7, usage.OutputTokens)
+	require.Equal(t, 5, usage.CacheReadInputTokens)
+	require.InDelta(t, 0.41, usage.KiroCredits, 0.000001)
 }

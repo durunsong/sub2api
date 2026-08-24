@@ -14,6 +14,9 @@ backend/migrations/*.sql text eol=lf
 # Shell 脚本
 *.sh text eol=lf
 
+# Shell tests parse the deployment environment example directly.
+deploy/.env.example text eol=lf
+
 # YAML/YML 配置文件
 *.yaml text eol=lf
 *.yml text eol=lf

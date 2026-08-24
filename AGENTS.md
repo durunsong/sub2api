@@ -14,8 +14,8 @@ Cursor 场景下还会加载 [`.cursor/rules/sub2api-fork.mdc`](.cursor/rules/su
 | 项 | 值 |
 |----|-----|
 | 上游官方 | https://github.com/Wei-Shaw/sub2api |
-| 已同步基线 | tag **v0.1.179**（官方无 v0.1.174 tag） |
-| 当前 VERSION | `backend/cmd/server/VERSION` = **0.1.179** |
+| 已同步基线 | tag **v0.1.180**（官方无 v0.1.174 tag） |
+| 当前 VERSION | `backend/cmd/server/VERSION` = **0.1.180** |
 | 完整差异文档 | **`docs/FORK_VS_UPSTREAM.md`**（相对历史基线；含 Fork 扩展见文档 §8.2 / §12；快捷清单见 `FORK_CUSTOMIZATIONS.md`） |
 | 快捷索引 | `FORK_CUSTOMIZATIONS.md` |
 
@@ -153,6 +153,7 @@ Access Ban 迁移顺序：`159` 建表 → `160` 扩展 rule_type / ua_pattern�
 - v0.1.175：Codex OAuth 设备指纹收敛、按上游响应模型计费、大文件备份分卷上传/恢复，以及 OpenAI/Grok/Gemini/WS/审计等集中修复；官方无 v0.1.174 tag。官方 tag 内 VERSION 仍为 0.1.173，本 Fork 按 release tag 设为 0.1.175，并继续保留全部 Fork 定制
 - v0.1.176：Grok 4.6 / JWT 订阅档位、分组逐模型定价（`model_pricing` + `long_context_pricing_enabled`）、原生 `POST /x_search`，以及备份 leader 锁、渠道缓存、定价冲突、Responses 探测、Realtime 音频计费等修复；新增迁移 `221`。官方 tag 内 VERSION 仍为 0.1.175，本 Fork 按 release tag 设为 0.1.176。Gateway `/x_search` 保留 Access Ban；分组 `oneof` 仍含 `kiro`
 - v0.1.179：国产供应商自适应 API 协议、Composite 支持 Codex/Kimi/智谱/DeepSeek、渠道服务层级/上下文区间倍率、可配置代理探测目标、`/v1/responses/input_tokens` 与用量聚合优化；新增迁移 `226_add_usage_log_effective_model_indexes_notx`、`227_composite_routes_add_cn_providers`、`228_channel_pricing_multipliers`；长上下文计费门控改为分组或账号任一开启即生效；Fork 额外将 Kiro 保留在全部共享平台目录、Composite 路由/定价与调度快照中
+- v0.1.180：OpenAI 重置卡按用量阈值自动使用、Fast mode `service_tier` 全链路计费、模型列表响应读取上限、模型广场阶梯/分时定价、Ops 错误返回列表和实验性 OAuth 出站传输插件；新增迁移 `229_plugins` / `230_plugin_artifacts`；Fork 继续保留 Kiro 在共享平台目录与 Wire 注入中的位置，并保留 XorPay、Access Ban、订阅重置卡与 UI 定制
 - v0.1.178：新增 Kimi/智谱/DeepSeek 多协议供应商、渠道监控配额模式、渠道模型分时倍率、OpenAI Team 联动熔断和账号批量设置，并集中修复 Codex/Gemini/Claude/Ops；官方迁移 `224_user_platform_quotas_add_cn_providers`、两个 `225_*` 与 `226_channel_monitor_quota_mode` 与 Fork 订阅重置卡 `224`/`225` 按完整文件名并存；全部 Fork 定制继续保留
 - v0.1.177：迁移 `222`/`223` 引入分组用量日汇总并跟随服务端配置时区，分组统计提供 `today` / `yesterday` / `total`；Codex 适配 remote compaction v2 与会话级 beta header，回传 `x-codex-turn-state` 并防止跨账号回显，指纹收敛默认改为 opt-in；修复 Grok 长上下文计费、带版本媒体模型识别和账号页自动刷新偏好。官方 tag 内 VERSION 是 0.1.176，本 Fork 按 release tag 设为 0.1.177，并完整保留 Kiro/XorPay/Access Ban、提示词审计、套餐续期、Ops、UI 品牌等全部定制
 
@@ -175,7 +176,7 @@ Access Ban 迁移顺序：`159` 建表 → `160` 扩展 rule_type / ua_pattern�
 
 见 `docs/FORK_VS_UPSTREAM.md` §14。原则：**Kiro + XorPay + Access Ban + 提示词审计 + 套餐续期 + Ops + UI 品牌等全部定制保留**。
 
-`upstream/main` 可能领先于 v0.1.179；同步时以 release tag 为基线，不带入 tag 后的 `main` 内容，并逐文件保留 Fork 模块。
+`upstream/main` 可能领先于 v0.1.180；同步时以 release tag 为基线，不带入 tag 后的 `main` 内容，并逐文件保留 Fork 模块。
 
 ---
 

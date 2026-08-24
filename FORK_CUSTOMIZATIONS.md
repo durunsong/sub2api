@@ -1,7 +1,7 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.1.179**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.1.179**（官方无独立 v0.1.174 tag），并保留本 Fork
+当前整合版本为 **v0.1.180**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.1.180**（官方无独立 v0.1.174 tag），并保留本 Fork
 的全部定制能力。
 
 ## 必须保留的模块
@@ -26,6 +26,13 @@
 - 消费指定期限卡时放弃原剩余时间，清零日/周/月 USD 与 token、重置三个窗口，并从点击时开始新期限；旧 `reset-daily` 兼容映射为 1 天卡。
 - 用户 `/subscriptions` 按期限返回并展示卡数量和“永久有效”；`manual_reset_credits` 保留为发卡加一、消费减一的兼容镜像，不承载期限事实。
 - 高危同步范围：`subscription_service.go`、`user_subscription{,_port}.go`、`user_subscription_repo.go`、`payment_fulfillment.go`、`redeem_service.go`、订阅 handler/routes/DTO、迁移 `224`/`225`、`SubscriptionsView.vue`、订阅 API/types/i18n。
+
+## v0.1.180 整合内容
+
+- 合入 OpenAI 重置卡按用量阈值自动使用、Responses/Chat/WS Fast mode `service_tier` 全链路传递与按上游实际档位计费。
+- 合入模型列表响应读取上限、模型广场上下文阶梯/渠道分时定价、Ops 错误详情返回列表，以及实验性 OAuth 出站传输插件。
+- 新增迁移 `229_plugins.sql`、`230_plugin_artifacts.sql`；Wire 同时保留 Kiro/Kiro OAuth/IP Ban，并接入插件管理器与 OpenAI 自动重置服务。
+- Kiro 继续进入共享平台目录、Composite 合法目标、渠道匹配和调度快照；Kiro 直连/中转账号表单语义、XorPay、Access Ban、Kiro→Claude、提示词审计、订阅重置卡、Ops、VersionBadge、GLM 套餐、支付体验和 UI 品牌全部保留。
 
 ## v0.1.179 整合内容
 
@@ -167,4 +174,4 @@
 - `wire.go`、`wire_gen.go`、网关路由、套餐服务、Ops 服务和设置页属于高冲突文件，合并后必须运行对应测试。
 - 同步订阅链路时必须保留迁移 `224`/`225`、购买来源幂等键、有效期快照、过期重开、旧 `reset-daily` → 1 天卡映射，以及 `manual_reset_credits` 兼容镜像。
 
-*最后更新：2026-08-16*
+*最后更新：2026-08-24*
