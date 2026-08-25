@@ -1,7 +1,7 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.1.181**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.1.181**（官方无独立 v0.1.174 tag），并保留本 Fork
+当前整合版本为 **v0.1.182**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.1.182**（官方无独立 v0.1.174 tag），并保留本 Fork
 的全部定制能力。
 
 ## 必须保留的模块
@@ -26,6 +26,14 @@
 - 消费指定期限卡时放弃原剩余时间，清零日/周/月 USD 与 token、重置三个窗口，并从点击时开始新期限；旧 `reset-daily` 兼容映射为 1 天卡。
 - 用户 `/subscriptions` 按期限返回并展示卡数量和“永久有效”；`manual_reset_credits` 保留为发卡加一、消费减一的兼容镜像，不承载期限事实。
 - 高危同步范围：`subscription_service.go`、`user_subscription{,_port}.go`、`user_subscription_repo.go`、`payment_fulfillment.go`、`redeem_service.go`、订阅 handler/routes/DTO、迁移 `224`/`225`、`SubscriptionsView.vue`、订阅 API/types/i18n。
+
+## v0.1.182 整合内容
+
+- 合入 OpenAI Responses Lite 在 OAuth、API Key、HTTP 与 WebSocket 下的统一处理：固定并行工具调用模式，并保留数值精度。
+- 合入 OAuth 图片生成原样保留用户提示词、OpenCode Go 用量重置时长解析、Anthropic 缓存创建明细去重计费。
+- 合入 Antigravity Sonnet 4.5 兼容路由修正（显式 4.5 仍透传）、Composite Kimi Code K3 模型标识路由。
+- 合入渠道监控 V2 将 Composite 分组错误归属到真实账号平台，以及余额充值完成后及时刷新用户余额。
+- 无新增数据库迁移。官方 tag 内 `backend/cmd/server/VERSION` 仍为 `0.1.181`，本 Fork 按 release tag 设为 `0.1.182`；Kiro、XorPay、Access Ban、Kiro→Claude、提示词审计、订阅重置卡、Ops、VersionBadge、GLM 套餐、支付体验和 UI 品牌全部保留。
 
 ## v0.1.181 整合内容
 
