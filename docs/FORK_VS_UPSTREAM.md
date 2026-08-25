@@ -2,10 +2,10 @@
 
 > **上游官方仓库**：[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api)
 > **本 Fork 远程**：`origin` → `durunsong/sub2api`（中转/部署用）
-> **对比基准**：官方 tag **`v0.1.182`**（2026-08-25；官方无 v0.1.174 tag）
-> **本 Fork 当前版本**：`backend/cmd/server/VERSION` = **0.1.182**
-> **统计**：历史相对 v0.1.164 的大盘差异见下文；v0.1.165–v0.1.182 增量以根目录 `FORK_CUSTOMIZATIONS.md` 为准
-> **当前工作区**：已合入官方 v0.1.182，并保留 Kiro / XorPay / Access Ban / 提示词审计 / 套餐续期 / Ops / UI 品牌等全部定制
+> **对比基准**：官方 tag **`v0.1.183`**（2026-08-25；官方无 v0.1.174 tag）
+> **本 Fork 当前版本**：`backend/cmd/server/VERSION` = **0.1.183**
+> **统计**：历史相对 v0.1.164 的大盘差异见下文；v0.1.165–v0.1.183 增量以根目录 `FORK_CUSTOMIZATIONS.md` 为准
+> **当前工作区**：已合入官方 v0.1.183，并保留 Kiro / XorPay / Access Ban / 提示词审计 / 套餐续期 / Ops / UI 品牌等全部定制
 > **维护**：新增 Fork 定制后，请同步更新本文与根目录 `AGENTS.md` 摘要。
 
 ---
@@ -20,7 +20,7 @@
 | **`AGENTS.md`**（项目根） | AI 协作**强制摘要**与禁区，改代码前必读 |
 | **`FORK_CUSTOMIZATIONS.md`**（项目根） | 历史清单，已收敛到本文；保留作快捷索引 |
 
-**注意**：本 Fork 已同步官方至 **v0.1.182**，但 **`upstream/main` 仍可能领先**。与官方同步时以目标 release **tag** 为准，不带入 tag 后的 `main` 内容；merge `main` 前务必先读本文 Fork 定制章节，禁止 blindly 采用上游覆盖 Kiro / XorPay / Access Ban 等模块。
+**注意**：本 Fork 已同步官方至 **v0.1.183**，但 **`upstream/main` 仍可能领先**。与官方同步时以目标 release **tag** 为准，不带入 tag 后的 `main` 内容；merge `main` 前务必先读本文 Fork 定制章节，禁止 blindly 采用上游覆盖 Kiro / XorPay / Access Ban 等模块。
 
 ---
 
@@ -45,6 +45,7 @@
 
 **以下能力已在官方 v0.1.142+ 中，本 Fork 通过同步拥有，不算 Fork 独有开发**（合并时保留了 Kiro/XorPay 定制）：
 
+- v0.1.183 官方能力：OpenAI OAuth 配额耗尽 429 按 5 小时/7 天窗口重置时间暂停，普通瞬时 429 继续重试；Codex `session-id` 粘性与容量溢出绑定保护；Responses custom tool/tool search 恢复后的类型化 item ID；Kimi 并发 403 临时冷却与故障转移；邮箱换绑别名占用检测和事务级并发保护；Antigravity 兼容模式 64000 token 上限；频道监控 V2 Composite 平台聚合 SQL 修复。无新增迁移；官方 tag 内 VERSION 为 0.1.182，本 Fork 按 release tag 设为 0.1.183，并保留全部 Fork 定制。
 - v0.1.182 官方能力：OpenAI Responses Lite 统一 OAuth/API Key/HTTP/WS 处理、固定并行工具调用并保留数值精度；OAuth 图片生成原样保留用户提示词；OpenCode Go 正确解析用量重置时长；Anthropic 缓存创建明细去重计费；Antigravity 修正 Sonnet 4.5 兼容路由并保留显式 4.5；Composite 支持 Kimi Code K3；渠道监控 V2 将 Composite 错误归属到真实账号平台；余额充值完成后刷新用户余额。无新增迁移；官方 tag 内 VERSION 仍为 0.1.181，本 Fork 按 release tag 设为 0.1.182，并保留全部 Fork 定制。
 - v0.1.181 官方能力：Gemini 工具 schema 递归移除 `deprecated`、规范化标量 enum 并丢弃非标量 enum；Responses Lite 识别 `additional_tools` 并保留必要的 `parallel_tool_calls=false`；Responses 拒绝字段重试一次清理同类 input item 的无效 `status`；Grok OAuth、模型探测与计费探针统一使用官方 CLI User-Agent，CLI 身份更新到 `0.2.120`。无新增迁移；官方 tag 内 VERSION 仍为 0.1.180，本 Fork 按 release tag 设为 0.1.181，并保留全部 Fork 定制。
 - v0.1.180 官方能力：OpenAI 重置卡按用量阈值自动使用、Responses/Chat/WS Fast mode `service_tier` 传递与按上游实际档位计费、可配置模型列表响应读取上限、模型广场上下文阶梯/渠道分时定价、Ops 错误详情返回列表，以及实验性 OAuth 出站传输插件；新增迁移 `229_plugins.sql` / `230_plugin_artifacts.sql`。本 Fork 在新插件与自动重置服务 Wire 注入之外继续注入 Kiro、Kiro OAuth 与 IP Ban，并保留 Kiro 作为 Composite、渠道匹配和调度快照的具体平台。
@@ -859,4 +860,4 @@ deploy/docker-compose.yml
 
 ---
 
-*最后更新：2026-08-25 · 基准：官方 v0.1.182 · 增量清单见 `FORK_CUSTOMIZATIONS.md` · 工作区：`git status --short`*
+*最后更新：2026-08-25 · 基准：官方 v0.1.183 · 增量清单见 `FORK_CUSTOMIZATIONS.md` · 工作区：`git status --short`*

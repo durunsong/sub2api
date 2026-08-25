@@ -1,7 +1,7 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.1.182**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.1.182**（官方无独立 v0.1.174 tag），并保留本 Fork
+当前整合版本为 **v0.1.183**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.1.183**（官方无独立 v0.1.174 tag），并保留本 Fork
 的全部定制能力。
 
 ## 必须保留的模块
@@ -26,6 +26,13 @@
 - 消费指定期限卡时放弃原剩余时间，清零日/周/月 USD 与 token、重置三个窗口，并从点击时开始新期限；旧 `reset-daily` 兼容映射为 1 天卡。
 - 用户 `/subscriptions` 按期限返回并展示卡数量和“永久有效”；`manual_reset_credits` 保留为发卡加一、消费减一的兼容镜像，不承载期限事实。
 - 高危同步范围：`subscription_service.go`、`user_subscription{,_port}.go`、`user_subscription_repo.go`、`payment_fulfillment.go`、`redeem_service.go`、订阅 handler/routes/DTO、迁移 `224`/`225`、`SubscriptionsView.vue`、订阅 API/types/i18n。
+
+## v0.1.183 整合内容
+
+- 合入 OpenAI OAuth 5 小时/7 天配额耗尽 429 的按重置时间暂停；普通瞬时 429 继续重试。
+- 合入 Codex `session-id` 粘性会话、容量溢出时保留持久绑定，以及 Responses custom tool/tool search 恢复后的类型化 item ID。
+- 合入 Kimi 并发 403 临时冷却与故障转移、Antigravity 兼容模式 64000 token 上限、频道监控 V2 Composite 平台聚合 SQL 修复。
+- 邮箱换绑增加别名占用检测和事务级并发保护；无新增数据库迁移。官方 tag 内 `backend/cmd/server/VERSION` 为 `0.1.182`，本 Fork 按 release tag 设为 `0.1.183`；Kiro、XorPay、Access Ban、Kiro→Claude、提示词审计、订阅重置卡、Ops、VersionBadge、GLM 套餐、支付体验和 UI 品牌全部保留。
 
 ## v0.1.182 整合内容
 
