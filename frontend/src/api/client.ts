@@ -186,7 +186,7 @@ apiClient.interceptors.response.use(
               originalRequest.headers.Authorization = `Bearer ${tokens.access_token}`
             }
             return apiClient(originalRequest)
-          } catch {
+          } catch (refreshError) {
             // A stale request must never destroy a session that was logged out or replaced while
             // its refresh was in flight (for example, when another tab signs in as another user).
             const sessionChanged =
@@ -197,6 +197,18 @@ apiClient.interceptors.response.use(
                 status: 401,
                 code: 'AUTH_SESSION_CHANGED',
                 message: 'Authentication session changed while refreshing.'
+              })
+            }
+
+            // Only a definitive refresh-token rejection means the session is invalid. Network
+            // failures, timeouts, rate limits, and upstream 5xx responses are transient in
+            // production; keep the session so the next request/refresh can retry.
+            const refreshStatus = (refreshError as { response?: { status?: unknown } }).response?.status
+            if (refreshStatus !== 401) {
+              return Promise.reject({
+                status,
+                code: 'TOKEN_REFRESH_UNAVAILABLE',
+                message: 'Authentication service temporarily unavailable. Please retry.'
               })
             }
 
