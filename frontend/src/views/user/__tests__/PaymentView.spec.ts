@@ -300,10 +300,11 @@ describe('PaymentView subscription filters', () => {
     const filterLabels = wrapper.findAll('button').map(button => button.text())
 
     expect(wrapper.text()).toContain('智普-GLM Plan MAX')
-    expect(filterLabels.indexOf('智普-GLM Plan MAX')).toBeLessThan(filterLabels.indexOf('Claude(Max 5x)'))
-    expect(filterLabels.indexOf('Claude(Max 5x)')).toBeLessThan(filterLabels.indexOf('OpenAI(GPT Pro 20x)'))
-    expect(wrapper.text()).toContain('Claude(Max 5x)')
-    expect(wrapper.text()).toContain('Claude(GLM coding Max)')
+    expect(filterLabels.indexOf('智普-GLM Plan MAX')).toBeLessThan(filterLabels.indexOf('Claude Max'))
+    expect(filterLabels.indexOf('Claude Max')).toBeLessThan(filterLabels.indexOf('OpenAI(GPT Pro 20x)'))
+    expect(filterLabels.filter(label => label === 'Claude Max')).toHaveLength(1)
+    expect(wrapper.text()).toContain('Claude Max')
+    expect(wrapper.text()).not.toContain('Claude(GLM coding Max)')
     expect(wrapper.text()).toContain('OpenAI(GPT Pro 20x)')
     expect(wrapper.text()).toContain('天卡')
     expect(wrapper.text()).toContain('周卡')
@@ -332,11 +333,12 @@ describe('PaymentView subscription filters', () => {
     expect(wrapper.text()).not.toContain('Anthropic One Month')
     expect(wrapper.text()).not.toContain('OpenAI Week')
 
-    await wrapper.findAll('button').find(button => button.text() === 'Claude(Max 5x)')?.trigger('click')
+    await wrapper.findAll('button').find(button => button.text() === 'Claude Max')?.trigger('click')
     expect(wrapper.text()).toContain('Claude Week')
     expect(wrapper.text()).toContain('Claude Day')
+    expect(wrapper.text()).toContain('Anthropic One Month')
     expect(wrapper.text()).not.toContain('OpenAI Week')
-    expect(wrapper.text()).not.toContain('Anthropic Month')
+    expect(wrapper.text()).not.toContain('OpenAI Three Months')
   })
 
   it('filters plans by plural validity_unit values from checkout info', async () => {
@@ -370,7 +372,7 @@ describe('PaymentView subscription filters', () => {
     expect(wrapper.text()).toContain('1月卡')
     expect(wrapper.text()).toContain('3月卡')
 
-    await wrapper.findAll('button').find(button => button.text() === 'Claude(Max 5x)')?.trigger('click')
+    await wrapper.findAll('button').find(button => button.text() === 'Claude Max')?.trigger('click')
     expect(wrapper.text()).toContain('Claude Day')
     expect(wrapper.text()).not.toContain('OpenAI Week')
     expect(wrapper.text()).not.toContain('OpenAI One Month')
@@ -458,14 +460,14 @@ describe('PaymentView subscription plan grid', () => {
 })
 
 describe('PaymentView subscription confirmation amounts', () => {
-  it('shows GLM instead of Anthropic in the selected plan badge', async () => {
+  it('shows Claude Max instead of the internal Anthropic platform name in the selected plan badge', async () => {
     const wrapper = await mountSubscriptionConfirm({
       plan: {
         group_platform: 'anthropic',
       },
     })
 
-    expect(wrapper.text()).toContain('GLM')
+    expect(wrapper.text()).toContain('Claude Max')
     expect(wrapper.text()).not.toContain('Anthropic')
   })
   it.each([

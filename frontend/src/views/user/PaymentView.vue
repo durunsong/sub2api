@@ -586,6 +586,7 @@ const enabledMethods = computed(() => Object.keys(visibleMethods.value))
 const validAmount = computed(() => amount.value ?? 0)
 const RECHARGE_MAX_AMOUNT = 1000
 const ZHIPU_PLAN_FILTER = 'zhipu-glm'
+const CLAUDE_PLAN_FILTER = 'claude'
 type SubscriptionPlanDurationFilterKey = 'day' | 'week' | 'oneMonth' | 'threeMonths'
 
 function isZhipuGlmPlan(plan: SubscriptionPlan): boolean {
@@ -642,14 +643,18 @@ function subscriptionPlanDurationKey(plan: SubscriptionPlan): SubscriptionPlanDu
 const subscriptionPlanPlatforms = computed(() => {
   const platforms = new Set<string>()
   if (checkout.value.plans.some(isZhipuGlmPlan)) platforms.add(ZHIPU_PLAN_FILTER)
+  if (checkout.value.plans.some(plan => plan.group_platform === 'kiro' || plan.group_platform === 'anthropic')) {
+    platforms.add(CLAUDE_PLAN_FILTER)
+  }
 
   checkout.value.plans.forEach((plan) => {
     if (!plan.group_platform) return
     if (plan.group_platform === 'openai' && isZhipuGlmPlan(plan)) return
+    if (plan.group_platform === 'kiro' || plan.group_platform === 'anthropic') return
     platforms.add(plan.group_platform)
   })
 
-  const priority = [ZHIPU_PLAN_FILTER, 'kiro', 'anthropic', 'openai']
+  const priority = [ZHIPU_PLAN_FILTER, CLAUDE_PLAN_FILTER, 'openai']
   return Array.from(platforms).sort((a, b) => {
     const aIndex = priority.indexOf(a)
     const bIndex = priority.indexOf(b)
@@ -673,6 +678,7 @@ function subscriptionPlanPlatformLabel(platform: string): string {
 
 function matchesSubscriptionPlanPlatform(plan: SubscriptionPlan, platform: string): boolean {
   if (platform === ZHIPU_PLAN_FILTER) return isZhipuGlmPlan(plan)
+  if (platform === CLAUDE_PLAN_FILTER) return plan.group_platform === 'kiro' || plan.group_platform === 'anthropic'
   if (platform === 'openai') return plan.group_platform === 'openai' && !isZhipuGlmPlan(plan)
   return plan.group_platform === platform
 }

@@ -61,11 +61,18 @@ const mountPlanCard = (groupPlatform: string, overrides: Partial<SubscriptionPla
   });
 
 describe("SubscriptionPlanCard", () => {
-  it("shows GLM instead of the internal Anthropic platform name", () => {
+  it("shows Claude Max for Anthropic plans", () => {
     const text = mountPlanCard("anthropic").text();
 
-    expect(text).toContain("GLM");
+    expect(text).toContain("Claude Max");
     expect(text).not.toContain("Anthropic");
+  });
+
+  it("uses the same Claude Max badge for Kiro plans", () => {
+    const text = mountPlanCard("kiro").text();
+
+    expect(text).toContain("Claude Max");
+    expect(text).not.toContain("GLM");
   });
 
   it("shows GLM for OpenAI-compatible GLM plans while keeping regular OpenAI labels", () => {

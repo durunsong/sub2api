@@ -7,13 +7,13 @@ export function subscriptionPlanBadgeLabel(
   const isOpenAICompatibleGlm = platform === 'openai'
     && [plan?.group_name, plan?.name, plan?.description]
       .some(value => String(value || '').toLowerCase().includes('glm'))
-  if (platform === 'anthropic' || isOpenAICompatibleGlm) return 'GLM'
+  if (platform === 'kiro' || platform === 'anthropic') return 'Claude Max'
+  if (isOpenAICompatibleGlm) return 'GLM'
   return platformLabel(platform)
 }
 
 export function subscriptionPlanFilterLabel(platform: string): string {
-  if (platform === 'kiro') return 'Claude(Max 5x)'
-  if (platform === 'anthropic') return 'Claude(GLM coding Max)'
+  if (platform === 'kiro' || platform === 'anthropic' || platform === 'claude') return 'Claude Max'
   if (platform === 'openai') return 'OpenAI(GPT Pro 20x)'
   return platformLabel(platform)
 }

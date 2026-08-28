@@ -187,7 +187,7 @@ backend/internal/service/
 | API Key 管理 | `/keys` | 分组名称、描述、徽章、图标和下拉选项显示 Claude；搜索 `claude` 可命中内部 Kiro 分组 |
 | 可用渠道 | `/available-channels` | 渠道、平台、分组及模型区域使用 Claude 名称、图标和配色；搜索 `claude` 可命中 Kiro 渠道 |
 | 我的订阅 | `/subscriptions` | 订阅分组名称、描述、平台徽章、卡片边框和操作按钮使用 Claude 展示 |
-| 购买 / 续费 | `/purchase` | Kiro 套餐分类显示为 `Claude(Max 5x)`；OpenAI 协议下名称、分组名或描述含 `GLM` 的套餐独立显示为 `智普-GLM Plan MAX`，并从普通 OpenAI 分类排除；套餐卡片、确认页、续费弹窗和已有订阅使用 Claude 名称与配色 |
+| 购买 / 续费 | `/purchase` | Kiro 与 Anthropic 套餐合并为 `Claude Max` 分类并统一徽章；OpenAI 协议下名称、分组名或描述含 `GLM` 的套餐独立显示为 `智普-GLM Plan MAX`，并从普通 OpenAI 分类排除；套餐卡片、确认页、续费弹窗和已有订阅使用 Claude 名称与配色 |
 | 用量—错误请求 | `/usage` | 错误列表和详情的平台字段显示 Claude |
 
 实现边界：
