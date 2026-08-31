@@ -1006,7 +1006,7 @@ const selectedUser = ref<SimpleUser | null>(null)
 let userSearchTimeout: ReturnType<typeof setTimeout> | null = null
 
 const filters = reactive({
-  status: 'active',
+  status: 'active_available',
   group_id: '',
   platform: '',
   user_id: null as number | null

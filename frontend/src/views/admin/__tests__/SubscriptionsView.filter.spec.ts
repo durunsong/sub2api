@@ -93,6 +93,14 @@ describe('admin SubscriptionsView filters', () => {
     getAllGroups.mockResolvedValue([])
   })
 
+  it('defaults to active subscriptions with quota remaining', async () => {
+    mountSubscriptionsView()
+    await flushPromises()
+
+    const filters = listSubscriptions.mock.calls.at(-1)?.[2]
+    expect(filters).toMatchObject({ status: 'active_available' })
+  })
+
   it('requests active subscriptions with quota remaining from the combined status option', async () => {
     const wrapper = mountSubscriptionsView()
     await flushPromises()
