@@ -1,7 +1,7 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.1.183**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.1.183**（官方无独立 v0.1.174 tag），并保留本 Fork
+当前整合版本为 **v0.1.184**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.1.184**（官方无独立 v0.1.174 tag），并保留本 Fork
 的全部定制能力。
 
 ## 必须保留的模块
@@ -26,6 +26,13 @@
 - 消费指定期限卡时放弃原剩余时间，清零日/周/月 USD 与 token、重置三个窗口，并从点击时开始新期限；旧 `reset-daily` 兼容映射为 1 天卡。
 - 用户 `/subscriptions` 按期限返回并展示卡数量和“永久有效”；`manual_reset_credits` 保留为发卡加一、消费减一的兼容镜像，不承载期限事实。
 - 高危同步范围：`subscription_service.go`、`user_subscription{,_port}.go`、`user_subscription_repo.go`、`payment_fulfillment.go`、`redeem_service.go`、订阅 handler/routes/DTO、迁移 `224`/`225`、`SubscriptionsView.vue`、订阅 API/types/i18n。
+
+## v0.1.184 整合内容
+
+- 合入 Codex 路由模型目录、实际路由能力同步与精确账号模型别名；管理员可限制用户访问的公共分组。
+- 用量记录新增原生 compaction 和映射前推理强度；新增智谱团队 GLM Coding Plan 用量查询，以及国产三家平台账号挂载 Ollama Cloud 用量窗口。
+- 合入 OpenAI 多渠道 service tier、配额原子重置、图像工具冷却、可配置 TTFT、WebSocket 隔离/大请求转发，以及 Anthropic/Grok/支付/SMTP/计费等集中修复。
+- 新增迁移 `231_add_usage_log_native_compaction_v2.sql`、`231_add_usage_log_requested_reasoning_effort.sql`、`231_user_restrict_public_groups.sql`。官方 tag 内 `backend/cmd/server/VERSION` 仍为 `0.1.183`，本 Fork 按 release tag 设为 `0.1.184`；Kiro、XorPay、Access Ban、Kiro→Claude、提示词审计、订阅重置卡、Ops、VersionBadge、GLM 套餐、支付体验和 UI 品牌全部保留。
 
 ## v0.1.183 整合内容
 
