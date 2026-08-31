@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	entsql "entgo.io/ent/dialect/sql"
 	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/ent/group"
 	"github.com/Wei-Shaw/sub2api/ent/predicate"
@@ -12,6 +13,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/user"
 	"github.com/Wei-Shaw/sub2api/ent/usersubscription"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/timezone"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/lib/pq"
 )
@@ -263,12 +265,15 @@ func (r *userSubscriptionRepository) List(ctx context.Context, params pagination
 	// Status filtering with real-time expiration check
 	now := time.Now()
 	switch status {
-	case service.SubscriptionStatusActive:
+	case service.SubscriptionStatusActive, service.SubscriptionFilterActiveAvailable:
 		// Active: status is active AND not yet expired
 		q = q.Where(
 			usersubscription.StatusEQ(service.SubscriptionStatusActive),
 			usersubscription.ExpiresAtGT(now),
 		)
+		if status == service.SubscriptionFilterActiveAvailable {
+			q = q.Where(activeSubscriptionWithQuotaRemaining(now))
+		}
 	case service.SubscriptionStatusExpired:
 		// Expired: status is expired OR (status is active but already expired)
 		q = q.Where(
@@ -338,6 +343,100 @@ func (r *userSubscriptionRepository) List(ctx context.Context, params pagination
 	}
 
 	return result, paginationResultFromTotal(int64(total), params), nil
+}
+
+func activeSubscriptionWithQuotaRemaining(now time.Time) predicate.UserSubscription {
+	today := timezone.StartOfDay(now)
+	timezoneName := timezone.Name()
+
+	return predicate.UserSubscription(func(subscription *entsql.Selector) {
+		groups := entsql.Table(group.Table)
+		matchingGroup := entsql.Select(groups.C(group.FieldID)).
+			From(groups).
+			Where(entsql.And(
+				entsql.ColumnsEQ(groups.C(group.FieldID), subscription.C(usersubscription.FieldGroupID)),
+				quotaDimensionAvailable(
+					groups.C(group.FieldDailyLimitUsd),
+					subscription.C(usersubscription.FieldDailyUsageUsd),
+					dailySubscriptionWindowReset(subscription, today, timezoneName),
+				),
+				quotaDimensionAvailable(
+					groups.C(group.FieldWeeklyLimitUsd),
+					subscription.C(usersubscription.FieldWeeklyUsageUsd),
+					periodicSubscriptionWindowReset(subscription, usersubscription.FieldWeeklyWindowStart, 7*24*time.Hour, now, timezoneName),
+				),
+				quotaDimensionAvailable(
+					groups.C(group.FieldMonthlyLimitUsd),
+					subscription.C(usersubscription.FieldMonthlyUsageUsd),
+					periodicSubscriptionWindowReset(subscription, usersubscription.FieldMonthlyWindowStart, 30*24*time.Hour, now, timezoneName),
+				),
+			))
+		subscription.Where(entsql.Exists(matchingGroup))
+	})
+}
+
+func quotaDimensionAvailable(limitColumn, usageColumn string, windowReset *entsql.Predicate) *entsql.Predicate {
+	return entsql.Or(
+		entsql.IsNull(limitColumn),
+		entsql.LTE(limitColumn, 0),
+		entsql.ColumnsLT(usageColumn, limitColumn),
+		windowReset,
+	)
+}
+
+func dailySubscriptionWindowReset(subscription *entsql.Selector, today time.Time, timezoneName string) *entsql.Predicate {
+	return entsql.And(
+		entsql.LT(subscription.C(usersubscription.FieldDailyWindowStart), today),
+		entsql.P(func(builder *entsql.Builder) {
+			builder.Ident(subscription.C(usersubscription.FieldExpiresAt)).
+				WriteString(" > (").
+				Ident(subscription.C(usersubscription.FieldStartsAt)).
+				WriteString(" AT TIME ZONE ").
+				Arg(timezoneName).
+				WriteString(" + INTERVAL '1 day') AT TIME ZONE ").
+				Arg(timezoneName)
+		}),
+	)
+}
+
+func periodicSubscriptionWindowReset(subscription *entsql.Selector, windowField string, period time.Duration, now time.Time, timezoneName string) *entsql.Predicate {
+	return entsql.P(func(builder *entsql.Builder) {
+		writePeriodicWindowAnchor(builder, subscription, windowField, timezoneName).
+			WriteString(" + make_interval(secs => ").
+			Arg(int64(period / time.Second)).
+			WriteString(")").
+			WriteString(" <= ").
+			Arg(now).
+			WriteString(" AND ")
+		writePeriodicWindowAnchor(builder, subscription, windowField, timezoneName).
+			WriteString(" + make_interval(secs => ").
+			Arg(int64(period / time.Second)).
+			WriteString(")").
+			WriteString(" < ").
+			Ident(subscription.C(usersubscription.FieldExpiresAt))
+	})
+}
+
+func writePeriodicWindowAnchor(builder *entsql.Builder, subscription *entsql.Selector, windowField, timezoneName string) *entsql.Builder {
+	windowColumn := subscription.C(windowField)
+	startsAtColumn := subscription.C(usersubscription.FieldStartsAt)
+	return builder.WriteString("(CASE WHEN ").
+		Ident(windowColumn).
+		WriteString(" = (date_trunc('day', ").
+		Ident(startsAtColumn).
+		WriteString(" AT TIME ZONE ").
+		Arg(timezoneName).
+		WriteString(") AT TIME ZONE ").
+		Arg(timezoneName).
+		WriteString(") AND ").
+		Ident(windowColumn).
+		WriteString(" < ").
+		Ident(startsAtColumn).
+		WriteString(" THEN ").
+		Ident(startsAtColumn).
+		WriteString(" ELSE ").
+		Ident(windowColumn).
+		WriteString(" END)")
 }
 
 func (r *userSubscriptionRepository) ExistsByUserIDAndGroupID(ctx context.Context, userID, groupID int64) (bool, error) {

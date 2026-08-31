@@ -363,6 +363,103 @@ func (s *UserSubscriptionRepoSuite) TestList_FilterByStatus() {
 	s.Require().Equal(service.SubscriptionStatusExpired, subs[0].Status)
 }
 
+func (s *UserSubscriptionRepoSuite) TestList_FilterByActiveAvailable() {
+	now := time.Now()
+	limit := 100.0
+
+	createGroup := func(name string, daily, weekly, monthly *float64) *service.Group {
+		s.T().Helper()
+		create := s.client.Group.Create().
+			SetName(name).
+			SetStatus(service.StatusActive)
+		if daily != nil {
+			create.SetDailyLimitUsd(*daily)
+		}
+		if weekly != nil {
+			create.SetWeeklyLimitUsd(*weekly)
+		}
+		if monthly != nil {
+			create.SetMonthlyLimitUsd(*monthly)
+		}
+		g, err := create.Save(s.ctx)
+		s.Require().NoError(err, "create limited group")
+		return groupEntityToService(g)
+	}
+	createSub := func(email string, groupID int64, mutate func(*dbent.UserSubscriptionCreate)) *dbent.UserSubscription {
+		s.T().Helper()
+		user := s.mustCreateUser(email, service.RoleUser)
+		return s.mustCreateSubscription(user.ID, groupID, mutate)
+	}
+
+	monthlyGroup := createGroup("g-active-available-monthly", nil, nil, &limit)
+	dailyAndMonthlyGroup := createGroup("g-active-available-daily", &limit, nil, &limit)
+	unlimitedGroup := createGroup("g-active-available-unlimited", nil, nil, nil)
+
+	available := createSub("active-available@test.com", monthlyGroup.ID, func(c *dbent.UserSubscriptionCreate) {
+		c.SetMonthlyUsageUsd(99)
+	})
+	createSub("active-exhausted@test.com", monthlyGroup.ID, func(c *dbent.UserSubscriptionCreate) {
+		c.SetMonthlyUsageUsd(limit)
+	})
+	createSub("daily-exhausted@test.com", dailyAndMonthlyGroup.ID, func(c *dbent.UserSubscriptionCreate) {
+		c.SetDailyUsageUsd(limit)
+		c.SetMonthlyUsageUsd(1)
+	})
+	unlimited := createSub("active-unlimited@test.com", unlimitedGroup.ID, nil)
+	resetWindow := createSub("active-reset-window@test.com", dailyAndMonthlyGroup.ID, func(c *dbent.UserSubscriptionCreate) {
+		c.SetStartsAt(now.Add(-48 * time.Hour))
+		c.SetExpiresAt(now.Add(7 * 24 * time.Hour))
+		c.SetDailyWindowStart(now.Add(-24 * time.Hour))
+		c.SetDailyUsageUsd(limit)
+	})
+	createSub("one-day-exhausted@test.com", dailyAndMonthlyGroup.ID, func(c *dbent.UserSubscriptionCreate) {
+		c.SetStartsAt(now.Add(-12 * time.Hour))
+		c.SetExpiresAt(now.Add(12 * time.Hour))
+		c.SetDailyWindowStart(now.Add(-24 * time.Hour))
+		c.SetDailyUsageUsd(limit)
+	})
+	createSub("expired-with-quota@test.com", monthlyGroup.ID, func(c *dbent.UserSubscriptionCreate) {
+		c.SetExpiresAt(now.Add(-time.Hour))
+		c.SetMonthlyUsageUsd(1)
+	})
+
+	subs, page, err := s.repo.List(
+		s.ctx,
+		pagination.PaginationParams{Page: 1, PageSize: 2},
+		nil,
+		nil,
+		"active_available",
+		"",
+		"created_at",
+		"asc",
+	)
+	s.Require().NoError(err)
+	s.Require().Len(subs, 2)
+	s.Require().Equal(int64(3), page.Total)
+	s.Require().Equal(2, page.Pages)
+
+	secondPage, _, err := s.repo.List(
+		s.ctx,
+		pagination.PaginationParams{Page: 2, PageSize: 2},
+		nil,
+		nil,
+		"active_available",
+		"",
+		"created_at",
+		"asc",
+	)
+	s.Require().NoError(err)
+	s.Require().Len(secondPage, 1)
+
+	gotIDs := map[int64]bool{}
+	for _, sub := range append(subs, secondPage...) {
+		gotIDs[sub.ID] = true
+	}
+	s.Require().True(gotIDs[available.ID])
+	s.Require().True(gotIDs[unlimited.ID])
+	s.Require().True(gotIDs[resetWindow.ID])
+}
+
 func (s *UserSubscriptionRepoSuite) TestList_IncludesRevokedWhenStatusEmpty() {
 	user1 := s.mustCreateUser("allstatus1@test.com", service.RoleUser)
 	user2 := s.mustCreateUser("allstatus2@test.com", service.RoleUser)

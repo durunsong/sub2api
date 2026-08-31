@@ -679,6 +679,7 @@ export default {
       noExpiration: 'No expiration',
       status: {
         active: 'Active',
+        activeAvailable: 'Active + quota remaining',
         expired: 'Expired',
         revoked: 'Revoked',
         suspended: 'Suspended'

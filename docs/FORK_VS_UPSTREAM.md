@@ -398,6 +398,13 @@ frontend/src/i18n/locales/zh/misc.ts
 frontend/src/i18n/locales/en/misc.ts
 ```
 
+### 8.5 管理端订阅可用额度筛选（Fork 新增，2026-08-31）
+
+- `/admin/subscriptions` 状态下拉增加 `active_available`（中文“生效中+没用完”），默认 `active` 筛选保持不变。
+- 该组合筛选只返回 `status=active` 且未到期的订阅；日、周、月任一已配置额度达到上限即排除，无限额订阅保留。
+- 查询按现有订阅窗口规则识别已进入新窗口的额度，并在数据库查询阶段过滤，确保分页条目、总数与页数一致；无数据库迁移。
+- 关键文件：`backend/internal/repository/user_subscription_repo.go`、`backend/internal/service/domain_constants.go`、`frontend/src/views/admin/SubscriptionsView.vue`、`frontend/src/api/admin/subscriptions.ts` 与管理端中英文 i18n。
+
 ---
 
 ## 9. 迁移红线（必守）

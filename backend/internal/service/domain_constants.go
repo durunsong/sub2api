@@ -172,6 +172,8 @@ const (
 	SubscriptionStatusActive    = domain.SubscriptionStatusActive
 	SubscriptionStatusExpired   = domain.SubscriptionStatusExpired
 	SubscriptionStatusSuspended = domain.SubscriptionStatusSuspended
+	// SubscriptionFilterActiveAvailable 是管理端列表使用的组合筛选值，不写入 status 字段。
+	SubscriptionFilterActiveAvailable = "active_available"
 	// SubscriptionStatusRevoked 是 soft-deleted 订阅的 API 展示态，不写入 status 字段。
 	SubscriptionStatusRevoked = "revoked"
 )

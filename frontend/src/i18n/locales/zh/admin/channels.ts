@@ -679,6 +679,7 @@ export default {
       noExpiration: '无过期时间',
       status: {
         active: '生效中',
+        activeAvailable: '生效中+没用完',
         expired: '已过期',
         revoked: '已撤销',
         suspended: '已暂停'

@@ -54,6 +54,7 @@ Cursor 场景下还会加载 [`.cursor/rules/sub2api-fork.mdc`](.cursor/rules/su
 - **支付 UX**：用户端隐藏倍率；二维码 payAmount / creditedAmount 分离
 - **购买页智普筛选**：OpenAI 协议下名称、分组名或描述含 `GLM` 的套餐显示为 `智普-GLM Plan MAX`，普通 OpenAI 分类必须排除这些套餐
 - **订阅重置卡**：迁移 `224`/`225` 保存永久期限明细并按 `group.default_validity_days` 回填旧计数；有效固定期限支付/兑换/管理员分配重复获得改发 `validity_days` 快照卡且不改到期时间，过期则直接重开；消费放弃余期、清零日周月 USD/token 并从点击时重开；旧 `reset-daily` 映射 1 天卡，`manual_reset_credits` 仅保留兼容镜像
+- **订阅可用额度筛选**：管理端订阅状态下拉提供 `active_available`（“生效中+没用完”）；后端按有效期及当前日/周/月窗口过滤任一额度已耗尽的订阅，无限额订阅保留
 - **UI**：首页/登录靛蓝紫罗兰主题、`logo.svg`、Select/ConfirmDialog 替换原生控件
 - **ProxyAdBanner**：已移除
 
