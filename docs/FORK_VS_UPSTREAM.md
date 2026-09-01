@@ -2,10 +2,10 @@
 
 > **上游官方仓库**：[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api)
 > **本 Fork 远程**：`origin` → `durunsong/sub2api`（中转/部署用）
-> **对比基准**：官方 tag **`v0.1.184`**（2026-08-31；官方无 v0.1.174 tag）
-> **本 Fork 当前版本**：`backend/cmd/server/VERSION` = **0.1.184**
-> **统计**：历史相对 v0.1.164 的大盘差异见下文；v0.1.165–v0.1.184 增量以根目录 `FORK_CUSTOMIZATIONS.md` 为准
-> **当前工作区**：已合入官方 v0.1.184，并保留 Kiro / XorPay / Access Ban / 提示词审计 / 套餐续期 / Ops / UI 品牌等全部定制
+> **对比基准**：官方 tag **`v0.1.185`**（2026-09-01；官方无 v0.1.174 tag）
+> **本 Fork 当前版本**：`backend/cmd/server/VERSION` = **0.1.185**
+> **统计**：历史相对 v0.1.164 的大盘差异见下文；v0.1.165–v0.1.185 增量以根目录 `FORK_CUSTOMIZATIONS.md` 为准
+> **当前工作区**：已合入官方 v0.1.185，并保留 Kiro / XorPay / Access Ban / 提示词审计 / 套餐续期 / Ops / UI 品牌等全部定制
 > **维护**：新增 Fork 定制后，请同步更新本文与根目录 `AGENTS.md` 摘要。
 
 ---
@@ -20,7 +20,7 @@
 | **`AGENTS.md`**（项目根） | AI 协作**强制摘要**与禁区，改代码前必读 |
 | **`FORK_CUSTOMIZATIONS.md`**（项目根） | 历史清单，已收敛到本文；保留作快捷索引 |
 
-**注意**：本 Fork 已同步官方至 **v0.1.184**，但 **`upstream/main` 仍可能领先**。与官方同步时以目标 release **tag** 为准，不带入 tag 后的 `main` 内容；merge `main` 前务必先读本文 Fork 定制章节，禁止 blindly 采用上游覆盖 Kiro / XorPay / Access Ban 等模块。
+**注意**：本 Fork 已同步官方至 **v0.1.185**，但 **`upstream/main` 仍可能领先**。与官方同步时以目标 release **tag** 为准，不带入 tag 后的 `main` 内容；merge `main` 前务必先读本文 Fork 定制章节，禁止 blindly 采用上游覆盖 Kiro / XorPay / Access Ban 等模块。
 
 ---
 
@@ -45,6 +45,7 @@
 
 **以下能力已在官方 v0.1.142+ 中，本 Fork 通过同步拥有，不算 Fork 独有开发**（合并时保留了 Kiro/XorPay 定制）：
 
+- v0.1.185 官方能力：价格目录支持 `pricing.override_file` JSON 补丁覆盖，长上下文阶梯计价改由价格目录数据驱动，Codex 快速模型展示 priority service tier；账号统计成本统一应用模型定价策略与 DeepSeek 峰谷价格，并增强数据库启动瞬时错误重试、OpenAI WebSocket 空闲连接回收、Codex 图像输入能力保留和持续禁用账号过滤。同步还修复 API Key 请求错误合成 instructions、ctx_pool 容量降载错误码和 delegation bootstrap 缺少 call id。无新增迁移；官方 tag peeled commit 为 `2ac784c51a5d0925b324efef2ba6b3446c364781`，tag 内 VERSION 为 0.1.184，本 Fork 按 release tag 设为 0.1.185，并保留全部 Fork 定制。
 - v0.1.184 官方能力：Codex 路由模型目录、实际路由能力同步和精确账号模型别名；管理员限制用户可访问公共分组；原生 compaction 与映射前推理强度用量记录；智谱团队 GLM Coding Plan 用量查询；国产三家平台账号挂载 Ollama Cloud 用量窗口；OpenAI 图像工具冷却和 TTFT 管理配置。同步还包含 OpenAI 多渠道 service tier、配额原子重置、WebSocket 隔离/大请求转发，以及 Anthropic/Grok/支付/SMTP/计费等修复。新增 `231_add_usage_log_native_compaction_v2.sql`、`231_add_usage_log_requested_reasoning_effort.sql`、`231_user_restrict_public_groups.sql`；官方 tag 内 VERSION 为 0.1.183，本 Fork 按 release tag 设为 0.1.184，并保留全部 Fork 定制。
 - v0.1.183 官方能力：OpenAI OAuth 配额耗尽 429 按 5 小时/7 天窗口重置时间暂停，普通瞬时 429 继续重试；Codex `session-id` 粘性与容量溢出绑定保护；Responses custom tool/tool search 恢复后的类型化 item ID；Kimi 并发 403 临时冷却与故障转移；邮箱换绑别名占用检测和事务级并发保护；Antigravity 兼容模式 64000 token 上限；频道监控 V2 Composite 平台聚合 SQL 修复。无新增迁移；官方 tag 内 VERSION 为 0.1.182，本 Fork 按 release tag 设为 0.1.183，并保留全部 Fork 定制。
 - v0.1.182 官方能力：OpenAI Responses Lite 统一 OAuth/API Key/HTTP/WS 处理、固定并行工具调用并保留数值精度；OAuth 图片生成原样保留用户提示词；OpenCode Go 正确解析用量重置时长；Anthropic 缓存创建明细去重计费；Antigravity 修正 Sonnet 4.5 兼容路由并保留显式 4.5；Composite 支持 Kimi Code K3；渠道监控 V2 将 Composite 错误归属到真实账号平台；余额充值完成后刷新用户余额。无新增迁移；官方 tag 内 VERSION 仍为 0.1.181，本 Fork 按 release tag 设为 0.1.182，并保留全部 Fork 定制。
@@ -868,4 +869,4 @@ deploy/docker-compose.yml
 
 ---
 
-*最后更新：2026-08-31 · 基准：官方 v0.1.184 · 增量清单见 `FORK_CUSTOMIZATIONS.md` · 工作区：`git status --short`*
+*最后更新：2026-09-01 · 基准：官方 v0.1.185 · 增量清单见 `FORK_CUSTOMIZATIONS.md` · 工作区：`git status --short`*

@@ -1,7 +1,7 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.1.184**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.1.184**（官方无独立 v0.1.174 tag），并保留本 Fork
+当前整合版本为 **v0.1.185**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.1.185**（官方无独立 v0.1.174 tag），并保留本 Fork
 的全部定制能力。
 
 ## 必须保留的模块
@@ -27,6 +27,13 @@
 - 消费指定期限卡时放弃原剩余时间，清零日/周/月 USD 与 token、重置三个窗口，并从点击时开始新期限；旧 `reset-daily` 兼容映射为 1 天卡。
 - 用户 `/subscriptions` 按期限返回并展示卡数量和“永久有效”；`manual_reset_credits` 保留为发卡加一、消费减一的兼容镜像，不承载期限事实。
 - 高危同步范围：`subscription_service.go`、`user_subscription{,_port}.go`、`user_subscription_repo.go`、`payment_fulfillment.go`、`redeem_service.go`、订阅 handler/routes/DTO、迁移 `224`/`225`、`SubscriptionsView.vue`、订阅 API/types/i18n。
+
+## v0.1.185 整合内容
+
+- 价格目录新增 `pricing.override_file` JSON 补丁覆盖，长上下文阶梯计价改由价格目录驱动，Codex 快速模型展示 priority service tier。
+- 账号统计成本统一应用模型定价策略与 DeepSeek 峰谷价格；数据库启动瞬时错误最多重试八次，OpenAI WebSocket 池自动回收过期空闲连接。
+- 修复 API Key 请求错误合成 instructions、Codex 持续禁用账号进入模型目录、已知图像输入能力丢失、ctx_pool 容量降载错误码和 delegation bootstrap 缺少 call id。
+- 无新增数据库迁移。官方 tag peeled commit 为 `2ac784c51a5d0925b324efef2ba6b3446c364781`，tag 内 `backend/cmd/server/VERSION` 为 `0.1.184`，本 Fork 按 release tag 设为 `0.1.185`；Kiro、XorPay、Access Ban、Kiro→Claude、提示词审计、订阅重置卡、订阅可用额度筛选、Ops、VersionBadge、GLM 套餐、支付体验和 UI 品牌全部保留。
 
 ## v0.1.184 整合内容
 

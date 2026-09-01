@@ -14,8 +14,8 @@ Cursor 场景下还会加载 [`.cursor/rules/sub2api-fork.mdc`](.cursor/rules/su
 | 项 | 值 |
 |----|-----|
 | 上游官方 | https://github.com/Wei-Shaw/sub2api |
-| 已同步基线 | tag **v0.1.184**（官方无 v0.1.174 tag） |
-| 当前 VERSION | `backend/cmd/server/VERSION` = **0.1.184** |
+| 已同步基线 | tag **v0.1.185**（官方无 v0.1.174 tag） |
+| 当前 VERSION | `backend/cmd/server/VERSION` = **0.1.185** |
 | 完整差异文档 | **`docs/FORK_VS_UPSTREAM.md`**（相对历史基线；含 Fork 扩展见文档 §8.2 / §12；快捷清单见 `FORK_CUSTOMIZATIONS.md`） |
 | 快捷索引 | `FORK_CUSTOMIZATIONS.md` |
 
@@ -155,6 +155,7 @@ Access Ban 迁移顺序：`159` 建表 → `160` 扩展 rule_type / ua_pattern�
 - v0.1.176：Grok 4.6 / JWT 订阅档位、分组逐模型定价（`model_pricing` + `long_context_pricing_enabled`）、原生 `POST /x_search`，以及备份 leader 锁、渠道缓存、定价冲突、Responses 探测、Realtime 音频计费等修复；新增迁移 `221`。官方 tag 内 VERSION 仍为 0.1.175，本 Fork 按 release tag 设为 0.1.176。Gateway `/x_search` 保留 Access Ban；分组 `oneof` 仍含 `kiro`
 - v0.1.179：国产供应商自适应 API 协议、Composite 支持 Codex/Kimi/智谱/DeepSeek、渠道服务层级/上下文区间倍率、可配置代理探测目标、`/v1/responses/input_tokens` 与用量聚合优化；新增迁移 `226_add_usage_log_effective_model_indexes_notx`、`227_composite_routes_add_cn_providers`、`228_channel_pricing_multipliers`；长上下文计费门控改为分组或账号任一开启即生效；Fork 额外将 Kiro 保留在全部共享平台目录、Composite 路由/定价与调度快照中
 - v0.1.180：OpenAI 重置卡按用量阈值自动使用、Fast mode `service_tier` 全链路计费、模型列表响应读取上限、模型广场阶梯/分时定价、Ops 错误返回列表和实验性 OAuth 出站传输插件；新增迁移 `229_plugins` / `230_plugin_artifacts`；Fork 继续保留 Kiro 在共享平台目录与 Wire 注入中的位置，并保留 XorPay、Access Ban、订阅重置卡与 UI 定制
+- v0.1.185：价格目录支持 `pricing.override_file` JSON 补丁，长上下文阶梯计价改由目录驱动，Codex 快速模型展示 priority service tier；账号统计统一使用模型定价策略与 DeepSeek 峰谷价格，并修复数据库启动重试、OpenAI WS 空闲连接回收、Codex 图像能力/禁用账号筛选、API Key instructions、ctx_pool 容量错误和 delegation bootstrap；无新增迁移，Fork 继续保留全部定制
 - v0.1.184：Codex 路由模型目录与能力同步、公共分组访问限制、原生 compaction 和映射前推理强度用量记录、智谱团队 GLM Coding Plan 用量、国产三家平台 Ollama Cloud 用量窗口、OpenAI 图像工具冷却与可配置 TTFT；新增三个 `231_*` 迁移，并修复 OpenAI/WS/Anthropic/Grok/支付/SMTP/计费链路；Fork 继续保留 Kiro/XorPay/Access Ban、提示词审计、订阅重置卡、Ops、VersionBadge、GLM 标签和 UI/支付定制
 - v0.1.183：OpenAI OAuth 配额耗尽 429 按重置时间暂停、Codex `session-id` 粘性与容量溢出绑定保护、Responses custom tool ID 修复；Kimi 并发 403 临时冷却；邮箱换绑别名/并发保护；Antigravity 64K 上限与频道监控 V2 Composite SQL 修复。无新增迁移。官方 tag 内 VERSION 为 0.1.182，本 Fork 按 release tag 设为 0.1.183，并继续保留全部定制
 - v0.1.182：OpenAI Responses Lite 统一 OAuth/API Key/HTTP/WS 处理并固定并行工具调用、保留数值精度；OAuth 图片生成原样保留用户提示词；OpenCode Go 正确解析用量重置时长；Anthropic 缓存创建明细去重计费；Antigravity 修正 Sonnet 4.5 兼容路由并保留显式 4.5；Composite 支持 Kimi Code K3；渠道监控 V2 将 Composite 错误归属到真实账号平台；余额充值完成后刷新用户余额。无新增迁移。官方 tag 内 VERSION 仍为 0.1.181，本 Fork 按 release tag 设为 0.1.182，并继续保留全部定制
@@ -181,7 +182,7 @@ Access Ban 迁移顺序：`159` 建表 → `160` 扩展 rule_type / ua_pattern�
 
 见 `docs/FORK_VS_UPSTREAM.md` §14。原则：**Kiro + XorPay + Access Ban + 提示词审计 + 套餐续期 + Ops + UI 品牌等全部定制保留**。
 
-`upstream/main` 可能领先于 v0.1.184；同步时以 release tag 为基线，不带入 tag 后的 `main` 内容，并逐文件保留 Fork 模块。
+`upstream/main` 可能领先于 v0.1.185；同步时以 release tag 为基线，不带入 tag 后的 `main` 内容，并逐文件保留 Fork 模块。
 
 ---
 
