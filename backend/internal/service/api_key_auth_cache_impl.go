@@ -14,7 +14,7 @@ import (
 	"github.com/dgraph-io/ristretto"
 )
 
-const apiKeyAuthSnapshotVersion = 21 // v21: include Kiro policy plus search/audio/video model pricing and profit control fields
+const apiKeyAuthSnapshotVersion = 22 // v22: retain Fork group fields and include OpenAI Fast policy fields
 type apiKeyAuthCacheConfig struct {
 	l1Size        int
 	l1TTL         time.Duration
@@ -423,6 +423,8 @@ func (s *APIKeyService) snapshotFromAPIKey(ctx context.Context, apiKey *APIKey) 
 			SupportedModelScopes:            groupForSnapshot.SupportedModelScopes,
 			AllowMessagesDispatch:           groupForSnapshot.AllowMessagesDispatch,
 			AllowLive:                       groupForSnapshot.AllowLive,
+			ForceOpenAIFast:                 groupForSnapshot.ForceOpenAIFast,
+			FreeOpenAIFast:                  groupForSnapshot.FreeOpenAIFast,
 			DefaultMappedModel:              groupForSnapshot.DefaultMappedModel,
 			MessagesDispatchModelConfig:     groupForSnapshot.MessagesDispatchModelConfig,
 			ModelsListConfig:                groupForSnapshot.ModelsListConfig,
@@ -433,6 +435,7 @@ func (s *APIKeyService) snapshotFromAPIKey(ctx context.Context, apiKey *APIKey) 
 			KiroCacheEmulationRatio:         groupForSnapshot.KiroCacheEmulationRatio,
 			KiroEndpointMode:                groupForSnapshot.KiroEndpointMode,
 			MaxReasoningEffort:              groupForSnapshot.MaxReasoningEffort,
+			MaxReasoningEffortOverLimit:     groupForSnapshot.MaxReasoningEffortOverLimit,
 			ReasoningEffortMappings:         groupForSnapshot.ReasoningEffortMappings,
 			PeakRateEnabled:                 groupForSnapshot.PeakRateEnabled,
 			PeakStart:                       groupForSnapshot.PeakStart,
@@ -526,6 +529,8 @@ func (s *APIKeyService) snapshotToAPIKey(key string, snapshot *APIKeyAuthSnapsho
 			SupportedModelScopes:            snapshot.Group.SupportedModelScopes,
 			AllowMessagesDispatch:           snapshot.Group.AllowMessagesDispatch,
 			AllowLive:                       snapshot.Group.AllowLive,
+			ForceOpenAIFast:                 snapshot.Group.ForceOpenAIFast,
+			FreeOpenAIFast:                  snapshot.Group.FreeOpenAIFast,
 			DefaultMappedModel:              snapshot.Group.DefaultMappedModel,
 			MessagesDispatchModelConfig:     snapshot.Group.MessagesDispatchModelConfig,
 			ModelsListConfig:                snapshot.Group.ModelsListConfig,
@@ -536,6 +541,7 @@ func (s *APIKeyService) snapshotToAPIKey(key string, snapshot *APIKeyAuthSnapsho
 			KiroCacheEmulationRatio:         snapshot.Group.KiroCacheEmulationRatio,
 			KiroEndpointMode:                snapshot.Group.KiroEndpointMode,
 			MaxReasoningEffort:              snapshot.Group.MaxReasoningEffort,
+			MaxReasoningEffortOverLimit:     snapshot.Group.MaxReasoningEffortOverLimit,
 			ReasoningEffortMappings:         snapshot.Group.ReasoningEffortMappings,
 			PeakRateEnabled:                 snapshot.Group.PeakRateEnabled,
 			PeakStart:                       snapshot.Group.PeakStart,

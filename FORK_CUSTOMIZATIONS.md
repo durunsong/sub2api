@@ -1,7 +1,7 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.1.185**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.1.185**（官方无独立 v0.1.174 tag），并保留本 Fork
+当前整合版本为 **v0.2.0**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.0**（官方无独立 v0.1.174 tag），并保留本 Fork
 的全部定制能力。
 
 ## 必须保留的模块
@@ -27,6 +27,15 @@
 - 消费指定期限卡时放弃原剩余时间，清零日/周/月 USD 与 token、重置三个窗口，并从点击时开始新期限；旧 `reset-daily` 兼容映射为 1 天卡。
 - 用户 `/subscriptions` 按期限返回并展示卡数量和“永久有效”；`manual_reset_credits` 保留为发卡加一、消费减一的兼容镜像，不承载期限事实。
 - 高危同步范围：`subscription_service.go`、`user_subscription{,_port}.go`、`user_subscription_repo.go`、`payment_fulfillment.go`、`redeem_service.go`、订阅 handler/routes/DTO、迁移 `224`/`225`、`SubscriptionsView.vue`、订阅 API/types/i18n。
+
+## v0.2.0 整合内容
+
+- 分组新增 `force_openai_fast` / `free_openai_fast`：HTTP、Messages 和 WebSocket 可强制 priority，免费 Fast 只将用户费用按 Standard 计价，账户成本仍记录实际档位。
+- reasoning effort 映射支持 global、exact model 和 model prefix，并可配置超过 ceiling 时降级或拒绝；Kimi 支持原生 OpenAI Responses，模型目录和 Antigravity 映射加入 Claude Fable 5.1。
+- 修复无 call ID 的合法自动化启动、OpenAI API Key 对话缓存身份、scheduler passthrough 快照、WS terminal event 前关闭、模型冷却覆盖 404 `model_not_found` 和 Anthropic fallback beta 字段透传。
+- 渠道定价新增可空 `cache_write_1h_price`；新增 `232_channel_cache_write_1h_pricing.sql`、`232_group_force_openai_fast.sql`、`232_group_reasoning_effort_over_limit.sql`、`233_group_free_openai_fast.sql`。
+- 精确同步范围为 `2ac784c51a5d0925b324efef2ba6b3446c364781..aa236488351eb71e120fc2b6fb32e36b0374c918`，共 60 个提交、148 个文件、4,926 行新增和 543 行删除；v0.2.0 tag object 为 `dd07c4d8d484878e617c945cc8bacc304a5a6560`。官方 tag 内 VERSION 仍为 `0.1.185`，本 Fork 按 release tag 设为 `0.2.0`。
+- 54 个重叠文件按三方逐 hunk 合并；Kiro、XorPay、Access Ban、Kiro→Claude、提示词审计、订阅重置卡、订阅可用额度筛选、Ops、VersionBadge、GLM 套餐、支付体验和 UI 品牌全部保留。
 
 ## v0.1.185 整合内容
 
@@ -211,4 +220,4 @@
 - `wire.go`、`wire_gen.go`、网关路由、套餐服务、Ops 服务和设置页属于高冲突文件，合并后必须运行对应测试。
 - 同步订阅链路时必须保留迁移 `224`/`225`、购买来源幂等键、有效期快照、过期重开、旧 `reset-daily` → 1 天卡映射，以及 `manual_reset_credits` 兼容镜像。
 
-*最后更新：2026-08-25*
+*最后更新：2026-09-02*

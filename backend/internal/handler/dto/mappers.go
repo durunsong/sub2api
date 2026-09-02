@@ -148,6 +148,8 @@ func GroupFromServiceAdmin(g *service.Group) *AdminGroup {
 	}
 	out := &AdminGroup{
 		Group:                       groupFromServiceBase(g),
+		ForceOpenAIFast:             g.ForceOpenAIFast,
+		FreeOpenAIFast:              g.FreeOpenAIFast,
 		ProfitControlEnabled:        g.ProfitControlEnabled,
 		ProfitMinMargin:             g.ProfitMinMargin,
 		ProfitSafetyBuffer:          g.ProfitSafetyBuffer,
@@ -226,6 +228,7 @@ func groupFromServiceBase(g *service.Group) Group {
 		KiroCacheEmulationRatio:         g.EffectiveKiroCacheEmulationRatio(),
 		KiroEndpointMode:                g.EffectiveKiroEndpointMode(),
 		MaxReasoningEffort:              g.MaxReasoningEffort,
+		MaxReasoningEffortOverLimit:     g.MaxReasoningEffortOverLimit,
 		ReasoningEffortMappings:         g.ReasoningEffortMappings,
 		CreatedAt:                       g.CreatedAt,
 		UpdatedAt:                       g.UpdatedAt,
