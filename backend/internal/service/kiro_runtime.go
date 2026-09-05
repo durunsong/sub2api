@@ -97,7 +97,7 @@ func (s *GatewayService) forwardKiroMessages(ctx context.Context, c *gin.Context
 	}
 
 	if parsed.Stream {
-		resp, _, err := s.openKiroAnthropicStreamResponse(ctx, account, parsed, body, mappedModel, originalModel, c.Request.Header, parsed.Group, nil)
+		resp, upstreamHeaders, err := s.openKiroAnthropicStreamResponse(ctx, account, parsed, body, mappedModel, originalModel, c.Request.Header, parsed.Group, nil)
 		if err != nil {
 			var failoverErr *UpstreamFailoverError
 			if errors.As(err, &failoverErr) {
@@ -145,6 +145,7 @@ func (s *GatewayService) forwardKiroMessages(ctx context.Context, c *gin.Context
 		requestID := buildKiroRequestID(resp)
 		return &ForwardResult{
 			RequestID:        requestID,
+			UpstreamHeaders:  upstreamHeaders,
 			Usage:            *streamResult.usage,
 			Model:            originalModel,
 			UpstreamModel:    upstreamModel,
@@ -174,12 +175,13 @@ func (s *GatewayService) forwardKiroMessages(ctx context.Context, c *gin.Context
 			c.Header("request-id", claudeReqID)
 			c.Data(http.StatusOK, "application/json", webSearchResult.ResponseBody)
 			return &ForwardResult{
-				RequestID:     webSearchResult.RequestID,
-				Usage:         webSearchResult.Usage,
-				Model:         originalModel,
-				UpstreamModel: upstreamModel,
-				Stream:        false,
-				Duration:      time.Since(startTime),
+				RequestID:       webSearchResult.RequestID,
+				UpstreamHeaders: webSearchResult.UpstreamHeaders,
+				Usage:           webSearchResult.Usage,
+				Model:           originalModel,
+				UpstreamModel:   upstreamModel,
+				Stream:          false,
+				Duration:        time.Since(startTime),
 			}, nil
 		default:
 			var httpErr *kiroWebSearchHTTPError
@@ -264,24 +266,25 @@ func (s *GatewayService) forwardKiroMessages(ctx context.Context, c *gin.Context
 	upstreamModel := resolveKiroUpstreamModel(mappedModel)
 
 	return &ForwardResult{
-		RequestID:     requestID,
-		Usage:         kiroUsageToClaude(parseResult.Usage, inputTokens),
-		Model:         originalModel,
-		UpstreamModel: upstreamModel,
-		Stream:        false,
-		Duration:      time.Since(startTime),
+		RequestID:       requestID,
+		UpstreamHeaders: resp.Header.Clone(),
+		Usage:           kiroUsageToClaude(parseResult.Usage, inputTokens),
+		Model:           originalModel,
+		UpstreamModel:   upstreamModel,
+		Stream:          false,
+		Duration:        time.Since(startTime),
 	}, nil
 }
 
-func (s *GatewayService) openKiroAnthropicStreamResponse(ctx context.Context, account *Account, parsed *ParsedRequest, anthropicBody []byte, mappedModel, requestModel string, headers http.Header, group *Group, cacheUsageOverride *kiroCacheEmulationUsage) (*http.Response, int, error) {
+func (s *GatewayService) openKiroAnthropicStreamResponse(ctx context.Context, account *Account, parsed *ParsedRequest, anthropicBody []byte, mappedModel, requestModel string, headers http.Header, group *Group, cacheUsageOverride *kiroCacheEmulationUsage) (*http.Response, http.Header, error) {
 	token, tokenType, err := s.GetAccessToken(ctx, account)
 	if err != nil {
-		return nil, 0, err
+		return nil, nil, err
 	}
 	// Kiro 直连 AWS 支持两类 token:OAuth access_token 与 API Key(ksk_*)。
 	// API Key 模式下 GetAccessToken 返回 tokenType "apikey"(无需刷新)。
 	if tokenType != "oauth" && tokenType != "apikey" {
-		return nil, 0, fmt.Errorf("kiro requires oauth or apikey token, got %s", tokenType)
+		return nil, nil, fmt.Errorf("kiro requires oauth or apikey token, got %s", tokenType)
 	}
 
 	inputTokens := estimateKiroInputTokens(ctx, anthropicBody)
@@ -305,19 +308,19 @@ func (s *GatewayService) openKiroAnthropicStreamResponse(ctx context.Context, ac
 			StatusCode: http.StatusOK,
 			Header:     headers,
 			Body:       pr,
-		}, inputTokens, nil
+		}, nil, nil
 	}
 
 	resp, requestCtx, err := s.executeKiroUpstreamWithParsed(ctx, account, parsed, anthropicBody, mappedModel, requestModel, token, headers)
 	if err != nil {
 		var failoverErr *UpstreamFailoverError
 		if errors.As(err, &failoverErr) {
-			return nil, inputTokens, err
+			return nil, nil, err
 		}
-		return nil, inputTokens, err
+		return nil, nil, err
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return resp, inputTokens, nil
+		return resp, resp.Header.Clone(), nil
 	}
 	cacheUsage := cacheUsageOverride
 	if cacheUsage == nil {
@@ -347,7 +350,7 @@ func (s *GatewayService) openKiroAnthropicStreamResponse(ctx context.Context, ac
 		StatusCode: resp.StatusCode,
 		Header:     wrappedHeaders,
 		Body:       pr,
-	}, inputTokens, nil
+	}, resp.Header.Clone(), nil
 }
 
 func (s *GatewayService) executeKiroUpstream(ctx context.Context, account *Account, anthropicBody []byte, mappedModel, requestModel, token string, headers http.Header) (*http.Response, kiropkg.KiroRequestContext, error) {

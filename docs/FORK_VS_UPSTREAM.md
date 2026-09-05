@@ -2,10 +2,10 @@
 
 > **上游官方仓库**：[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api)
 > **本 Fork 远程**：`origin` → `durunsong/sub2api`（中转/部署用）
-> **对比基准**：官方 tag **`v0.2.0`**（2026-09-02；官方无 v0.1.174 tag）
-> **本 Fork 当前版本**：`backend/cmd/server/VERSION` = **0.2.0**
-> **统计**：v0.1.185→v0.2.0 为 60 commits / 148 files / +4,926 / -543；历史相对 v0.1.164 的大盘差异见下文
-> **当前工作区**：已合入官方 v0.2.0，并保留 Kiro / XorPay / Access Ban / 提示词审计 / 订阅重置卡 / Ops / UI 品牌等全部定制
+> **对比基准**：官方 tag **`v0.2.1`**（同步于 2026-09-05；官方无 v0.1.174 tag）
+> **本 Fork 当前版本**：`backend/cmd/server/VERSION` = **0.2.1**
+> **统计**：v0.2.0→v0.2.1 为 82 commits / 297 files / +12,622 / -1,033；历史相对 v0.1.164 的大盘差异见下文
+> **当前工作区**：已合入官方 v0.2.1，并保留 Kiro / XorPay / Access Ban / 提示词审计 / 订阅重置卡 / Ops / UI 品牌等全部定制，含登录失败自动封禁及重置卡提示
 > **维护**：新增 Fork 定制后，请同步更新本文与根目录 `AGENTS.md` 摘要。
 
 ---
@@ -20,7 +20,7 @@
 | **`AGENTS.md`**（项目根） | AI 协作**强制摘要**与禁区，改代码前必读 |
 | **`FORK_CUSTOMIZATIONS.md`**（项目根） | 历史清单，已收敛到本文；保留作快捷索引 |
 
-**注意**：本 Fork 已同步官方至 **v0.2.0**，但 **`upstream/main` 仍可能领先**。与官方同步时以目标 release **tag** 为准，不带入 tag 后的 `main` 内容；merge `main` 前务必先读本文 Fork 定制章节，禁止 blindly 采用上游覆盖 Kiro / XorPay / Access Ban 等模块。
+**注意**：本 Fork 已同步官方至 **v0.2.1**，但 **`upstream/main` 仍可能领先**。与官方同步时以目标 release **tag** 为准，不带入 tag 后的 `main` 内容；merge `main` 前务必先读本文 Fork 定制章节，禁止 blindly 采用上游覆盖 Kiro / XorPay / Access Ban 等模块。
 
 ---
 
@@ -45,6 +45,7 @@
 
 **以下能力已在官方 v0.1.142+ 中，本 Fork 通过同步拥有，不算 Fork 独有开发**（合并时保留了 Kiro/XorPay 定制）：
 
+- v0.2.1 官方能力：Codex 固定账号模型目录与回退、GPT-6 Astra/ultrafast、none 推理映射、精简账号列表、用量上游请求 ID、图片 URL 转 Base64（私网阻断和字节类型检测）、定价文件热重载、Claude CLI 版本覆盖/max 推理倍率，以及 WS 续聊、会话槽释放、渠道调度、Ops 代理归因/零值指标和 Alipay 待支付补偿。四个新增迁移为 `232_add_usage_log_upstream_request_id.sql`、`233_add_usage_log_upstream_request_id_index_notx.sql`、`234_channel_max_reasoning_effort_multiplier.sql`、`234_group_codex_models_manifest_config.sql`。目标 commit `578785ee7fb35030b094b69624efe25670a36f5f`，tag object `adc26f68f687685e847bfb997559f48e79cac475`；相对 v0.2.0 共 82 commits / 297 files / +12,622 / -1,033。官方 VERSION 仍为 0.2.0，本 Fork 设为 0.2.1；保留 87 个重叠文件中的定制，特别是 Kiro 精简列表状态、credits 与请求 ID 并存、冻结计价时刻和单次 max 倍率。实施与验证记录位于 `openspec/changes/sync-upstream-v0-2-1/`。
 - v0.2.0 官方能力：分组级 OpenAI 强制/免费 Fast、按模型 reasoning effort 映射与 ceiling 超限拒绝/降级、Kimi 原生 Responses、Claude Fable 5.1、无 call ID 自动化启动；同时修复 WS terminal event 前关闭、模型冷却覆盖 404 `model_not_found`、Anthropic fallback beta、OpenAI API Key 缓存身份和 scheduler passthrough 快照，并为渠道增加可空 `cache_write_1h_price`。新增 `232_channel_cache_write_1h_pricing.sql`、`232_group_force_openai_fast.sql`、`232_group_reasoning_effort_over_limit.sql`、`233_group_free_openai_fast.sql`。精确增量 `2ac784c51a5d0925b324efef2ba6b3446c364781..aa236488351eb71e120fc2b6fb32e36b0374c918` 为 60 commits / 148 files / +4,926 / -543；tag object 为 `dd07c4d8d484878e617c945cc8bacc304a5a6560`，官方 tag 内 VERSION 仍为 0.1.185，本 Fork 设为 0.2.0。54 个重叠文件逐 hunk 合并并保留全部 Fork 定制。
 - v0.1.185 官方能力：价格目录支持 `pricing.override_file` JSON 补丁覆盖，长上下文阶梯计价改由价格目录数据驱动，Codex 快速模型展示 priority service tier；账号统计成本统一应用模型定价策略与 DeepSeek 峰谷价格，并增强数据库启动瞬时错误重试、OpenAI WebSocket 空闲连接回收、Codex 图像输入能力保留和持续禁用账号过滤。同步还修复 API Key 请求错误合成 instructions、ctx_pool 容量降载错误码和 delegation bootstrap 缺少 call id。无新增迁移；官方 tag peeled commit 为 `2ac784c51a5d0925b324efef2ba6b3446c364781`，tag 内 VERSION 为 0.1.184，本 Fork 按 release tag 设为 0.1.185，并保留全部 Fork 定制。
 - v0.1.184 官方能力：Codex 路由模型目录、实际路由能力同步和精确账号模型别名；管理员限制用户可访问公共分组；原生 compaction 与映射前推理强度用量记录；智谱团队 GLM Coding Plan 用量查询；国产三家平台账号挂载 Ollama Cloud 用量窗口；OpenAI 图像工具冷却和 TTFT 管理配置。同步还包含 OpenAI 多渠道 service tier、配额原子重置、WebSocket 隔离/大请求转发，以及 Anthropic/Grok/支付/SMTP/计费等修复。新增 `231_add_usage_log_native_compaction_v2.sql`、`231_add_usage_log_requested_reasoning_effort.sql`、`231_user_restrict_public_groups.sql`；官方 tag 内 VERSION 为 0.1.183，本 Fork 按 release tag 设为 0.1.184，并保留全部 Fork 定制。
@@ -105,6 +106,7 @@ v0.1.160 同步时额外补齐 `securityaudit.ProviderSet` 中 `*PromptService` 
 - 计费：`usage_logs.kiro_credits` 字段；cache_read **不重复计入** input_tokens
 - 429：独立冷却（`kirocooldown`），**跳过**通用 `HandleUpstreamError`，与 DB `rate_limit_reset_at` 双向同步
 - **count_tokens**：Kiro 直连账号（OAuth / 无 base_url 的 API Key）走本地 `estimateKiroInputTokens`，**不打上游**，避免 `jwt auth is not yet supported on count_tokens` → OAuth 401 临时不可调度
+- **v0.2.1 接入**：精简账号列表继续返回 `kiro_quota_*` / `kiro_runtime_*` 六字段；Messages 直连和 Responses/Chat 桥接单独保留真实响应头快照，按账号配置提取上游请求 ID，避免流式包装生成的 Claude ID 混入用量记录。非流式 Web Search 记录最后一次实际上游响应头；合成多步搜索流没有单一真实响应头时保持 NULL。
 - **已同步 nianzs/main（上次合入之后）的 Kiro 增量**：图片视觉 token、`KiroEndpointModeAuto`、API Key 直连/中转分流、`profile_arn` 解析回填、External IdP OAuth 后端、translator tool/filePath/空 input、直连调度 `isKiroDirectModeAccount` 等（前端 External IdP 两阶段引导 UI 仍待补齐）
 
 ### 3.2 后端 — 新增文件（独立包）
@@ -879,4 +881,4 @@ deploy/docker-compose.yml
 
 ---
 
-*最后更新：2026-09-02 · 基准：官方 v0.2.0 · 增量清单见 `FORK_CUSTOMIZATIONS.md` · 工作区：`git status --short`*
+*最后更新：2026-09-05 · 基准：官方 v0.2.1 · 增量清单见 `FORK_CUSTOMIZATIONS.md` · 工作区：`git status --short`*

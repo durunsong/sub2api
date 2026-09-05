@@ -30,12 +30,17 @@ func newSessionIDUsageLog(sessionID *string) *service.UsageLog {
 
 // TestPrepareUsageLogInsert_SessionIDArgWiring pins the session_id column to the
 // arg slice / arg-type table so the five INSERT column lists stay in sync. session_id
-// remains after the Fork's kiro_credits and before native_compaction_v2.
+// remains after kiro_credits/upstream_request_id and before native_compaction_v2.
 func TestPrepareUsageLogInsert_SessionIDArgWiring(t *testing.T) {
-	require.Len(t, usageLogInsertArgTypes, 62, "arg-type table must include upstream model audit, kiro_credits, session_id, and native compaction")
+	require.Len(t, usageLogInsertArgTypes, 63, "arg-type table must include upstream model audit, kiro_credits, upstream_request_id, session_id, and native compaction")
 
 	sessionID := "sess-persisted-123"
-	prepared := prepareUsageLogInsert(newSessionIDUsageLog(&sessionID))
+	upstreamID := "upstream-persisted-456"
+	credits := 0.25
+	log := newSessionIDUsageLog(&sessionID)
+	log.UpstreamRequestID = &upstreamID
+	log.KiroCredits = &credits
+	prepared := prepareUsageLogInsert(log)
 
 	require.Len(t, prepared.args, len(usageLogInsertArgTypes),
 		"prepared args must match the arg-type table length")
@@ -49,8 +54,12 @@ func TestPrepareUsageLogInsert_SessionIDArgWiring(t *testing.T) {
 
 	require.Equal(t, "text", usageLogInsertArgTypes[len(usageLogInsertArgTypes)-3],
 		"session_id arg type must be text")
-	require.Equal(t, "numeric", usageLogInsertArgTypes[len(usageLogInsertArgTypes)-4],
+	require.Equal(t, "text", usageLogInsertArgTypes[len(usageLogInsertArgTypes)-4],
+		"upstream_request_id arg type must be text")
+	require.Equal(t, "numeric", usageLogInsertArgTypes[len(usageLogInsertArgTypes)-5],
 		"kiro_credits arg type must remain numeric")
+	require.Equal(t, &credits, prepared.args[len(prepared.args)-5])
+	require.Equal(t, sql.NullString{String: upstreamID, Valid: true}, prepared.args[len(prepared.args)-4])
 	require.Equal(t, "boolean", usageLogInsertArgTypes[len(usageLogInsertArgTypes)-2],
 		"native_compaction_v2 arg type must be boolean")
 }

@@ -14,8 +14,8 @@ Cursor 场景下还会加载 [`.cursor/rules/sub2api-fork.mdc`](.cursor/rules/su
 | 项 | 值 |
 |----|-----|
 | 上游官方 | https://github.com/Wei-Shaw/sub2api |
-| 已同步基线 | tag **v0.2.0**（官方无 v0.1.174 tag） |
-| 当前 VERSION | `backend/cmd/server/VERSION` = **0.2.0** |
+| 已同步基线 | tag **v0.2.1**（官方无 v0.1.174 tag） |
+| 当前 VERSION | `backend/cmd/server/VERSION` = **0.2.1** |
 | 完整差异文档 | **`docs/FORK_VS_UPSTREAM.md`**（相对历史基线；含 Fork 扩展见文档 §8.2 / §12；快捷清单见 `FORK_CUSTOMIZATIONS.md`） |
 | 快捷索引 | `FORK_CUSTOMIZATIONS.md` |
 
@@ -33,6 +33,7 @@ Cursor 场景下还会加载 [`.cursor/rules/sub2api-fork.mdc`](.cursor/rules/su
 - 迁移：`135`、`145`、`151`–`153`（kiro 相关）
 - **计费口径**：`kiro_credits`；cache_read **不重复计入** input_tokens
 - **429**：独立冷却，跳过通用 `HandleUpstreamError`
+- **上游请求 ID**：直连 Messages、Responses/Chat 桥接返回真实上游响应头快照；客户端生成的 Claude 请求 ID 不得用于上游 ID 落库。精简账号列表保留六个 Kiro 配额/运行状态字段。
 
 ### XorPay 支付
 
@@ -134,6 +135,7 @@ Access Ban 迁移顺序：`159` 建表 → `160` 扩展 rule_type / ua_pattern�
 
 以下来自官方 v0.1.142+，勿误当 Fork 独有而重复实现或删除：
 
+- v0.2.1：Codex 固定账号模型目录、GPT-6 Astra/ultrafast、上游请求 ID 与账号精简列表、图片 URL 转 Base64、定价文件热重载、Claude CLI 版本覆盖/max 推理倍率，以及 WS 续聊、会话槽释放、渠道调度、Ops 代理归因、Alipay 待支付补偿等修复。新增四个 `232`/`233`/`234` 迁移，与 Fork 历史迁移按完整文件名并存。精确增量为 82 commits / 297 files / +12,622 / -1,033，目标 commit `578785ee7fb35030b094b69624efe25670a36f5f`；保留全部定制，精简账号 DTO 必须保留 Kiro 六个运行/配额状态字段，账号统计保留冻结计价时刻且 max 倍率只计算一次。
 - 用户端用量分析与管理员对齐（`UsageView`、`request_type`）
 - 订阅支付金额显示修复
 - `prefer_soonest_reset` 调度、`affiliate` 订阅返佣
@@ -185,7 +187,7 @@ Access Ban 迁移顺序：`159` 建表 → `160` 扩展 rule_type / ua_pattern�
 
 见 `docs/FORK_VS_UPSTREAM.md` §14。原则：**Kiro + XorPay + Access Ban + 提示词审计 + 套餐续期 + Ops + UI 品牌等全部定制保留**。
 
-`upstream/main` 可能领先于 v0.2.0；同步时以 release tag 为基线，不带入 tag 后的 `main` 内容，并逐文件保留 Fork 模块。
+`upstream/main` 可能领先于 v0.2.1；同步时以 release tag 为基线，不带入 tag 后的 `main` 内容，并逐文件保留 Fork 模块。
 
 ---
 

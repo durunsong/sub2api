@@ -1,7 +1,7 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.2.0**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.0**（官方无独立 v0.1.174 tag），并保留本 Fork
+当前整合版本为 **v0.2.1**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.1**（官方无独立 v0.1.174 tag），并保留本 Fork
 的全部定制能力。
 
 ## 必须保留的模块
@@ -27,6 +27,17 @@
 - 消费指定期限卡时放弃原剩余时间，清零日/周/月 USD 与 token、重置三个窗口，并从点击时开始新期限；旧 `reset-daily` 兼容映射为 1 天卡。
 - 用户 `/subscriptions` 按期限返回并展示卡数量和“永久有效”；`manual_reset_credits` 保留为发卡加一、消费减一的兼容镜像，不承载期限事实。
 - 高危同步范围：`subscription_service.go`、`user_subscription{,_port}.go`、`user_subscription_repo.go`、`payment_fulfillment.go`、`redeem_service.go`、订阅 handler/routes/DTO、迁移 `224`/`225`、`SubscriptionsView.vue`、订阅 API/types/i18n。
+
+## v0.2.1 整合内容
+
+- Codex 模型目录可指定固定账号及调度回退；支持 GPT-6 Astra、ultrafast、none 推理映射源和同步模型能力保留。
+- 账号精简列表减少响应体；账户可配置上游请求 ID 响应头，用量表保存与展示该值；OpenAI 图片结果可选将 URL 下载回填为 Base64，并拒绝私网目的地。
+- 定价 fallback/override 文件按内容哈希热重载；支持 Claude CLI 版本覆盖、Fable 5.1 max 推理默认 3 倍及渠道自定义倍率。
+- 修复 WS 加密续聊与复制开销、失败请求会话槽释放、映射模型及渠道限制调度、Ops 代理归因和零值指标、Alipay 待支付订单主动补偿。
+- 新增 `232_add_usage_log_upstream_request_id.sql`、`233_add_usage_log_upstream_request_id_index_notx.sql`、`234_channel_max_reasoning_effort_multiplier.sql`、`234_group_codex_models_manifest_config.sql`；本次仅纳入文件，未执行生产迁移。
+- 精确范围 `aa236488351eb71e120fc2b6fb32e36b0374c918..578785ee7fb35030b094b69624efe25670a36f5f`，82 commits / 297 files / +12,622 / -1,033；tag object `adc26f68f687685e847bfb997559f48e79cac475`。官方 tag 内 VERSION 为 0.2.0，本 Fork 按 release tag 设为 0.2.1。
+- 保留全部既有定制及 `e316f5189` 的登录失败自动封禁/重置卡提示。87 个重叠文件逐项合并；精简账号 DTO 继续返回 Kiro 六个状态字段，用量 SQL 同时保存 Kiro credits 和上游 ID，账号统计保留冻结计价时刻并避免重复乘 max 倍率。
+- Kiro Messages 直连和 Responses/Chat 桥接补齐真实上游响应头快照，保留客户端生成 ID 的原有行为；合成多步搜索流的上游 ID 保持 NULL。
 
 ## v0.2.0 整合内容
 

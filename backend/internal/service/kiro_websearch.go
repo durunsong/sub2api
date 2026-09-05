@@ -21,9 +21,10 @@ var (
 )
 
 type kiroWebSearchExecution struct {
-	ResponseBody []byte
-	Usage        ClaudeUsage
-	RequestID    string
+	ResponseBody    []byte
+	Usage           ClaudeUsage
+	RequestID       string
+	UpstreamHeaders http.Header
 }
 
 type kiroWebSearchHTTPError struct {
@@ -263,9 +264,10 @@ func (s *GatewayService) executeKiroWebSearch(ctx context.Context, account *Acco
 				parseResult.ResponseBody = finalBody
 			}
 			return &kiroWebSearchExecution{
-				ResponseBody: parseResult.ResponseBody,
-				Usage:        kiroUsageToClaude(parseResult.Usage, inputTokens),
-				RequestID:    requestID,
+				ResponseBody:    parseResult.ResponseBody,
+				Usage:           kiroUsageToClaude(parseResult.Usage, inputTokens),
+				RequestID:       requestID,
+				UpstreamHeaders: resp.Header.Clone(),
 			}, nil
 		}
 
