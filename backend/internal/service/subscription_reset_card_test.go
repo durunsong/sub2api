@@ -7,8 +7,61 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	"github.com/stretchr/testify/require"
 )
+
+type resetCardListRepo struct {
+	*resetCardRepoStub
+	err error
+}
+
+func (r *resetCardListRepo) List(context.Context, pagination.PaginationParams, *int64, *int64, string, string, string, string) ([]UserSubscription, *pagination.PaginationResult, error) {
+	return []UserSubscription{*r.byID[1], *r.byID[2]}, &pagination.PaginationResult{Total: 2}, nil
+}
+
+func (r *resetCardListRepo) ListByGroupID(ctx context.Context, _ int64, params pagination.PaginationParams) ([]UserSubscription, *pagination.PaginationResult, error) {
+	return r.List(ctx, params, nil, nil, "", "", "", "")
+}
+
+func (r *resetCardListRepo) ListAvailableResetCardGroups(ctx context.Context, ids []int64) ([]ResetCardGroup, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	return r.resetCardRepoStub.ListAvailableResetCardGroups(ctx, ids)
+}
+
+func TestAdminSubscriptionListsAttachResetCards(t *testing.T) {
+	now := time.Now()
+	repo := &resetCardListRepo{resetCardRepoStub: &resetCardRepoStub{subscriptionUserSubRepoStub: newSubscriptionUserSubRepoStub(), cards: []UserSubscriptionResetCard{
+		{ID: 1, UserSubscriptionID: 1, ValidityDays: 30},
+		{ID: 2, UserSubscriptionID: 1, ValidityDays: 30},
+		{ID: 3, UserSubscriptionID: 1, ValidityDays: 7, ConsumedAt: &now},
+	}}}
+	repo.seed(&UserSubscription{ID: 1, UserID: 2, GroupID: 3, ExpiresAt: now.Add(-time.Hour), Status: SubscriptionStatusExpired, ManualResetCredits: 99, ResetCards: ResetCardSummary{Total: 99}})
+	repo.seed(&UserSubscription{ID: 2, UserID: 4, GroupID: 3, ExpiresAt: now.Add(time.Hour), Status: SubscriptionStatusActive})
+	svc := NewSubscriptionService(groupRepoNoop{}, repo, nil, nil, nil)
+	for _, list := range []func() ([]UserSubscription, *pagination.PaginationResult, error){
+		func() ([]UserSubscription, *pagination.PaginationResult, error) {
+			return svc.List(context.Background(), 1, 20, nil, nil, "", "", "", "")
+		},
+		func() ([]UserSubscription, *pagination.PaginationResult, error) {
+			return svc.ListGroupSubscriptions(context.Background(), 3, 1, 20)
+		},
+	} {
+		subs, pag, err := list()
+		require.NoError(t, err)
+		require.EqualValues(t, 2, pag.Total)
+		require.Equal(t, 2, subs[0].ResetCards.Total, "must use unconsumed cards, not the legacy counter or old summary")
+		require.Equal(t, []ResetCardGroup{{SubscriptionID: 1, ValidityDays: 30, AvailableCount: 2}}, subs[0].ResetCards.Groups)
+		require.Zero(t, subs[1].ResetCards.Total)
+		require.Empty(t, subs[1].ResetCards.Groups)
+		repo.err = errors.New("card query failed")
+		_, _, err = list()
+		require.ErrorIs(t, err, repo.err)
+		repo.err = nil
+	}
+}
 
 type resetCardPublishCache struct {
 	BillingCache

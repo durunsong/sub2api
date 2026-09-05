@@ -534,7 +534,21 @@ func (s *AuthService) IsEmailVerifyEnabled(ctx context.Context) bool {
 	return s.settingService.IsEmailVerifyEnabled(ctx)
 }
 
-// Login 用户登录，返回JWT token
+// LoginWithClientIP applies automatic IP protection after a failed local login.
+func (s *AuthService) LoginWithClientIP(ctx context.Context, email, password, clientIP string) (string, *User, error) {
+	token, user, err := s.Login(ctx, email, password)
+	if errors.Is(err, ErrInvalidCredentials) && s.accessBanService != nil {
+		// Persist protection even if the attacking client disconnects after password verification.
+		banCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 3*time.Second)
+		defer cancel()
+		if banErr := s.accessBanService.BanFailedAdminLogin(banCtx, email, clientIP); banErr != nil {
+			logger.LegacyPrintf("service.auth", "[Auth] Failed to persist automatic login IP ban: %v", banErr)
+		}
+	}
+	return token, user, err
+}
+
+// Login verifies local credentials without an HTTP client address.
 func (s *AuthService) Login(ctx context.Context, email, password string) (string, *User, error) {
 	if err := s.validateLoginEmailPolicy(ctx, email); err != nil {
 		return "", nil, err

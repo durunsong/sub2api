@@ -265,6 +265,9 @@ export default {
       },
     },
     ipBans: {
+      autoAdminLogin: 'Automatic login protection',
+      manualSource: 'Manual',
+      autoAdminLoginReason: 'Invalid login credentials for an account containing admin; IP automatically banned',
       title: 'Access Bans',
       description: 'Globally block registration and API key usage by IP, UA, IP+UA, email suffix, or email regex',
       createRule: 'Create Ban',

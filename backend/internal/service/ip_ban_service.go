@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"net/netip"
 	"strings"
 	"sync"
 	"time"
@@ -13,8 +14,9 @@ import (
 )
 
 const (
-	IPBanStatusActive   = "active"
-	IPBanStatusInactive = "inactive"
+	IPBanStatusActive     = "active"
+	IPBanStatusInactive   = "inactive"
+	IPBanSourceAdminLogin = "admin_login_failure"
 )
 
 var (
@@ -73,6 +75,7 @@ type UpdateIPBanInput struct {
 
 type IPBanRepository interface {
 	Create(ctx context.Context, ban *IPBan) error
+	UpsertAutomatic(ctx context.Context, ban *IPBan) error
 	GetByID(ctx context.Context, id int64) (*IPBan, error)
 	List(ctx context.Context, params pagination.PaginationParams, filters IPBanListFilters) ([]IPBan, *pagination.PaginationResult, error)
 	Update(ctx context.Context, ban *IPBan) error
@@ -92,6 +95,33 @@ type IPBanService struct {
 
 func NewIPBanService(repo IPBanRepository) *IPBanService {
 	return &IPBanService{repo: repo, cacheTTL: 5 * time.Second}
+}
+
+// BanFailedAdminLogin only accepts a trusted public client address, never a proxy subnet.
+func (s *IPBanService) BanFailedAdminLogin(ctx context.Context, email, clientIP string) error {
+	account, _, ok := strings.Cut(strings.ToLower(strings.TrimSpace(email)), "@")
+	if !ok || !strings.Contains(account, "admin") || s == nil || s.repo == nil {
+		return nil
+	}
+	addr, err := netip.ParseAddr(strings.TrimSpace(clientIP))
+	if err != nil {
+		return nil
+	}
+	addr = addr.Unmap()
+	if !addr.IsGlobalUnicast() || addr.IsPrivate() || addr.Zone() != "" {
+		return nil
+	}
+	expiresAt := time.Now().Add(24 * time.Hour)
+	ban := &IPBan{
+		RuleType: accessban.RuleTypeIP, Pattern: addr.String(), Status: IPBanStatusActive,
+		Source: IPBanSourceAdminLogin, ExpiresAt: &expiresAt,
+		Reason: "Automatic ban: invalid credentials for an account containing admin",
+	}
+	if err := s.repo.UpsertAutomatic(ctx, ban); err != nil {
+		return err
+	}
+	s.invalidateCache()
+	return nil
 }
 
 func (s *IPBanService) Create(ctx context.Context, input CreateIPBanInput) (*IPBan, error) {
@@ -190,6 +220,11 @@ func (s *IPBanService) Delete(ctx context.Context, id int64) error {
 
 // CheckClient matches IP / UA / IP+UA rules for gateway and auth client guards.
 func (s *IPBanService) CheckClient(ctx context.Context, clientIP, userAgent string) (*IPBan, bool, error) {
+	return s.CheckClientWithTrustedIP(ctx, clientIP, clientIP, userAgent)
+}
+
+// Automatic bans always use the trusted proxy chain; manual rules retain the configured compatibility mode.
+func (s *IPBanService) CheckClientWithTrustedIP(ctx context.Context, clientIP, trustedIP, userAgent string) (*IPBan, bool, error) {
 	clientIP = strings.TrimSpace(clientIP)
 	userAgent = strings.TrimSpace(userAgent)
 	if s == nil || s.repo == nil {
@@ -206,10 +241,14 @@ func (s *IPBanService) CheckClient(ctx context.Context, clientIP, userAgent stri
 		default:
 			continue
 		}
-		if clientRuleNeedsIP(bans[i].RuleType) && clientIP == "" {
+		matchIP := clientIP
+		if bans[i].Source == IPBanSourceAdminLogin {
+			matchIP = strings.TrimSpace(trustedIP)
+		}
+		if clientRuleNeedsIP(bans[i].RuleType) && matchIP == "" {
 			continue
 		}
-		if !accessban.MatchesClient(bans[i].RuleType, bans[i].Pattern, bans[i].UAPattern, clientIP, userAgent) {
+		if !accessban.MatchesClient(bans[i].RuleType, bans[i].Pattern, bans[i].UAPattern, matchIP, userAgent) {
 			continue
 		}
 		_ = s.repo.RecordHit(ctx, bans[i].ID, now)

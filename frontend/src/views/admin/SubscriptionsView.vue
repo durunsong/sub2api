@@ -211,6 +211,19 @@
             <span v-else class="text-sm text-gray-400 dark:text-dark-500">-</span>
           </template>
 
+          <template #cell-reset_cards="{ row }">
+            <div v-if="row.reset_cards?.total > 0" data-test="admin-reset-cards" class="min-w-32 space-y-1">
+              <span class="badge badge-success">
+                {{ t('userSubscriptions.resetCards.title', { count: row.reset_cards.total }) }}
+              </span>
+              <div v-for="card in row.reset_cards.groups" :key="card.validity_days" class="text-xs text-gray-600 dark:text-dark-300">
+                {{ t('userSubscriptions.resetCards.term', { days: card.validity_days, count: card.count }) }}
+              </div>
+              <div class="text-xs text-gray-500 dark:text-dark-400">{{ t('userSubscriptions.resetCards.permanent') }}</div>
+            </div>
+            <span v-else class="text-sm text-gray-400">-</span>
+          </template>
+
           <template #cell-usage="{ row }">
             <div class="min-w-[280px] space-y-2">
               <!-- Daily Usage -->
@@ -906,6 +919,7 @@ const allColumns = computed<Column[]>(() => [
     sortable: false
   },
   { key: 'group', label: t('admin.subscriptions.columns.group'), sortable: false },
+  { key: 'reset_cards', label: t('userSubscriptions.resetCards.label'), sortable: false },
   { key: 'usage', label: t('admin.subscriptions.columns.usage'), sortable: false },
   { key: 'expires_at', label: t('admin.subscriptions.columns.expires'), sortable: true },
   { key: 'status', label: t('admin.subscriptions.columns.status'), sortable: true },

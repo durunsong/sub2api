@@ -78,9 +78,17 @@
             </div>
           </template>
 
-          <template #cell-reason="{ value }">
+          <template #cell-source="{ value }">
+            <span v-if="value === 'admin_login_failure'" class="badge badge-warning">
+              {{ t('admin.ipBans.autoAdminLogin') }}
+            </span>
+            <span v-else>{{ value === 'manual' ? t('admin.ipBans.manualSource') : value }}</span>
+          </template>
+
+          <template #cell-reason="{ value, row }">
             <span class="text-sm text-gray-700 dark:text-gray-300">
-              {{ value || '-' }}
+              {{ row.source === 'admin_login_failure' && value === 'Automatic ban: invalid credentials for an account containing admin'
+                ? t('admin.ipBans.autoAdminLoginReason') : (value || '-') }}
             </span>
           </template>
 

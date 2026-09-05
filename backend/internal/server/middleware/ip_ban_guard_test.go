@@ -22,7 +22,8 @@ type stubIPBanRepo struct {
 	hits   []int64
 }
 
-func (s *stubIPBanRepo) Create(context.Context, *service.IPBan) error { return nil }
+func (s *stubIPBanRepo) Create(context.Context, *service.IPBan) error          { return nil }
+func (s *stubIPBanRepo) UpsertAutomatic(context.Context, *service.IPBan) error { return nil }
 func (s *stubIPBanRepo) GetByID(context.Context, int64) (*service.IPBan, error) {
 	return nil, service.ErrIPBanNotFound
 }
@@ -37,6 +38,35 @@ func (s *stubIPBanRepo) ListActive(context.Context, time.Time) ([]service.IPBan,
 func (s *stubIPBanRepo) RecordHit(_ context.Context, id int64, _ time.Time) error {
 	s.hits = append(s.hits, id)
 	return nil
+}
+
+func TestIPBanGuardAutomaticRulesUseTrustedIP(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	for _, tc := range []struct {
+		name, remote, forwarded string
+		trusted                 []string
+		status                  int
+	}{
+		{"cannot evade with forwarded header", "43.255.119.7:1234", "8.8.8.8", nil, http.StatusForbidden},
+		{"cannot frame another client", "8.8.8.8:1234", "43.255.119.7", nil, http.StatusOK},
+		{"configured proxy resolves client", "10.0.0.2:1234", "43.255.119.7", []string{"10.0.0.0/24"}, http.StatusForbidden},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := &stubIPBanRepo{active: []service.IPBan{{ID: 1, RuleType: accessban.RuleTypeIP, Pattern: "43.255.119.7", Source: service.IPBanSourceAdminLogin, Status: service.IPBanStatusActive}}}
+			router := gin.New()
+			require.NoError(t, router.SetTrustedProxies(tc.trusted))
+			router.Use(IPBanGuard(service.NewIPBanService(repo), nil))
+			router.GET("/t", func(c *gin.Context) { c.Status(http.StatusOK) })
+			req := httptest.NewRequest(http.MethodGet, "/t", nil)
+			req.RemoteAddr = tc.remote
+			req.Header.Set("X-Forwarded-For", tc.forwarded)
+			req.Header.Set("X-Real-IP", tc.forwarded)
+			req.Header.Set("CF-Connecting-IP", tc.forwarded)
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+			require.Equal(t, tc.status, w.Code)
+		})
+	}
 }
 
 func TestGatewayIPBanGuardUsesForwardedClientIPWithoutTrustedProxies(t *testing.T) {

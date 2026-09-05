@@ -19,6 +19,19 @@ func NewIPBanRepository(db *sql.DB) service.IPBanRepository {
 	return &ipBanRepository{db: db}
 }
 
+// Keep manual rules and explicitly disabled rules intact. The unique index serializes concurrent attempts.
+func (r *ipBanRepository) UpsertAutomatic(ctx context.Context, ban *service.IPBan) error {
+	_, err := r.db.ExecContext(ctx, `
+		INSERT INTO ip_bans (rule_type, pattern, status, reason, source, expires_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		ON CONFLICT (rule_type, pattern, (COALESCE(ua_pattern, ''))) WHERE deleted_at IS NULL
+		DO UPDATE SET expires_at = EXCLUDED.expires_at, reason = EXCLUDED.reason, updated_at = NOW()
+		WHERE ip_bans.source = EXCLUDED.source AND ip_bans.status = 'active'
+			AND ip_bans.expires_at IS NOT NULL AND ip_bans.expires_at <= NOW()
+	`, ban.RuleType, ban.Pattern, ban.Status, ban.Reason, ban.Source, nullableTime(ban.ExpiresAt))
+	return err
+}
+
 func (r *ipBanRepository) Create(ctx context.Context, ban *service.IPBan) error {
 	row := r.db.QueryRowContext(ctx, `
 		INSERT INTO ip_bans (rule_type, pattern, ua_pattern, status, reason, source, created_by, expires_at, hit_count)

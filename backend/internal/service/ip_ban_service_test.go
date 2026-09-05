@@ -14,7 +14,8 @@ type memoryIPBanRepo struct {
 	rules []IPBan
 }
 
-func (m *memoryIPBanRepo) Create(context.Context, *IPBan) error { return nil }
+func (m *memoryIPBanRepo) Create(context.Context, *IPBan) error          { return nil }
+func (m *memoryIPBanRepo) UpsertAutomatic(context.Context, *IPBan) error { return nil }
 func (m *memoryIPBanRepo) GetByID(context.Context, int64) (*IPBan, error) {
 	return nil, ErrIPBanNotFound
 }

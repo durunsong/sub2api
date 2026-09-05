@@ -45,6 +45,7 @@ Cursor 场景下还会加载 [`.cursor/rules/sub2api-fork.mdc`](.cursor/rules/su
 - 已提交：IP/CIDR 封禁 — 迁移 `159`、`IPBanService`、`ip_ban_guard` 中间件、`IpBansView`
 - **Fork 扩展**：`accessban` 包 — 规则类型 `ip` / `ua` / `ip_ua` / `email_suffix`；迁移 `160`；注册邮箱格式校验 `registration_email_format.go`
 - 管理端批量删用户：`POST /api/v1/admin/users/batch-delete`
+- 登录防护：账号名（邮箱 @ 前）含 `admin` 且凭据错误时，可信公网客户端 IP 自动封禁 24 小时，来源 `admin_login_failure`；创建及拦截均使用可信代理链，跳过内网/回环地址，部署须配置 `server.trusted_proxies`；同 IP 原子去重，尊重手动禁用，不改普通账号/验证码/服务异常行为。
 
 ### 其他 Fork 定制
 
@@ -55,6 +56,7 @@ Cursor 场景下还会加载 [`.cursor/rules/sub2api-fork.mdc`](.cursor/rules/su
 - **购买页智普筛选**：OpenAI 协议下名称、分组名或描述含 `GLM` 的套餐显示为 `智普-GLM Plan MAX`，普通 OpenAI 分类必须排除这些套餐
 - **订阅重置卡**：迁移 `224`/`225` 保存永久期限明细并按 `group.default_validity_days` 回填旧计数；有效固定期限支付/兑换/管理员分配重复获得改发 `validity_days` 快照卡且不改到期时间，过期则直接重开；消费放弃余期、清零日周月 USD/token 并从点击时重开；旧 `reset-daily` 映射 1 天卡，`manual_reset_credits` 仅保留兼容镜像
 - **订阅可用额度筛选**：管理端订阅状态下拉默认选择 `active_available`（“生效中+没用完”）；后端按有效期及当前日/周/月窗口过滤任一额度已耗尽的订阅，无限额订阅保留
+- **重置卡提示**：管理端分页/分组订阅列表批量加载 `reset_cards`，展示数量及期限明细；用户端页面顶部汇总永久卡数量，消费后同步更新；不得使用兼容计数代替卡明细。
 - **UI**：首页/登录靛蓝紫罗兰主题、`logo.svg`、Select/ConfirmDialog 替换原生控件
 - **ProxyAdBanner**：已移除
 

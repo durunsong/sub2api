@@ -137,6 +137,9 @@ export default {
     oneTimeDailyHint: '24小时有效，日卡不自动重置；再买同套餐后需点击重置才起算新周期',
     usageOf: '已用 {used} / {limit}',
     resetCards: {
+      label: '重置卡',
+      notice: '你有 {count} 张永久重置卡',
+      term: '{days} 天 ×{count}',
       title: '重置卡 ×{count}',
       permanent: '永久有效',
       action: '重置 {days} 天 ×{count}',

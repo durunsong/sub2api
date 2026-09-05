@@ -58,6 +58,7 @@ describe('SubscriptionsView reset cards', () => {
     const wrapper = await mountView([subscription()])
     expect(wrapper.text()).toContain('userSubscriptions.resetCards.title:3')
     expect(wrapper.text()).toContain('userSubscriptions.resetCards.permanent')
+    expect(wrapper.get('[data-test=reset-card-notice]').text()).toContain('userSubscriptions.resetCards.notice:3')
     expect(cardButtons(wrapper).map(button => button.text())).toEqual([
       'userSubscriptions.resetCards.action:1,2',
       'userSubscriptions.resetCards.action:30,1',
@@ -67,6 +68,7 @@ describe('SubscriptionsView reset cards', () => {
 
     const hidden = await mountView([subscription({ reset_cards: { total: 0, groups: [] } })])
     expect(hidden.find('[data-test=reset-cards]').exists()).toBe(false)
+    expect(hidden.find('[data-test=reset-card-notice]').exists()).toBe(false)
     expect(hidden.text()).not.toContain('userSubscriptions.manualReset')
   })
 
@@ -101,8 +103,18 @@ describe('SubscriptionsView reset cards', () => {
     await flushPromises()
     const rendered = (wrapper.vm as unknown as { subscriptions: UserSubscription[] }).subscriptions[0]
     expect(rendered).toEqual(updated)
+    expect(wrapper.get('[data-test=reset-card-notice]').text()).toContain('userSubscriptions.resetCards.notice:2')
     expect(wrapper.text()).not.toContain('Plan')
     expect(showSuccess).toHaveBeenCalledWith('userSubscriptions.resetCards.success:30')
+  })
+
+  it('counts cards on expired subscriptions and does not use the legacy counter', async () => {
+    const wrapper = await mountView([
+      subscription(),
+      subscription({ id: 2, status: 'expired', reset_cards: { total: 2, groups: [{ validity_days: 7, count: 2 }] } }),
+      subscription({ id: 3, manual_reset_credits: 99, reset_cards: undefined }),
+    ])
+    expect(wrapper.get('[data-test=reset-card-notice]').text()).toContain('userSubscriptions.resetCards.notice:5')
   })
 
   it('keeps the backend error and silently refreshes after failure', async () => {

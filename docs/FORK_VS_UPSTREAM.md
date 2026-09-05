@@ -367,6 +367,14 @@ backend/migrations/160_extend_access_ban_rules.sql        # rule_type / ua_patte
 - 中间件注册位置在 `routes` / `middleware` 链 — merge 后确认 `IPBanGuard` 仍在 Gateway 与 Auth 路由上
 - 勿将 `IPBanService` 从 `AuthService` 构造中移除
 
+#### 登录失败自动封禁（2026-09-05）
+
+- `POST /api/v1/auth/login` 在验证码通过后，邮箱账号名（`@` 前，忽略大小写）包含 `admin` 且返回 `INVALID_CREDENTIALS` 时，自动写入现有 `ip_bans` 表，封禁单个公网 IP 24 小时。普通账号、验证码失败、账号已停用但密码正确、数据库/Token 服务异常不触发。
+- 使用 `AuthService.LoginWithClientIP` → `IPBanService.BanFailedAdminLogin` → `IPBanRepository.UpsertAutomatic`；复用 `159`/`160` 表与唯一索引，无新增迁移。并发请求按规则唯一键去重，仍有效的自动规则不反复续期；到期后再次命中可更新到期时间。人工规则以及手动禁用的规则保持原样。
+- 自动规则来源为 `admin_login_failure`，管理端 `/admin/ip-bans` 显示中文来源和原因，可编辑、禁用或删除。禁用保留人工解除意图，删除后新的失败请求可重新触发。自动写入成功立即失效本进程缓存，其余实例最迟在现有 5 秒缓存到期后生效；写入异常记录服务日志，登录仍返回原凭据错误。
+- 自动创建和拦截统一使用 `GetTrustedClientIP`，不直接信任兼容模式的 `CF-Connecting-IP` / `X-Real-IP` 等任意头；现有人工封禁规则保留原有 IP 解析口径。反向代理部署必须正确配置 `server.trusted_proxies` 并由代理维护 `X-Forwarded-For`；未配置时只识别直连地址，内网、回环、链路本地等地址跳过自动封禁，避免封掉容器网关。不要将任意公网地址配置为可信代理。
+- IP 封禁会影响同出口 IP 的其他用户；一次密码输错也会触发含 `admin` 账号的规则。可以在管理端禁用对应记录提前解除；该规则不会封禁账号本身。代码不会追溯扫描历史审计记录或自动封禁截图里的历史 IP。
+
 ### 8.4 订阅重置卡（Fork 新增，2026-08-16）
 
 - 迁移 `224_create_user_subscription_reset_cards.sql` 新建永久明细表 `user_subscription_reset_cards`：记录订阅、`validity_days` 快照、来源类型/引用/序号、创建与消费时间；来源唯一键保证支付订单/兑换码幂等，同一订阅删除受 `ON DELETE RESTRICT` 保护。
@@ -374,6 +382,7 @@ backend/migrations/160_extend_access_ban_rules.sql        # rule_type / ua_patte
 - 对仍在有效固定期限内的支付购买、正数订阅兑换或**管理员分配**，不再顺延现有到期时间，而是发放一张以本次 `validity_days` 为快照的卡；支付/兑换用来源引用保证同一订单只发一次，管理员分配每次发一张。已过期订阅仍从当前时刻直接重开对应期限，不发卡。
 - 消费接口为 `POST /api/v1/subscriptions/:id/reset-cards/consume`，按指定 `validity_days` 取一张未消费卡；同一事务内先锁订阅行，再新语句按幂等键重放或选卡消费，将日/周/月 USD 与 token 用量全部清零、窗口起点改为点击时刻，并放弃原剩余时间，从点击时重开该卡期限。旧 `POST .../:id/reset-daily` 保留并映射为消费 1 天卡。
 - 用户 `/subscriptions` 接口返回按期限聚合的 `reset_cards.total/groups`；页面按期限展示按钮与数量，并标注“永久有效”。`manual_reset_credits` 继续作为兼容镜像：发卡加一、消费减一；新逻辑和 UI 不再以它作为卡期限的事实来源。
+- 管理端分页及分组订阅列表同样批量加载 `reset_cards`，新增默认可见的重置卡数量/期限列；用户端顶部展示永久卡总数（含过期订阅持有的卡），消费后立即更新。没有卡时不展示提醒；重复加载重建汇总，避免重复累计，卡明细查询失败正常上抛。
 - 订阅订单退款：未消费来源卡与订单 `REFUNDED` 同一事务作废，网关成功后才落盘；`REFUNDING` 重入根据 `REFUND_GATEWAY_SUCCEEDED` 审计或查询网关状态重试本地 finalize，不重复打退款网关。已消费来源卡仍需 force，且不缩短当前周期。
 
 **高危同步文件（订阅重置卡）**：

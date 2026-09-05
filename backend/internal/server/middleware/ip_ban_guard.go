@@ -58,7 +58,7 @@ func evaluateAccessBan(c *gin.Context, ipBanService *service.IPBanService, cfg *
 	_ = cfg
 	clientIP := ippkg.GetClientIP(c)
 	userAgent := c.GetHeader("User-Agent")
-	return ipBanService.CheckClient(c.Request.Context(), clientIP, userAgent)
+	return ipBanService.CheckClientWithTrustedIP(c.Request.Context(), clientIP, ippkg.GetTrustedClientIP(c), userAgent)
 }
 
 func clientAccessBanMessage(ban *service.IPBan) string {

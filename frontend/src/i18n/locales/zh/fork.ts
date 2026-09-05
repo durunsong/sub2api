@@ -264,6 +264,9 @@ export default {
       },
     },
     ipBans: {
+      autoAdminLogin: '登录防护自动封禁',
+      manualSource: '手动添加',
+      autoAdminLoginReason: '含 admin 的账号登录凭据错误，自动封禁 IP',
       title: '访问封禁',
       description: '按 IP、UA、IP+UA、邮箱后缀或邮箱正则全局封禁注册和 API Key 调用',
       createRule: '创建封禁',

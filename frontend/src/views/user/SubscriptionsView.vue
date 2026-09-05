@@ -1,6 +1,15 @@
 <template>
   <AppLayout>
     <div class="space-y-6">
+      <div
+        v-if="!loading && resetCardTotal > 0"
+        role="status"
+        data-test="reset-card-notice"
+        class="flex items-center gap-2 border-l-4 border-emerald-500 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 dark:bg-emerald-950/25 dark:text-emerald-200"
+      >
+        <Icon name="creditCard" size="md" class="shrink-0" />
+        {{ t('userSubscriptions.resetCards.notice', { count: resetCardTotal }) }}
+      </div>
       <!-- Loading State -->
       <div v-if="loading" class="flex justify-center py-12">
         <div
@@ -312,7 +321,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useAppStore } from '@/stores/app'
@@ -352,6 +361,7 @@ const router = useRouter()
 const appStore = useAppStore()
 
 const subscriptions = ref<UserSubscription[]>([])
+const resetCardTotal = computed(() => subscriptions.value.reduce((total, subscription) => total + (subscription.reset_cards?.total ?? 0), 0))
 const loading = ref(true)
 const resettingId = ref<number | null>(null)
 const resettingValidityDays = ref<number | null>(null)

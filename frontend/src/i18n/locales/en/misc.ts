@@ -140,6 +140,9 @@ export default {
     oneTimeDailyHint: 'Valid for 24 hours; daily cards do not auto-reset. After repurchase, click reset to start a new period',
     usageOf: '{used} of {limit}',
     resetCards: {
+      label: 'Reset cards',
+      notice: 'You have {count} permanent reset cards',
+      term: '{days} days ×{count}',
       title: 'Reset cards ×{count}',
       permanent: 'Never expires',
       action: 'Reset {days} days ×{count}',

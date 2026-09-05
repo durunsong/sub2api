@@ -1024,7 +1024,7 @@ func (s *SubscriptionService) attachResetCards(ctx context.Context, subs []UserS
 	ids := make([]int64, len(subs))
 	for i := range subs {
 		ids[i] = subs[i].ID
-		subs[i].ResetCards.Groups = []ResetCardGroup{}
+		subs[i].ResetCards = ResetCardSummary{Groups: []ResetCardGroup{}}
 	}
 	groups, err := s.ListAvailableResetCardGroups(ctx, ids)
 	if err != nil {
@@ -1064,6 +1064,9 @@ func (s *SubscriptionService) ListGroupSubscriptions(ctx context.Context, groupI
 	}
 	normalizeExpiredWindows(subs)
 	normalizeSubscriptionStatus(subs)
+	if err := s.attachResetCards(ctx, subs); err != nil {
+		return nil, nil, err
+	}
 	return subs, pag, nil
 }
 
@@ -1076,6 +1079,9 @@ func (s *SubscriptionService) List(ctx context.Context, page, pageSize int, user
 	}
 	normalizeExpiredWindows(subs)
 	normalizeSubscriptionStatus(subs)
+	if err := s.attachResetCards(ctx, subs); err != nil {
+		return nil, nil, err
+	}
 	return subs, pag, nil
 }
 
