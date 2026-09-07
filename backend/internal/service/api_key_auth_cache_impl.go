@@ -14,7 +14,7 @@ import (
 	"github.com/dgraph-io/ristretto"
 )
 
-const apiKeyAuthSnapshotVersion = 23 // v23: group codex_models_manifest_config field
+const apiKeyAuthSnapshotVersion = 24 // v24: group model_allowlist field (renamed from models_list_config, enforcing semantics)
 
 type apiKeyAuthCacheConfig struct {
 	l1Size        int
@@ -428,7 +428,7 @@ func (s *APIKeyService) snapshotFromAPIKey(ctx context.Context, apiKey *APIKey) 
 			FreeOpenAIFast:                  groupForSnapshot.FreeOpenAIFast,
 			DefaultMappedModel:              groupForSnapshot.DefaultMappedModel,
 			MessagesDispatchModelConfig:     groupForSnapshot.MessagesDispatchModelConfig,
-			ModelsListConfig:                groupForSnapshot.ModelsListConfig,
+			ModelAllowlist:                  groupForSnapshot.ModelAllowlist,
 			CodexModelsManifestConfig:       groupForSnapshot.CodexModelsManifestConfig,
 			RPMLimit:                        groupForSnapshot.RPMLimit,
 			KiroCacheEmulationEnabled:       groupForSnapshot.KiroCacheEmulationEnabled,
@@ -535,7 +535,7 @@ func (s *APIKeyService) snapshotToAPIKey(key string, snapshot *APIKeyAuthSnapsho
 			FreeOpenAIFast:                  snapshot.Group.FreeOpenAIFast,
 			DefaultMappedModel:              snapshot.Group.DefaultMappedModel,
 			MessagesDispatchModelConfig:     snapshot.Group.MessagesDispatchModelConfig,
-			ModelsListConfig:                snapshot.Group.ModelsListConfig,
+			ModelAllowlist:                  snapshot.Group.ModelAllowlist,
 			CodexModelsManifestConfig:       snapshot.Group.CodexModelsManifestConfig,
 			RPMLimit:                        snapshot.Group.RPMLimit,
 			KiroCacheEmulationEnabled:       snapshot.Group.KiroCacheEmulationEnabled,

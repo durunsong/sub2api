@@ -1,7 +1,7 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.2.1**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.1**（官方无独立 v0.1.174 tag），并保留本 Fork
+当前整合版本为 **v0.2.2**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.2**（官方无独立 v0.1.174 tag），并保留本 Fork
 的全部定制能力。
 
 ## 必须保留的模块
@@ -27,6 +27,18 @@
 - 消费指定期限卡时放弃原剩余时间，清零日/周/月 USD 与 token、重置三个窗口，并从点击时开始新期限；旧 `reset-daily` 兼容映射为 1 天卡。
 - 用户 `/subscriptions` 按期限返回并展示卡数量和“永久有效”；`manual_reset_credits` 保留为发卡加一、消费减一的兼容镜像，不承载期限事实。
 - 高危同步范围：`subscription_service.go`、`user_subscription{,_port}.go`、`user_subscription_repo.go`、`payment_fulfillment.go`、`redeem_service.go`、订阅 handler/routes/DTO、迁移 `224`/`225`、`SubscriptionsView.vue`、订阅 API/types/i18n。
+
+## v0.2.2 整合内容
+
+- 分组模型白名单同时约束模型列表与请求准入；支持简易模式的基础分组和账号绑定、推理强度映射为拒绝。
+- Codex 固定账号模型发现扩展到标准模型接口，修复目录编辑状态、混合账号默认模型、模型路由与别名；补齐 Astra Ultra/Pro、图像能力、专用 instructions 和工具约束兼容。
+- 修复 WebSocket 配额/会话隔离/终态处理、工具调用最终参数、Claude CLI 最低版本与 thinking beta、Grok 媒体资格、Gemini/GLM 定价及 DeepSeek 峰谷成本。
+- 公共兑换失败窗口调整为固定十分钟、30 次失败；支付和管理员发货使用独立受信任入口，不受公共失败计数影响。余额发货验证兑换码归属、金额与状态，保留订阅支付/兑换的 PurchaseSource 重置卡幂等。
+- 备份与迁移共用 advisory lock；前端新增账号月/年到期预设、订阅到用量链接、完整 API Key 筛选及 i18n 构建门禁。
+- 新增 `235_group_model_allowlist.sql`，将 `models_list_config` 原值保留并更名为 `model_allowlist`。**上线前审核已启用的模型配置：旧配置将限制实际请求；迁移后不能直接回退旧二进制。** 本次未执行迁移或部署。
+- 精确范围 `578785ee7fb35030b094b69624efe25670a36f5f..5485f368b29d05adb95a00f71801c7c23d8f48af`：102 commits / 261 files / +13,430 / -2,005；tag object `86495464d82f78da55792db6aa5568ee1302716a`。官方 VERSION 仍为 0.2.1，本 Fork 设为 0.2.2。
+- 逐文件三方合并保留 Kiro/XorPay/Access Ban、登录失败自动封禁、提示词审计、订阅重置卡/提示/可用额度筛选、Ops、Claude 别名、GLM 套餐及 UI/支付定制。账号成本保留已有冻结计价时刻和单次 max 倍率；旧测试按新模型白名单字段和 Fork 注入签名适配。
+- 实施与验证记录：`openspec/changes/sync-upstream-v0-2-2/`。
 
 ## v0.2.1 整合内容
 
@@ -231,4 +243,4 @@
 - `wire.go`、`wire_gen.go`、网关路由、套餐服务、Ops 服务和设置页属于高冲突文件，合并后必须运行对应测试。
 - 同步订阅链路时必须保留迁移 `224`/`225`、购买来源幂等键、有效期快照、过期重开、旧 `reset-daily` → 1 天卡映射，以及 `manual_reset_credits` 兼容镜像。
 
-*最后更新：2026-09-02*
+*最后更新：2026-09-07*
