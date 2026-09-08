@@ -1,7 +1,7 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.2.2**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.2**（官方无独立 v0.1.174 tag），并保留本 Fork
+当前整合版本为 **v0.2.3**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.3**（官方无独立 v0.1.174 tag），并保留本 Fork
 的全部定制能力。
 
 ## 必须保留的模块
@@ -27,6 +27,16 @@
 - 消费指定期限卡时放弃原剩余时间，清零日/周/月 USD 与 token、重置三个窗口，并从点击时开始新期限；旧 `reset-daily` 兼容映射为 1 天卡。
 - 用户 `/subscriptions` 按期限返回并展示卡数量和“永久有效”；`manual_reset_credits` 保留为发卡加一、消费减一的兼容镜像，不承载期限事实。
 - 高危同步范围：`subscription_service.go`、`user_subscription{,_port}.go`、`user_subscription_repo.go`、`payment_fulfillment.go`、`redeem_service.go`、订阅 handler/routes/DTO、迁移 `224`/`225`、`SubscriptionsView.vue`、订阅 API/types/i18n。
+
+## v0.2.3 整合内容
+
+- Ollama Cloud DeepSeek 在 Chat Completions、Responses 和 Messages 出站统一限制输出 token，按实际协议目标 URL 与映射后的模型判断，保留账号自定义上限和禁用配置。
+- Ollama Cloud Anthropic 兼容端点自动使用 Bearer，覆盖普通转发、透传、count_tokens、账号测试和模型探测；非 Ollama 上游保持原鉴权行为。
+- 账号测试实时模型目录补齐缺失的显示名和类型，不改变共享目录缓存与空列表语义。
+- 新增 `236_group_model_allowlist_repair.sql`：修复旧列重命名遗漏，两列并存时仅回填空新列，缺列则补建，保留已有非空白名单。294 个历史 SQL 原文不变；未执行真实迁移或部署。
+- 官方范围 `5485f368b29d05adb95a00f71801c7c23d8f48af..8fa67d477d6651a744754392a8982ea589c26ae6`：9 commits / 22 files / +1,517 / -24；tag object `fe2b5c04b1c9503fba7e01a099b206f14867cfc1`。官方 VERSION 仍为 0.2.2，本 Fork 设为 0.2.3。
+- 4 个代码重叠文件中的 Kiro provider/直连分流/credits/账号心跳差异完整保留；Kiro、XorPay、Access Ban、登录失败自动封禁、提示词审计、订阅重置卡及提示、可用额度筛选、Ops、Claude 别名、GLM 套餐、UI/支付等其余定制代码逐字节不变。无前端和依赖变更。
+- 验证记录：`openspec/changes/sync-upstream-v0-2-3/verification.md`。
 
 ## v0.2.2 整合内容
 
@@ -243,4 +253,4 @@
 - `wire.go`、`wire_gen.go`、网关路由、套餐服务、Ops 服务和设置页属于高冲突文件，合并后必须运行对应测试。
 - 同步订阅链路时必须保留迁移 `224`/`225`、购买来源幂等键、有效期快照、过期重开、旧 `reset-daily` → 1 天卡映射，以及 `manual_reset_credits` 兼容镜像。
 
-*最后更新：2026-09-07*
+*最后更新：2026-09-08*
