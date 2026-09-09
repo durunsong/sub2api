@@ -1,7 +1,7 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.2.3**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.3**（官方无独立 v0.1.174 tag），并保留本 Fork
+当前整合版本为 **v0.2.4**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.4**（官方无独立 v0.1.174 tag），并保留本 Fork
 的全部定制能力。
 
 ## 必须保留的模块
@@ -27,6 +27,19 @@
 - 消费指定期限卡时放弃原剩余时间，清零日/周/月 USD 与 token、重置三个窗口，并从点击时开始新期限；旧 `reset-daily` 兼容映射为 1 天卡。
 - 用户 `/subscriptions` 按期限返回并展示卡数量和“永久有效”；`manual_reset_credits` 保留为发卡加一、消费减一的兼容镜像，不承载期限事实。
 - 高危同步范围：`subscription_service.go`、`user_subscription{,_port}.go`、`user_subscription_repo.go`、`payment_fulfillment.go`、`redeem_service.go`、订阅 handler/routes/DTO、迁移 `224`/`225`、`SubscriptionsView.vue`、订阅 API/types/i18n。
+
+## v0.2.4 整合内容
+
+- 新增 MiniMax：账号/分组/Composite 多协议路由、配额与阈值停调、监控、模型目录和计价；共享目录与调度同时保留 Kiro。
+- 新增 Grok 媒体资格控制、OpenAI 周费用估算与 Image 2.5 支持、监控用户排行显示开关，以及自定义页面链接按钮拖动。
+- 支付帮助支持经过清理的 Markdown；保留 XorPay、GLM 套餐筛选、隐藏倍率与付款/到账金额分离。
+- 合入代理备用关系有向化/多主共享、反复到期切换、部分更新不清空字段、日期校验；修复流式取消/WS 断开、HTTP/2 PING 保活、Redis nil context、渠道跨实例缓存失效和 Ops 日志保留。
+- 新增 `237_add_minimax_platform.sql`，配额与 Composite 路由 CHECK 同时含 `kiro` 和 `minimax`，295 个历史 SQL 原文不变；不执行真实迁移或部署。
+- 官方范围 `8fa67d477d6651a744754392a8982ea589c26ae6..5de5e2bed035d43591a2e10e51f420ef6a84eb98`：70 commits / 266 files / +5,696 / -726；tag object `d681d0798064ee0ffff376d19687d12f09fe600f`。官方 VERSION 为 0.2.3，本 Fork 设为 0.2.4。
+- 25 个文本冲突逐块处理；保留确认弹窗、Kiro 管理端真实名称/用户端 Claude 别名，以及监控页请求取消与过期响应保护。全套支付/重置卡/访问封禁/提示词审计/Ops/UI 定制继续保留。
+- `.env*` 与四个部署 compose 文件受保护，本次不读不写。日志保留采用应用默认 30 天，可在后台运行时日志设置修改；Apple 可选网络子网支持已合入脚本和文档，但不自动迁移现有网络。
+- 插件安装器合并双方 Windows 句柄修复：ZIP 只关闭一次且检查错误，关闭失败保留清理逻辑；安装、重复上传和数据库原件恢复共用该路径。
+- 验证记录：`openspec/changes/sync-upstream-v0-2-4/verification.md`。
 
 ## v0.2.3 整合内容
 
@@ -253,4 +266,4 @@
 - `wire.go`、`wire_gen.go`、网关路由、套餐服务、Ops 服务和设置页属于高冲突文件，合并后必须运行对应测试。
 - 同步订阅链路时必须保留迁移 `224`/`225`、购买来源幂等键、有效期快照、过期重开、旧 `reset-daily` → 1 天卡映射，以及 `manual_reset_credits` 兼容镜像。
 
-*最后更新：2026-09-08*
+*最后更新：2026-09-09*

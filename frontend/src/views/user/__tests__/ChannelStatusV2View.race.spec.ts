@@ -24,9 +24,13 @@ vi.mock('vue-i18n', async (importOriginal) => {
     useI18n: () => ({ t: (key: string) => key, te: () => false, locale: { value: 'zh-CN' } }),
   }
 })
-vi.mock('@/utils/featureFlags', () => ({ isChannelMonitorThroughputHidden: () => false }))
+vi.mock('@/utils/featureFlags', () => ({
+  isChannelMonitorThroughputHidden: () => false,
+  isChannelMonitorUserRankingHidden: vi.fn(() => false),
+}))
 
 import { useAppStore } from '@/stores/app'
+import { isChannelMonitorUserRankingHidden } from '@/utils/featureFlags'
 import ChannelStatusV2View from '../ChannelStatusV2View.vue'
 
 function deferred<T>() {
@@ -96,10 +100,24 @@ describe('ChannelStatusV2View tab requests', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
+    vi.mocked(isChannelMonitorUserRankingHidden).mockReturnValue(false)
     api.getDimensions.mockResolvedValue({ platforms: [], groups: [], models: [] })
     api.getSnapshot.mockReturnValue(new Promise(() => {}))
     api.getMatrix.mockReturnValue(new Promise(() => {}))
     api.getModels.mockResolvedValue({ items: [] })
+  })
+
+  it('does not expose or request user rankings when the public flag hides them', async () => {
+    vi.mocked(isChannelMonitorUserRankingHidden).mockReturnValue(true)
+    api.getSnapshot.mockResolvedValueOnce(snapshot)
+    api.getMatrix.mockResolvedValueOnce({ coverage, group_by: 'platform_group', items: [] })
+    const wrapper = mountView()
+    await flushPromises()
+
+    expect(wrapper.findAll('[role="tab"]')).toHaveLength(2)
+    expect(api.getUsers).not.toHaveBeenCalled()
+    expect(api.getModels).toHaveBeenCalledOnce()
+    wrapper.unmount()
   })
 
   it('does not let the main reload clear a newer tab request loading state', async () => {

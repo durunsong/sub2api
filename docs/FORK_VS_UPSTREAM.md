@@ -2,10 +2,10 @@
 
 > **上游官方仓库**：[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api)
 > **本 Fork 远程**：`origin` → `durunsong/sub2api`（中转/部署用）
-> **对比基准**：官方 tag **`v0.2.3`**（同步于 2026-09-08；官方无 v0.1.174 tag）
-> **本 Fork 当前版本**：`backend/cmd/server/VERSION` = **0.2.3**
-> **统计**：v0.2.2→v0.2.3 为 9 commits / 22 files / +1,517 / -24；历史相对 v0.1.164 的大盘差异见下文
-> **当前工作区**：已合入官方 v0.2.3，并保留 Kiro / XorPay / Access Ban / 提示词审计 / 订阅重置卡 / Ops / UI 品牌等全部定制，含登录失败自动封禁及重置卡提示
+> **对比基准**：官方 tag **`v0.2.4`**（同步于 2026-09-09；官方无 v0.1.174 tag）
+> **本 Fork 当前版本**：`backend/cmd/server/VERSION` = **0.2.4**
+> **统计**：v0.2.3→v0.2.4 为 70 commits / 266 files / +5,696 / -726；历史相对 v0.1.164 的大盘差异见下文
+> **当前工作区**：已合入官方 v0.2.4，并保留 Kiro / XorPay / Access Ban / 提示词审计 / 订阅重置卡 / Ops / UI 品牌等全部定制，含登录失败自动封禁及重置卡提示
 > **维护**：新增 Fork 定制后，请同步更新本文与根目录 `AGENTS.md` 摘要。
 
 ---
@@ -20,7 +20,7 @@
 | **`AGENTS.md`**（项目根） | AI 协作**强制摘要**与禁区，改代码前必读 |
 | **`FORK_CUSTOMIZATIONS.md`**（项目根） | 历史清单，已收敛到本文；保留作快捷索引 |
 
-**注意**：本 Fork 已同步官方至 **v0.2.3**，但 **`upstream/main` 仍可能领先**。与官方同步时以目标 release **tag** 为准，不带入 tag 后的 `main` 内容；merge `main` 前务必先读本文 Fork 定制章节，禁止 blindly 采用上游覆盖 Kiro / XorPay / Access Ban 等模块。
+**注意**：本 Fork 已同步官方至 **v0.2.4**，但 **`upstream/main` 仍可能领先**。与官方同步时以目标 release **tag** 为准，不带入 tag 后的 `main` 内容；merge `main` 前务必先读本文 Fork 定制章节，禁止 blindly 采用上游覆盖 Kiro / XorPay / Access Ban 等模块。
 
 ---
 
@@ -45,6 +45,7 @@
 
 **以下能力已在官方 v0.1.142+ 中，本 Fork 通过同步拥有，不算 Fork 独有开发**（合并时保留了 Kiro/XorPay 定制）：
 
+- v0.2.4：MiniMax 多协议平台、Grok 媒体资格控制、OpenAI 周成本估算与 Image 2.5、监控用户排行开关、支付帮助 Markdown，以及代理备用关系/部分更新、流式取消、HTTP/2 保活、渠道跨实例缓存和 Ops 日志保留修复。精确增量 70 commits / 266 files / +5,696 / -726，目标 commit `5de5e2bed035d43591a2e10e51f420ef6a84eb98`；官方 VERSION 为 0.2.3，本 Fork 设为 0.2.4。新增 `237_add_minimax_platform.sql` 的配额/Composite 约束同时保留 Kiro 与 MiniMax；295 个历史 SQL 不变。保留全部定制，管理端 Badge 继续显示 Kiro，用户端仍显示 Claude；不执行真实迁移或部署。实施与验证见 `openspec/changes/sync-upstream-v0-2-4/`。
 - v0.2.3：Ollama Cloud DeepSeek 跨 Chat Completions/Responses/Messages 输出上限及 Anthropic Bearer 鉴权修复、账号测试模型显示名补全，以及 `236_group_model_allowlist_repair.sql` 白名单列收敛修复。精确增量 9 commits / 22 files / +1,517 / -24，目标 commit `8fa67d477d6651a744754392a8982ea589c26ae6`；官方 VERSION 仍为 0.2.2，本 Fork 设为 0.2.3。4 个重叠代码文件保留全部原有 Fork 差异，历史迁移不变；本次不执行数据库迁移或部署。实施与验证记录见 `openspec/changes/sync-upstream-v0-2-3/`。
 - v0.2.2 官方能力：分组模型白名单、简易模式基础分组/账号绑定、推理拒绝映射、Codex 固定账号标准模型发现与 Astra Ultra/Pro/图像/instructions 兼容；支付与管理员发货隔离公共兑换失败计数，备份与迁移共享 advisory lock，以及 WS、Claude、Grok、Gemini/GLM/DeepSeek 计费和前端体验修复。新增 `235_group_model_allowlist.sql`，把 `models_list_config` 原值保留并更名为 `model_allowlist`，同时约束模型列表与实际准入，部署前审核既有开启配置，不能直接回退旧二进制。目标 commit `5485f368b29d05adb95a00f71801c7c23d8f48af`，tag object `86495464d82f78da55792db6aa5568ee1302716a`，102 commits / 261 files / +13,430 / -2,005。官方 VERSION 为 0.2.1，本 Fork 设为 0.2.2；保留全部定制，Access Ban 继续覆盖新的根路径路由 helper，支付/兑换继续透传重置卡 PurchaseSource，账号统计继续使用冻结 pricingAt 和单次 max 倍率。实施记录见 `openspec/changes/sync-upstream-v0-2-2/`。
 - v0.2.1 官方能力：Codex 固定账号模型目录与回退、GPT-6 Astra/ultrafast、none 推理映射、精简账号列表、用量上游请求 ID、图片 URL 转 Base64（私网阻断和字节类型检测）、定价文件热重载、Claude CLI 版本覆盖/max 推理倍率，以及 WS 续聊、会话槽释放、渠道调度、Ops 代理归因/零值指标和 Alipay 待支付补偿。四个新增迁移为 `232_add_usage_log_upstream_request_id.sql`、`233_add_usage_log_upstream_request_id_index_notx.sql`、`234_channel_max_reasoning_effort_multiplier.sql`、`234_group_codex_models_manifest_config.sql`。目标 commit `578785ee7fb35030b094b69624efe25670a36f5f`，tag object `adc26f68f687685e847bfb997559f48e79cac475`；相对 v0.2.0 共 82 commits / 297 files / +12,622 / -1,033。官方 VERSION 仍为 0.2.0，本 Fork 设为 0.2.1；保留 87 个重叠文件中的定制，特别是 Kiro 精简列表状态、credits 与请求 ID 并存、冻结计价时刻和单次 max 倍率。实施与验证记录位于 `openspec/changes/sync-upstream-v0-2-1/`。
@@ -434,6 +435,8 @@ frontend/src/i18n/locales/en/misc.ts
 ```
 
 **今后 merge 上游若覆盖 `157`，必须重新确认约束含 `kiro`。**
+
+v0.2.4 新增 `237_add_minimax_platform.sql` 再次重建配额和 Composite 路由约束：最终平台集合为 anthropic/openai/gemini/antigravity/grok/kiro/kimi/zhipu/deepseek/minimax。237 已补回 Kiro；监控 provider 只按官方范围增加 MiniMax，历史 295 个 SQL 不改。部署前备份并验证实际 Kiro 行及约束；本次不执行真实迁移。
 
 ---
 
@@ -883,4 +886,4 @@ deploy/docker-compose.yml
 
 ---
 
-*最后更新：2026-09-08 · 基准：官方 v0.2.3 · 增量清单见 `FORK_CUSTOMIZATIONS.md` · 工作区：`git status --short`*
+*最后更新：2026-09-09 · 基准：官方 v0.2.4 · 增量清单见 `FORK_CUSTOMIZATIONS.md` · 工作区：`git status --short`*

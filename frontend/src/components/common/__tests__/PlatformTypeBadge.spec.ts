@@ -13,6 +13,15 @@ vi.mock('vue-i18n', async () => {
 })
 
 describe('PlatformTypeBadge', () => {
+  it('keeps the real Kiro platform name in admin account badges', () => {
+    const wrapper = mount(PlatformTypeBadge, {
+      props: { platform: 'kiro', type: 'oauth' }
+    })
+
+    expect(wrapper.text()).toContain('Kiro')
+    expect(wrapper.text()).not.toContain('Claude')
+  })
+
   it('uses Kiro theme instead of Anthropic orange theme', () => {
     const wrapper = mount(PlatformTypeBadge, {
       props: {
