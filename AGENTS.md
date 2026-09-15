@@ -14,8 +14,8 @@ Cursor 场景下还会加载 [`.cursor/rules/sub2api-fork.mdc`](.cursor/rules/su
 | 项 | 值 |
 |----|-----|
 | 上游官方 | https://github.com/Wei-Shaw/sub2api |
-| 已同步基线 | tag **v0.2.4**（官方无 v0.1.174 tag） |
-| 当前 VERSION | `backend/cmd/server/VERSION` = **0.2.4** |
+| 已同步基线 | tag **v0.2.5**（官方无 v0.1.174 tag） |
+| 当前 VERSION | `backend/cmd/server/VERSION` = **0.2.5** |
 | 完整差异文档 | **`docs/FORK_VS_UPSTREAM.md`**（相对历史基线；含 Fork 扩展见文档 §8.2 / §12；快捷清单见 `FORK_CUSTOMIZATIONS.md`） |
 | 快捷索引 | `FORK_CUSTOMIZATIONS.md` |
 
@@ -127,6 +127,8 @@ CHECK (platform IN ('anthropic', 'openai', 'gemini', 'antigravity', 'kiro', 'gro
 
 新增 `237_add_minimax_platform.sql` 的 `user_platform_quotas.platform` 与 `composite_model_routes.target_platform` CHECK 必须同时包含 `kiro` 与 `minimax`；不得因上游新增平台丢失历史 Kiro 行。监控 provider 按官方范围，不新增 Kiro 监控。
 
+新增 `238_opencode_go_platform.sql` 的 quota/Composite CHECK 必须同时包含 `kiro`、`minimax`、`opencode_go`；监控仍按官方范围。`238_purge_unlimited_user_platform_quotas.sql` 删除三档 USD 限额全 NULL 的历史行，上线前必须备份验证，不自动执行迁移。
+
 Access Ban 迁移顺序：`159` 建表 → `160` 扩展 rule_type / ua_pattern，**不可删除或回退**。
 
 订阅重置卡迁移顺序：`224` 建永久明细表 → `225` 按分组默认期限回填历史 `manual_reset_credits`；同步时不得恢复有效固定期限购买/分配顺延，也不得删除旧 `reset-daily` → 1 天卡和兼容镜像。
@@ -137,6 +139,7 @@ Access Ban 迁移顺序：`159` 建表 → `160` 扩展 rule_type / ua_pattern�
 
 以下来自官方 v0.1.142+，勿误当 Fork 独有而重复实现或删除：
 
+- v0.2.5：OpenCode Zen/GO、多协议原生 Codex Images、API Key 服务商筛选与批量编辑、订阅批量操作、站点计费模式、注册确认密码及模型查询，并合入配额、认证、订阅并发、Antigravity/OpenAI/Grok/监控等修复。精确增量 197 commits / 447 files / +23,038 / -1,538，目标 commit `86f93c28ee34cc74b629dafb748bd5ac5ca8c5ea`；官方 VERSION 为 0.2.4，本 Fork 设为 0.2.5。新增两个 `238` 迁移，平台 CHECK 同时保留 Kiro 与 OpenCode，296 个历史 SQL 不变。批量删用户复用 Fork 接口；延期行锁保留月窗口对齐，固定期限重复分配仍发重置卡。全部定制保留；六个部署配置路径未同步，不执行真实迁移或部署。实施与验证见 `openspec/changes/sync-upstream-v0-2-5/`。
 - v0.2.4：MiniMax 多协议平台、Grok 媒体资格控制、OpenAI 周成本估算与 Image 2.5、监控用户排行开关、支付帮助 Markdown，以及代理备用关系/部分更新、流式取消、HTTP/2 保活、渠道跨实例缓存和 Ops 日志保留修复。精确增量 70 commits / 266 files / +5,696 / -726，目标 commit `5de5e2bed035d43591a2e10e51f420ef6a84eb98`；官方 VERSION 为 0.2.3，本 Fork 设为 0.2.4。新增 `237_add_minimax_platform.sql` 的配额/Composite 约束同时保留 Kiro 与 MiniMax；295 个历史 SQL 不变。保留全部定制，管理端 Badge 继续显示 Kiro，用户端仍显示 Claude；不执行真实迁移或部署。实施与验证见 `openspec/changes/sync-upstream-v0-2-4/`。
 - v0.2.3：Ollama Cloud DeepSeek 跨 Chat Completions/Responses/Messages 输出上限及 Anthropic Bearer 鉴权修复、账号测试模型显示名补全，以及 `236_group_model_allowlist_repair.sql` 白名单列收敛修复。精确增量 9 commits / 22 files / +1,517 / -24，目标 commit `8fa67d477d6651a744754392a8982ea589c26ae6`；官方 VERSION 仍为 0.2.2，本 Fork 设为 0.2.3。4 个重叠代码文件保留全部原有 Fork 差异，历史迁移不变；本次不执行数据库迁移或部署。
 - v0.2.2：分组模型白名单、简易模式基础分组、Codex 固定账号标准模型发现、Astra Ultra/Pro 兼容与推理拒绝映射；支付/管理员发货隔离公共兑换失败计数，备份迁移 advisory lock，以及 WS、Claude、Grok、Gemini/GLM/DeepSeek 计费和前端修复。新增 `235_group_model_allowlist.sql`，旧展示配置更名后同时限制实际请求，上线前必须审核已启用配置。精确增量 102 commits / 261 files / +13,430 / -2,005，目标 commit `5485f368b29d05adb95a00f71801c7c23d8f48af`；全部 Fork 定制保留，根路径路由 helper 必须包含 Access Ban，重置卡 PurchaseSource 不得丢失。
@@ -192,7 +195,7 @@ Access Ban 迁移顺序：`159` 建表 → `160` 扩展 rule_type / ua_pattern�
 
 见 `docs/FORK_VS_UPSTREAM.md` §14。原则：**Kiro + XorPay + Access Ban + 提示词审计 + 套餐续期 + Ops + UI 品牌等全部定制保留**。
 
-`upstream/main` 可能领先于 v0.2.4；同步时以 release tag 为基线，不带入 tag 后的 `main` 内容，并逐文件保留 Fork 模块。
+`upstream/main` 可能领先于 v0.2.5；同步时以 release tag 为基线，不带入 tag 后的 `main` 内容，并逐文件保留 Fork 模块。
 
 ---
 

@@ -1,7 +1,7 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.2.4**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.4**（官方无独立 v0.1.174 tag），并保留本 Fork
+当前整合版本为 **v0.2.5**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.5**（官方无独立 v0.1.174 tag），并保留本 Fork
 的全部定制能力。
 
 ## 必须保留的模块
@@ -27,6 +27,16 @@
 - 消费指定期限卡时放弃原剩余时间，清零日/周/月 USD 与 token、重置三个窗口，并从点击时开始新期限；旧 `reset-daily` 兼容映射为 1 天卡。
 - 用户 `/subscriptions` 按期限返回并展示卡数量和“永久有效”；`manual_reset_credits` 保留为发卡加一、消费减一的兼容镜像，不承载期限事实。
 - 高危同步范围：`subscription_service.go`、`user_subscription{,_port}.go`、`user_subscription_repo.go`、`payment_fulfillment.go`、`redeem_service.go`、订阅 handler/routes/DTO、迁移 `224`/`225`、`SubscriptionsView.vue`、订阅 API/types/i18n。
+
+## v0.2.5 整合内容
+
+- 新增 OpenCode Zen/GO：账号、分组、Composite、多协议调度/模型/计价与监控；共享平台同时保留 Kiro。
+- 新增原生 Codex Images、API Key 服务商筛选及批量编辑、订阅批量操作、站点计费模式、注册确认密码、模型详情查询；批量编辑分组继续支持 Claude 搜索并保留内部 Kiro 值。
+- 用户批量删除复用 Fork 批量接口及跳过管理员规则，增加确认目标快照、提交锁和失败/跳过选择保留。订阅延期使用事务锁，保留月窗口对齐、重置卡明细与重复获得发卡口径。
+- 合入 OpenAI WS/配额窗口、Antigravity token 缓存隔离、DeepSeek 模型与定价、Ollama 限流重置、代理凭据清空、监控刷新等修复；认证临时失败返回真实状态并保留登录，仅明确刷新 401 清除会话。
+- 新增两个 `238` SQL，OpenCode 平台约束保留 Kiro；无限额清理仅删除三档限额全 NULL 的历史行。296 个既有 SQL 字节不变。不执行真实迁移，上线前备份与数据库验证另行进行。
+- v0.2.5：OpenCode Zen/GO、多协议原生 Codex Images、API Key 服务商筛选与批量编辑、订阅批量操作、站点计费模式、注册确认密码及模型查询，并合入配额、认证、订阅并发、Antigravity/OpenAI/Grok/监控等修复。精确增量 197 commits / 447 files / +23,038 / -1,538，目标 commit `86f93c28ee34cc74b629dafb748bd5ac5ca8c5ea`；官方 VERSION 为 0.2.4，本 Fork 设为 0.2.5。新增两个 `238` 迁移，平台 CHECK 同时保留 Kiro 与 OpenCode，296 个历史 SQL 不变。批量删用户复用 Fork 接口；延期行锁保留月窗口对齐，固定期限重复分配仍发重置卡。全部定制保留；六个部署配置路径未同步，不执行真实迁移或部署。实施与验证见 `openspec/changes/sync-upstream-v0-2-5/`。
+- Kiro/XorPay/Access Ban/登录失败封禁/提示词审计/订阅重置卡/active_available/Ops/VersionBadge/GLM/支付/UI 定制保留。
 
 ## v0.2.4 整合内容
 
@@ -266,4 +276,4 @@
 - `wire.go`、`wire_gen.go`、网关路由、套餐服务、Ops 服务和设置页属于高冲突文件，合并后必须运行对应测试。
 - 同步订阅链路时必须保留迁移 `224`/`225`、购买来源幂等键、有效期快照、过期重开、旧 `reset-daily` → 1 天卡映射，以及 `manual_reset_credits` 兼容镜像。
 
-*最后更新：2026-09-09*
+*最后更新：2026-09-15*

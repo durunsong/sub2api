@@ -203,12 +203,14 @@ apiClient.interceptors.response.use(
             // Only a definitive refresh-token rejection means the session is invalid. Network
             // failures, timeouts, rate limits, and upstream 5xx responses are transient in
             // production; keep the session so the next request/refresh can retry.
-            const refreshStatus = (refreshError as { response?: { status?: unknown } }).response?.status
+            const refreshStatus = (refreshError as { response?: { status?: unknown } } | null)?.response?.status
             if (refreshStatus !== 401) {
               return Promise.reject({
-                status,
+                status: typeof refreshStatus === 'number' ? refreshStatus : 0,
                 code: 'TOKEN_REFRESH_UNAVAILABLE',
-                message: 'Authentication service temporarily unavailable. Please retry.'
+                message: axios.isAxiosError(refreshError)
+                  ? refreshError.response?.data?.message || refreshError.message
+                  : 'Authentication service temporarily unavailable. Please retry.'
               })
             }
 

@@ -254,8 +254,10 @@
 
             <!-- Create User Button (full width on mobile, auto width on desktop) -->
             <button
+              v-if="selectedCount > 0"
               @click="openBatchDelete"
-              :disabled="selectedCount === 0"
+              data-test="bulk-delete-users"
+              :disabled="batchDeleting"
               class="btn btn-danger flex-1 md:flex-initial"
               :title="t('admin.users.batchDeleteAction')"
             >
@@ -764,7 +766,7 @@
     <ConfirmDialog
       :show="showBatchDeleteDialog"
       :title="t('admin.users.batchDelete')"
-      :message="t('admin.users.batchDeleteConfirm', { count: selectedCount })"
+      :message="t('admin.users.batchDeleteConfirm', { count: batchDeleteIds.length })"
       :confirm-text="t('common.delete')"
       :cancel-text="t('common.cancel')"
       :danger="true"
@@ -1356,6 +1358,8 @@ const showEditModal = ref(false)
 const showBulkEditModal = ref(false)
 const showDeleteDialog = ref(false)
 const showBatchDeleteDialog = ref(false)
+const batchDeleteIds = ref<number[]>([])
+const batchDeleting = ref(false)
 const showApiKeysModal = ref(false)
 const showAttributesModal = ref(false)
 const showPlatformQuotaModal = ref(false)
@@ -1806,7 +1810,8 @@ const handleDelete = (user: AdminUser) => {
 }
 
 const openBatchDelete = () => {
-  if (selectedCount.value === 0) return
+  if (selectedCount.value === 0 || batchDeleting.value) return
+  batchDeleteIds.value = [...selectedIds.value]
   showBatchDeleteDialog.value = true
 }
 
@@ -1826,11 +1831,11 @@ const confirmDelete = async () => {
 }
 
 const confirmBatchDelete = async () => {
-  const ids = [...selectedIds.value]
-  if (ids.length === 0) {
-    showBatchDeleteDialog.value = false
-    return
-  }
+  if (batchDeleting.value) return
+  const ids = [...batchDeleteIds.value]
+  showBatchDeleteDialog.value = false
+  if (ids.length === 0) return
+  batchDeleting.value = true
 
   try {
     const result = await adminAPI.users.batchDelete(ids)
@@ -1839,16 +1844,17 @@ const confirmBatchDelete = async () => {
 
     if (deleted > 0) {
       appStore.showSuccess(t('admin.users.batchDeleteDone', { deleted, skipped }))
+      pagination.page = 1
     } else if (skipped > 0) {
       appStore.showInfo(t('admin.users.batchDeleteSkipped', { skipped }))
     }
-
-    clearSelectedUsers()
-    showBatchDeleteDialog.value = false
-    loadUsers()
+    removeSelectedUsers(result.deleted_ids || [])
+    await loadUsers()
   } catch (error: any) {
     appStore.showError(error.response?.data?.detail || t('admin.users.batchDeleteFailed'))
     console.error('Error batch deleting users:', error)
+  } finally {
+    batchDeleting.value = false
   }
 }
 
