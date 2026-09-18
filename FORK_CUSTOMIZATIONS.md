@@ -1,7 +1,7 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.2.6**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.6**（官方无独立 v0.1.174 tag），并保留本 Fork
+当前整合版本为 **v0.2.5**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.5**（官方无独立 v0.1.174 tag），并保留本 Fork
 的全部定制能力。
 
 ## 必须保留的模块
@@ -27,13 +27,6 @@
 - 消费指定期限卡时放弃原剩余时间，清零日/周/月 USD 与 token、重置三个窗口，并从点击时开始新期限；旧 `reset-daily` 兼容映射为 1 天卡。
 - 用户 `/subscriptions` 按期限返回并展示卡数量和“永久有效”；`manual_reset_credits` 保留为发卡加一、消费减一的兼容镜像，不承载期限事实。
 - 高危同步范围：`subscription_service.go`、`user_subscription{,_port}.go`、`user_subscription_repo.go`、`payment_fulfillment.go`、`redeem_service.go`、订阅 handler/routes/DTO、迁移 `224`/`225`、`SubscriptionsView.vue`、订阅 API/types/i18n。
-
-## v0.2.6 整合内容
-
-- v0.2.6：Codex 292 票据采集/注入及后台热设置、兑换记录分页，Gemini 混合模型发现、DeepSeek 工具输出媒体、严格 Chat 上游角色兼容、Antigravity attribution、分组统计与 UI 修复，并升级 gRPC 等既有依赖。精确增量 60 commits / 132 files / +4,836 / -304，目标 commit `49a39b6dc1abed30fd227611e8af1108bc427610`；官方 VERSION 为 0.2.5，本 Fork 设为 0.2.6。无新增迁移，298 个历史 SQL 不变。金额输入同时保留人民币/快捷金额/max 限制并恢复非法输入；Kiro、XorPay、Access Ban、订阅重置卡及全部 UI 定制继续保留。`deploy/config.example.yaml` 未同步，不执行真实迁移或部署。实施与验证见 `openspec/changes/sync-upstream-v0-2-6/`。
-- Codex 票据默认关闭；管理端可设置开关和采集代理，票据原文不进入普通 DTO/账号导出。保留 Kiro 六个精简列表状态字段及 Wire 注入。
-- 兑换记录分页保持旧版不带分页参数时的数组契约；发卡、来源幂等、退款、过期重开和重置卡提示不变。
-- Go 依赖采用上游安全升级，同时保留 Fork tokenizer 与已有更高的 x/image 版本。
 
 ## v0.2.5 整合内容
 
