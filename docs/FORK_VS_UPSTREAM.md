@@ -2,10 +2,10 @@
 
 > **上游官方仓库**：[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api)
 > **本 Fork 远程**：`origin` → `durunsong/sub2api`（中转/部署用）
-> **对比基准**：官方 tag **`v0.2.5`**（同步于 2026-09-15；官方无 v0.1.174 tag）
-> **本 Fork 当前版本**：`backend/cmd/server/VERSION` = **0.2.5**
-> **统计**：v0.2.4→v0.2.5 为 197 commits / 447 files / +23,038 / -1,538；历史相对 v0.1.164 的大盘差异见下文
-> **当前工作区**：已合入官方 v0.2.5，并保留 Kiro / XorPay / Access Ban / 提示词审计 / 订阅重置卡 / Ops / UI 品牌等全部定制，含登录失败自动封禁及重置卡提示
+> **对比基准**：官方 tag **`v0.2.6`**（同步于 2026-09-18；官方无 v0.1.174 tag）
+> **本 Fork 当前版本**：`backend/cmd/server/VERSION` = **0.2.6**
+> **统计**：v0.2.5→v0.2.6 为 60 commits / 132 files / +4,836 / -304；历史相对 v0.1.164 的大盘差异见下文
+> **当前工作区**：已合入官方 v0.2.6，并保留 Kiro / XorPay / Access Ban / 提示词审计 / 订阅重置卡 / Ops / UI 品牌等全部定制，含登录失败自动封禁及重置卡提示
 > **维护**：新增 Fork 定制后，请同步更新本文与根目录 `AGENTS.md` 摘要。
 
 ---
@@ -20,7 +20,7 @@
 | **`AGENTS.md`**（项目根） | AI 协作**强制摘要**与禁区，改代码前必读 |
 | **`FORK_CUSTOMIZATIONS.md`**（项目根） | 历史清单，已收敛到本文；保留作快捷索引 |
 
-**注意**：本 Fork 已同步官方至 **v0.2.5**，但 **`upstream/main` 仍可能领先**。与官方同步时以目标 release **tag** 为准，不带入 tag 后的 `main` 内容；merge `main` 前务必先读本文 Fork 定制章节，禁止 blindly 采用上游覆盖 Kiro / XorPay / Access Ban 等模块。
+**注意**：本 Fork 已同步官方至 **v0.2.6**，但 **`upstream/main` 仍可能领先**。与官方同步时以目标 release **tag** 为准，不带入 tag 后的 `main` 内容；merge `main` 前务必先读本文 Fork 定制章节，禁止 blindly 采用上游覆盖 Kiro / XorPay / Access Ban 等模块。
 
 ---
 
@@ -45,6 +45,7 @@
 
 **以下能力已在官方 v0.1.142+ 中，本 Fork 通过同步拥有，不算 Fork 独有开发**（合并时保留了 Kiro/XorPay 定制）：
 
+- v0.2.6：Codex 292 票据采集/注入及后台热设置、兑换记录分页，Gemini 混合模型发现、DeepSeek 工具输出媒体、严格 Chat 上游角色兼容、Antigravity attribution、分组统计与 UI 修复，并升级 gRPC 等既有依赖。精确增量 60 commits / 132 files / +4,836 / -304，目标 commit `49a39b6dc1abed30fd227611e8af1108bc427610`；官方 VERSION 为 0.2.5，本 Fork 设为 0.2.6。无新增迁移，298 个历史 SQL 不变。金额输入同时保留人民币/快捷金额/max 限制并恢复非法输入；Kiro、XorPay、Access Ban、订阅重置卡及全部 UI 定制继续保留。`deploy/config.example.yaml` 未同步，不执行真实迁移或部署。实施与验证见 `openspec/changes/sync-upstream-v0-2-6/`。
 - v0.2.5：OpenCode Zen/GO、多协议原生 Codex Images、API Key 服务商筛选与批量编辑、订阅批量操作、站点计费模式、注册确认密码及模型查询，并合入配额、认证、订阅并发、Antigravity/OpenAI/Grok/监控等修复。精确增量 197 commits / 447 files / +23,038 / -1,538，目标 commit `86f93c28ee34cc74b629dafb748bd5ac5ca8c5ea`；官方 VERSION 为 0.2.4，本 Fork 设为 0.2.5。新增两个 `238` 迁移，平台 CHECK 同时保留 Kiro 与 OpenCode，296 个历史 SQL 不变。批量删用户复用 Fork 接口；延期行锁保留月窗口对齐，固定期限重复分配仍发重置卡。全部定制保留；六个部署配置路径未同步，不执行真实迁移或部署。实施与验证见 `openspec/changes/sync-upstream-v0-2-5/`。
 - v0.2.4：MiniMax 多协议平台、Grok 媒体资格控制、OpenAI 周成本估算与 Image 2.5、监控用户排行开关、支付帮助 Markdown，以及代理备用关系/部分更新、流式取消、HTTP/2 保活、渠道跨实例缓存和 Ops 日志保留修复。精确增量 70 commits / 266 files / +5,696 / -726，目标 commit `5de5e2bed035d43591a2e10e51f420ef6a84eb98`；官方 VERSION 为 0.2.3，本 Fork 设为 0.2.4。新增 `237_add_minimax_platform.sql` 的配额/Composite 约束同时保留 Kiro 与 MiniMax；295 个历史 SQL 不变。保留全部定制，管理端 Badge 继续显示 Kiro，用户端仍显示 Claude；不执行真实迁移或部署。实施与验证见 `openspec/changes/sync-upstream-v0-2-4/`。
 - v0.2.3：Ollama Cloud DeepSeek 跨 Chat Completions/Responses/Messages 输出上限及 Anthropic Bearer 鉴权修复、账号测试模型显示名补全，以及 `236_group_model_allowlist_repair.sql` 白名单列收敛修复。精确增量 9 commits / 22 files / +1,517 / -24，目标 commit `8fa67d477d6651a744754392a8982ea589c26ae6`；官方 VERSION 仍为 0.2.2，本 Fork 设为 0.2.3。4 个重叠代码文件保留全部原有 Fork 差异，历史迁移不变；本次不执行数据库迁移或部署。实施与验证记录见 `openspec/changes/sync-upstream-v0-2-3/`。
@@ -889,4 +890,4 @@ deploy/docker-compose.yml
 
 ---
 
-*最后更新：2026-09-15 · 基准：官方 v0.2.5 · 增量清单见 `FORK_CUSTOMIZATIONS.md` · 工作区：`git status --short`*
+*最后更新：2026-09-18 · 基准：官方 v0.2.6 · 增量清单见 `FORK_CUSTOMIZATIONS.md` · 工作区：`git status --short`*

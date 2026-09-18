@@ -14,8 +14,8 @@ Cursor 场景下还会加载 [`.cursor/rules/sub2api-fork.mdc`](.cursor/rules/su
 | 项 | 值 |
 |----|-----|
 | 上游官方 | https://github.com/Wei-Shaw/sub2api |
-| 已同步基线 | tag **v0.2.5**（官方无 v0.1.174 tag） |
-| 当前 VERSION | `backend/cmd/server/VERSION` = **0.2.5** |
+| 已同步基线 | tag **v0.2.6**（官方无 v0.1.174 tag） |
+| 当前 VERSION | `backend/cmd/server/VERSION` = **0.2.6** |
 | 完整差异文档 | **`docs/FORK_VS_UPSTREAM.md`**（相对历史基线；含 Fork 扩展见文档 §8.2 / §12；快捷清单见 `FORK_CUSTOMIZATIONS.md`） |
 | 快捷索引 | `FORK_CUSTOMIZATIONS.md` |
 
@@ -139,6 +139,7 @@ Access Ban 迁移顺序：`159` 建表 → `160` 扩展 rule_type / ua_pattern�
 
 以下来自官方 v0.1.142+，勿误当 Fork 独有而重复实现或删除：
 
+- v0.2.6：Codex 292 票据采集/注入及后台热设置、兑换记录分页，Gemini 混合模型发现、DeepSeek 工具输出媒体、严格 Chat 上游角色兼容、Antigravity attribution、分组统计与 UI 修复，并升级 gRPC 等既有依赖。精确增量 60 commits / 132 files / +4,836 / -304，目标 commit `49a39b6dc1abed30fd227611e8af1108bc427610`；官方 VERSION 为 0.2.5，本 Fork 设为 0.2.6。无新增迁移，298 个历史 SQL 不变。金额输入同时保留人民币/快捷金额/max 限制并恢复非法输入；Kiro、XorPay、Access Ban、订阅重置卡及全部 UI 定制继续保留。`deploy/config.example.yaml` 未同步，不执行真实迁移或部署。实施与验证见 `openspec/changes/sync-upstream-v0-2-6/`。
 - v0.2.5：OpenCode Zen/GO、多协议原生 Codex Images、API Key 服务商筛选与批量编辑、订阅批量操作、站点计费模式、注册确认密码及模型查询，并合入配额、认证、订阅并发、Antigravity/OpenAI/Grok/监控等修复。精确增量 197 commits / 447 files / +23,038 / -1,538，目标 commit `86f93c28ee34cc74b629dafb748bd5ac5ca8c5ea`；官方 VERSION 为 0.2.4，本 Fork 设为 0.2.5。新增两个 `238` 迁移，平台 CHECK 同时保留 Kiro 与 OpenCode，296 个历史 SQL 不变。批量删用户复用 Fork 接口；延期行锁保留月窗口对齐，固定期限重复分配仍发重置卡。全部定制保留；六个部署配置路径未同步，不执行真实迁移或部署。实施与验证见 `openspec/changes/sync-upstream-v0-2-5/`。
 - v0.2.4：MiniMax 多协议平台、Grok 媒体资格控制、OpenAI 周成本估算与 Image 2.5、监控用户排行开关、支付帮助 Markdown，以及代理备用关系/部分更新、流式取消、HTTP/2 保活、渠道跨实例缓存和 Ops 日志保留修复。精确增量 70 commits / 266 files / +5,696 / -726，目标 commit `5de5e2bed035d43591a2e10e51f420ef6a84eb98`；官方 VERSION 为 0.2.3，本 Fork 设为 0.2.4。新增 `237_add_minimax_platform.sql` 的配额/Composite 约束同时保留 Kiro 与 MiniMax；295 个历史 SQL 不变。保留全部定制，管理端 Badge 继续显示 Kiro，用户端仍显示 Claude；不执行真实迁移或部署。实施与验证见 `openspec/changes/sync-upstream-v0-2-4/`。
 - v0.2.3：Ollama Cloud DeepSeek 跨 Chat Completions/Responses/Messages 输出上限及 Anthropic Bearer 鉴权修复、账号测试模型显示名补全，以及 `236_group_model_allowlist_repair.sql` 白名单列收敛修复。精确增量 9 commits / 22 files / +1,517 / -24，目标 commit `8fa67d477d6651a744754392a8982ea589c26ae6`；官方 VERSION 仍为 0.2.2，本 Fork 设为 0.2.3。4 个重叠代码文件保留全部原有 Fork 差异，历史迁移不变；本次不执行数据库迁移或部署。
@@ -195,7 +196,7 @@ Access Ban 迁移顺序：`159` 建表 → `160` 扩展 rule_type / ua_pattern�
 
 见 `docs/FORK_VS_UPSTREAM.md` §14。原则：**Kiro + XorPay + Access Ban + 提示词审计 + 套餐续期 + Ops + UI 品牌等全部定制保留**。
 
-`upstream/main` 可能领先于 v0.2.5；同步时以 release tag 为基线，不带入 tag 后的 `main` 内容，并逐文件保留 Fork 模块。
+`upstream/main` 可能领先于 v0.2.6；同步时以 release tag 为基线，不带入 tag 后的 `main` 内容，并逐文件保留 Fork 模块。
 
 ---
 
