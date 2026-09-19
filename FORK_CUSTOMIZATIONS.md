@@ -1,7 +1,7 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.2.5**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.5**（官方无独立 v0.1.174 tag），并保留本 Fork
+当前整合版本为 **v0.2.7**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.7**（官方无独立 v0.1.174 tag），并保留本 Fork
 的全部定制能力。
 
 ## 必须保留的模块
@@ -27,6 +27,12 @@
 - 消费指定期限卡时放弃原剩余时间，清零日/周/月 USD 与 token、重置三个窗口，并从点击时开始新期限；旧 `reset-daily` 兼容映射为 1 天卡。
 - 用户 `/subscriptions` 按期限返回并展示卡数量和“永久有效”；`manual_reset_credits` 保留为发卡加一、消费减一的兼容镜像，不承载期限事实。
 - 高危同步范围：`subscription_service.go`、`user_subscription{,_port}.go`、`user_subscription_repo.go`、`payment_fulfillment.go`、`redeem_service.go`、订阅 handler/routes/DTO、迁移 `224`/`225`、`SubscriptionsView.vue`、订阅 API/types/i18n。
+
+## v0.2.7 整合内容
+
+- v0.2.7：Seedance Ark 原生视频任务、插件宿主 KV/账号目录与只读状态桥、兑换记录分页，以及 Antigravity/Gemini/DeepSeek/Anthropic、国产配额 403 暂停、OAuth 刷新、用量汇总和支付/交互修复。精确增量 71 commits / 131 files / +7,283 / -446，目标 commit `aea725f2ea644d5592d0bbb1d63b607efa7e200a`；官方 VERSION 为 0.2.5，本 Fork 设为 0.2.7。298 个历史 SQL 不变，无新增迁移。保留全部 Fork 定制；新 Seedance 根路由继续经过 Access Ban；插件账号目录在 Wire provider 中接线，支持重新生成。插件身份解析拒绝非 active 账号，避免禁用后通过旧账号 ID 获取凭据。严格从 v0.2.5 同步，不恢复官方 v0.2.7 已不包含的 Codex 票据模块。验证见 `openspec/changes/sync-upstream-v0-2-7/`。
+- 充值非法输入恢复最近合法金额，同时保留人民币、快捷金额与上限；配额拒绝负数而不误存为无限额。
+- Kiro/XorPay/Access Ban/登录失败封禁/提示词审计/订阅重置卡/active_available/Ops/VersionBadge/GLM/支付/UI 定制保留。
 
 ## v0.2.5 整合内容
 
@@ -276,4 +282,4 @@
 - `wire.go`、`wire_gen.go`、网关路由、套餐服务、Ops 服务和设置页属于高冲突文件，合并后必须运行对应测试。
 - 同步订阅链路时必须保留迁移 `224`/`225`、购买来源幂等键、有效期快照、过期重开、旧 `reset-daily` → 1 天卡映射，以及 `manual_reset_credits` 兼容镜像。
 
-*最后更新：2026-09-15*
+*最后更新：2026-09-19*
