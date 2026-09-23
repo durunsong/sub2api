@@ -87,7 +87,7 @@ type postUsageBillingParams struct {
 	// path that records only API-key 5h/1d/7d window usage. It must not trigger
 	// balance, subscription, account, platform, or lifetime-key-quota effects.
 	SimpleModeKeyRateLimitOnly bool
-	Tokens                int64  // raw tokens for this request (multiplier-independent)
+	Tokens                     int64 // raw tokens for this request (multiplier-independent)
 }
 
 var ErrSimpleModeKeyRateLimitBillingUnavailable = errors.New("simple mode api key rate-limit billing unavailable")

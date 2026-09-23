@@ -151,8 +151,11 @@ func sanitizePluginExtra(extra map[string]any) map[string]any {
 	if extra == nil {
 		return nil
 	}
-	clean := sanitizePluginMetadataValue(extra)
-	return clean.(map[string]any)
+	clean, ok := sanitizePluginMetadataValue(extra).(map[string]any)
+	if !ok {
+		return nil
+	}
+	return clean
 }
 
 // ResolvePluginOutboundIdentity resolves the access token plus the outbound
