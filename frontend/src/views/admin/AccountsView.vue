@@ -1339,7 +1339,9 @@ const handleSort = (key: string, order: AccountSortOrder) => {
   hasPendingListSync.value = false
   resetAutoRefreshCache()
   pendingTodayStatsRefresh.value = true
-  load()
+  load().catch((error) => {
+    console.error('Failed to load accounts:', error)
+  })
 }
 
 watch(loading, (isLoading, wasLoading) => {
