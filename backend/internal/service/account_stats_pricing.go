@@ -19,6 +19,8 @@ import (
 // totalCost 是本次请求的客户计费（倍率前），用于优先级 2。
 // serviceTier 是最终参与用户计费的 OpenAI 服务层级，用于优先级 3。
 // pricingAt 是请求级冻结计价时刻，用于优先级 3 的模型分时策略；同时与客户计费保持一致，避免跨峰谷错位。
+// longContextPricingEnabled 表示上游是否对本次请求收取长上下文费率，用于优先级 3；
+// 由 accountStatsLongContextPricingEnabled 按账号开关得出，不受分组售价开关影响。
 // reasoningEffort 是最终转发等级；按账号统计定价中配置的等级倍率计费。
 func resolveAccountStatsCost(
 	ctx context.Context,
@@ -32,6 +34,7 @@ func resolveAccountStatsCost(
 	totalCost float64,
 	serviceTier string,
 	pricingAt time.Time,
+	longContextPricingEnabled bool,
 	reasoningEfforts ...string,
 ) *float64 {
 	reasoningEffort := ""
@@ -64,7 +67,7 @@ func resolveAccountStatsCost(
 
 	// 优先级 3：模型定价文件（LiteLLM）默认价格
 	if billingService != nil {
-		return tryModelFilePricing(ctx, billingService, upstreamModel, tokens, serviceTier, pricingAt, reasoningEffort)
+		return tryModelFilePricing(ctx, billingService, upstreamModel, tokens, serviceTier, pricingAt, longContextPricingEnabled, reasoningEffort)
 	}
 
 	return nil
@@ -72,8 +75,8 @@ func resolveAccountStatsCost(
 
 // tryModelFilePricing 使用模型定价文件（LiteLLM/fallback）中的价格计算费用。
 // 与用户计费共用同一条定价管线，避免这里维护第二份"单价 × token 数"实现后，
-// 每加一个定价特性都要手工镜像一次。Resolver 不注入 ChannelService，保持
-// 优先级 3 的语义：只取模型定价文件，不引入分组或渠道自定义定价。
+// 每加一个定价特性都要手工镜像一次。解析器不配置渠道或分组，保持优先级 3 的
+// 语义：只取模型定价文件，不引入自定义售价。
 func tryModelFilePricing(
 	ctx context.Context,
 	billingService *BillingService,
@@ -81,6 +84,7 @@ func tryModelFilePricing(
 	tokens UsageTokens,
 	serviceTier string,
 	pricingAt time.Time,
+	longContextPricingEnabled bool,
 	reasoningEfforts ...string,
 ) *float64 {
 	reasoningEffort := ""
@@ -88,16 +92,21 @@ func tryModelFilePricing(
 		reasoningEffort = reasoningEfforts[0]
 	}
 	resolver := NewModelPricingResolver(nil, billingService)
+	resolved := resolver.Resolve(ctx, PricingInput{Model: model})
+	// 无分组的解析结果默认开启长上下文，CostInput.LongContextBillingEnabled=false 无法否决，
+	// 因此直接覆写解析结果。
+	resolved.longContextPricingEnabled = longContextPricingEnabled
 	breakdown, err := billingService.CalculateCostUnified(CostInput{
 		Ctx:             ctx,
 		Model:           model,
 		Tokens:          tokens,
 		RequestCount:    1,
 		RateMultiplier:  1,
-		PricingAt:       pricingAt,
 		ServiceTier:     normalizeBillingServiceTier(serviceTier),
 		ReasoningEffort: reasoningEffort,
+		PricingAt:       pricingAt,
 		Resolver:        resolver,
+		Resolved:        resolved,
 	})
 	if err != nil || breakdown == nil || breakdown.TotalCost <= 0 {
 		return nil
@@ -273,6 +282,7 @@ func applyAccountStatsCost(
 	tokens UsageTokens,
 	totalCost float64,
 	pricingAt time.Time,
+	longContextPricingEnabled bool,
 ) {
 	model := upstreamModel
 	if model == "" {
@@ -291,6 +301,14 @@ func applyAccountStatsCost(
 		reasoningEffort = *usageLog.ReasoningEffort
 	}
 	usageLog.AccountStatsCost = resolveAccountStatsCost(
-		ctx, cs, bs, accountID, groupID, model, tokens, requestCount, totalCost, serviceTier, pricingAt, reasoningEffort,
+		ctx, cs, bs, accountID, groupID, model, tokens, requestCount, totalCost, serviceTier, pricingAt, longContextPricingEnabled, reasoningEffort,
 	)
+}
+
+// accountStatsLongContextPricingEnabled 判断账号统计成本是否计入长上下文阶梯。
+// 账号统计成本反映上游实际成本：OpenAI 账号由开关声明上游是否收取长上下文费率；
+// 其它平台没有该开关（accountGate 为 nil），按官方阶梯计。分组开关只决定客户售价，
+// 不参与成本判断。
+func accountStatsLongContextPricingEnabled(accountGate *bool) bool {
+	return accountGate == nil || *accountGate
 }

@@ -1,7 +1,7 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.2.8**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.8**（官方无独立 v0.1.174 tag），并保留本 Fork
+当前整合版本为 **v0.2.9**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.9**（官方无独立 v0.1.174 tag），并保留本 Fork
 的全部定制能力。
 
 ## 必须保留的模块
@@ -27,6 +27,11 @@
 - 消费指定期限卡时放弃原剩余时间，清零日/周/月 USD 与 token、重置三个窗口，并从点击时开始新期限；旧 `reset-daily` 兼容映射为 1 天卡。
 - 用户 `/subscriptions` 按期限返回并展示卡数量和“永久有效”；`manual_reset_credits` 保留为发卡加一、消费减一的兼容镜像，不承载期限事实。
 - 高危同步范围：`subscription_service.go`、`user_subscription{,_port}.go`、`user_subscription_repo.go`、`payment_fulfillment.go`、`redeem_service.go`、订阅 handler/routes/DTO、迁移 `224`/`225`、`SubscriptionsView.vue`、订阅 API/types/i18n。
+
+## v0.2.9 整合内容
+
+- v0.2.9：模型白名单任意位置通配符、协议转换/推理/工具参数恢复、客户端断开 499、账号长上下文成本开关、渠道图片价格继承、Free Fast 零成本日志，以及 OpenAI 配额重置/WS、Antigravity、模型广场视频倍率和 CC Switch 修复。目标 commit `4c00df2e0183e2c70b7fa8ba45914205e36aad0c`，70 commits / 117 files / +3,133 / -378；官方 VERSION 仍为 0.2.8，Fork 设为 0.2.9。无新增迁移/依赖；三个部署配置未同步。保留全部定制及冻结 pricingAt、请求 context、单次推理倍率和 DeepSeek 峰谷计价。验证见 `openspec/changes/sync-upstream-v0-2-9/`。
+- 三方合并 114 个非部署路径；账号成本冲突保留 Fork context、冻结 pricingAt、RequestCount 和 DeepSeek 回归，同时接入上游账号长上下文开关。订阅重置卡、Kiro credits、封禁、XorPay 与全部 UI 定制保留；不执行数据库迁移或部署。
 
 ## v0.2.8 整合内容
 
@@ -288,4 +293,4 @@
 - `wire.go`、`wire_gen.go`、网关路由、套餐服务、Ops 服务和设置页属于高冲突文件，合并后必须运行对应测试。
 - 同步订阅链路时必须保留迁移 `224`/`225`、购买来源幂等键、有效期快照、过期重开、旧 `reset-daily` → 1 天卡映射，以及 `manual_reset_credits` 兼容镜像。
 
-*最后更新：2026-09-23*
+*最后更新：2026-09-29*
