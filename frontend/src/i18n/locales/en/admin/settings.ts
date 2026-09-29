@@ -84,6 +84,8 @@ export default {
           enabledHint: 'When off, the admin sidebar entry is hidden and gateway moderation is skipped.',
           cyberSessionBlock: 'Cyber session auto-block',
           cyberSessionBlockHint: 'When enabled, sessions hit by upstream cyber_policy are blocked locally for the TTL and no longer forwarded. Only the offending session is blocked; other sessions on the same key are unaffected.',
+          riskControlUserAllowlist: 'Risk control allowlist',
+          riskControlUserAllowlistHint: 'Search users by email. The allowlist exempts users only from local blocking and automatic penalties in content moderation and cyber_policy while preserving audit records. Independent prompt auditing, Access Ban, login protection, and upstream restrictions remain in effect. Typically used for trusted downstream relay sites.',
           cyberSessionBlockTTL: 'Block TTL (seconds)',
         },
         affiliate: {

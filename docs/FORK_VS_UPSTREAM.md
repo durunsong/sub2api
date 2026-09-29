@@ -2,10 +2,10 @@
 
 > **上游官方仓库**：[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api)
 > **本 Fork 远程**：`origin` → `durunsong/sub2api`（中转/部署用）
-> **对比基准**：官方 tag **`v0.2.9`**（同步于 2026-09-29；官方无 v0.1.174 tag）
-> **本 Fork 当前版本**：`backend/cmd/server/VERSION` = **0.2.9**
-> **最新同步统计**：官方 v0.2.8→v0.2.9 为 70 commits / 117 files / +3,133 / -378；114 个非部署路径已核对同步，历史增量保留在下文
-> **当前工作区**：已合入官方 v0.2.9，并保留 Kiro / XorPay / Access Ban / 提示词审计 / 订阅重置卡 / Ops / UI 品牌等全部定制，含登录失败自动封禁及重置卡提示
+> **对比基准**：官方 tag **`v0.2.10`**（同步于 2026-09-29；官方无 v0.1.174 tag）
+> **本 Fork 当前版本**：`backend/cmd/server/VERSION` = **0.2.10**
+> **最新同步统计**：官方 v0.2.9→v0.2.10 为 33 commits / 118 files / +3,759 / -332；118 个路径已核对同步，历史增量保留在下文
+> **当前工作区**：已合入官方 v0.2.10，并保留 Kiro / XorPay / Access Ban / 提示词审计 / 订阅重置卡 / Ops / UI 品牌等全部定制，含登录失败自动封禁及重置卡提示
 > **维护**：新增 Fork 定制后，请同步更新本文与根目录 `AGENTS.md` 摘要。
 
 ---
@@ -20,7 +20,7 @@
 | **`AGENTS.md`**（项目根） | AI 协作**强制摘要**与禁区，改代码前必读 |
 | **`FORK_CUSTOMIZATIONS.md`**（项目根） | 历史清单，已收敛到本文；保留作快捷索引 |
 
-**注意**：本 Fork 已同步官方至 **v0.2.9**，但 **`upstream/main` 仍可能领先**。与官方同步时以目标 release **tag** 为准，不带入 tag 后的 `main` 内容；merge `main` 前务必先读本文 Fork 定制章节，禁止 blindly 采用上游覆盖 Kiro / XorPay / Access Ban 等模块。
+**注意**：本 Fork 已同步官方至 **v0.2.10**，但 **`upstream/main` 仍可能领先**。与官方同步时以目标 release **tag** 为准，不带入 tag 后的 `main` 内容；merge `main` 前务必先读本文 Fork 定制章节，禁止 blindly 采用上游覆盖 Kiro / XorPay / Access Ban 等模块。
 
 ---
 
@@ -46,7 +46,8 @@
 **以下能力已在官方 v0.1.142+ 中，本 Fork 通过同步拥有，不算 Fork 独有开发**（合并时保留了 Kiro/XorPay 定制）：
 
 
-- **v0.2.9（本次同步）**：模型白名单任意位置通配符、协议转换/推理/工具参数恢复、客户端断开 499、账号长上下文成本开关、渠道图片价格继承、Free Fast 零成本日志，以及 OpenAI 配额重置/WS、Antigravity、模型广场视频倍率和 CC Switch 修复。目标 commit `4c00df2e0183e2c70b7fa8ba45914205e36aad0c`，70 commits / 117 files / +3,133 / -378；官方 VERSION 仍为 0.2.8，Fork 设为 0.2.9。无新增迁移/依赖；三个部署配置未同步。保留全部定制及冻结 pricingAt、请求 context、单次推理倍率和 DeepSeek 峰谷计价。验证见 `openspec/changes/sync-upstream-v0-2-9/`。
+- **v0.2.10（本次同步）**：Sonnet 5.5 多协议支持、Claude 原生重置额度查询、风控用户白名单、仪表盘费用趋势，以及流式用量、聚合 WS 路由、工具重写、模型白名单映射和 Antigravity 保活修复。目标 commit `2f3fed2fdb0787141294cec81487a5df30426f7f`，33 commits / 118 files / +3,759 / -332；官方 VERSION 仍为 0.2.9，Fork 设为 0.2.10。无新增迁移/依赖。保留全部 Fork 定制、默认今天的仪表盘日期、Kiro credits 与历史模型兜底价格；Claude 原生额度查询与订阅重置卡独立。验证见 `openspec/changes/sync-upstream-v0-2-10/`。
+- **v0.2.9**：模型白名单任意位置通配符、协议转换/推理/工具参数恢复、客户端断开 499、账号长上下文成本开关、渠道图片价格继承、Free Fast 零成本日志，以及 OpenAI 配额重置/WS、Antigravity、模型广场视频倍率和 CC Switch 修复。目标 commit `4c00df2e0183e2c70b7fa8ba45914205e36aad0c`，70 commits / 117 files / +3,133 / -378；官方 VERSION 仍为 0.2.8，Fork 设为 0.2.9。无新增迁移/依赖；三个部署配置未同步。保留全部定制及冻结 pricingAt、请求 context、单次推理倍率和 DeepSeek 峰谷计价。验证见 `openspec/changes/sync-upstream-v0-2-9/`。
 - **v0.2.8**：OpenCode Go 用量窗口和管理端查询、Claude Code 版本自动同步、reasoning effort 分级计费、月度备份归档与保留、联盟线下提现幂等、Codex 推荐/积分、TypeSafe 内容审核、GPT-6 Sol/Luna、Claude Opus 5.5、图片余额与多协议兼容，以及网关/调度/代理/前端竞态修复。官方 commit `fd80b08c90b55edcad5b00171b53f08721d30da1`，473 个文件、+28,638/-2,096；新增迁移 `238b_content_moderation_engine_meta.sql`、`239_channel_reasoning_effort_multipliers.sql`、`240_affiliate_ledger_operation_id.sql`。本 Fork 保留 Kiro/XorPay/Access Ban/订阅重置卡/提示词审计/Ops/UI 定制，配额 CHECK 同时保留 Kiro、MiniMax、OpenCode Go。
 - v0.2.7：Seedance Ark 原生视频任务、插件宿主 KV/账号目录与只读状态桥、兑换记录分页，以及 Antigravity/Gemini/DeepSeek/Anthropic、国产配额 403 暂停、OAuth 刷新、用量汇总和支付/交互修复。精确增量 71 commits / 131 files / +7,283 / -446，目标 commit `aea725f2ea644d5592d0bbb1d63b607efa7e200a`；官方 VERSION 为 0.2.5，本 Fork 设为 0.2.7。298 个历史 SQL 不变，无新增迁移。保留全部 Fork 定制；新 Seedance 根路由继续经过 Access Ban；插件账号目录在 Wire provider 中接线，支持重新生成。插件身份解析拒绝非 active 账号，避免禁用后通过旧账号 ID 获取凭据。严格从 v0.2.5 同步，不恢复官方 v0.2.7 已不包含的 Codex 票据模块。验证见 `openspec/changes/sync-upstream-v0-2-7/`。
 - v0.2.5：OpenCode Zen/GO、多协议原生 Codex Images、API Key 服务商筛选与批量编辑、订阅批量操作、站点计费模式、注册确认密码及模型查询，并合入配额、认证、订阅并发、Antigravity/OpenAI/Grok/监控等修复。精确增量 197 commits / 447 files / +23,038 / -1,538，目标 commit `86f93c28ee34cc74b629dafb748bd5ac5ca8c5ea`；官方 VERSION 为 0.2.4，本 Fork 设为 0.2.5。新增两个 `238` 迁移，平台 CHECK 同时保留 Kiro 与 OpenCode，296 个历史 SQL 不变。批量删用户复用 Fork 接口；延期行锁保留月窗口对齐，固定期限重复分配仍发重置卡。全部定制保留；六个部署配置路径未同步，不执行真实迁移或部署。实施与验证见 `openspec/changes/sync-upstream-v0-2-5/`。
@@ -893,4 +894,4 @@ deploy/docker-compose.yml
 
 ---
 
-*最后更新：2026-09-29 · 基准：官方 v0.2.9 · 增量清单见 `FORK_CUSTOMIZATIONS.md` · 工作区：`git status --short`*
+*最后更新：2026-09-29 · 基准：官方 v0.2.10 · 增量清单见 `FORK_CUSTOMIZATIONS.md` · 工作区：`git status --short`*

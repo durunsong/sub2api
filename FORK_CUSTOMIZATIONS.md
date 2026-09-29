@@ -1,6 +1,6 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.2.9**，基于官方
+当前整合版本为 **v0.2.10**，基于官方
 [Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.9**（官方无独立 v0.1.174 tag），并保留本 Fork
 的全部定制能力。
 
@@ -27,6 +27,10 @@
 - 消费指定期限卡时放弃原剩余时间，清零日/周/月 USD 与 token、重置三个窗口，并从点击时开始新期限；旧 `reset-daily` 兼容映射为 1 天卡。
 - 用户 `/subscriptions` 按期限返回并展示卡数量和“永久有效”；`manual_reset_credits` 保留为发卡加一、消费减一的兼容镜像，不承载期限事实。
 - 高危同步范围：`subscription_service.go`、`user_subscription{,_port}.go`、`user_subscription_repo.go`、`payment_fulfillment.go`、`redeem_service.go`、订阅 handler/routes/DTO、迁移 `224`/`225`、`SubscriptionsView.vue`、订阅 API/types/i18n。
+
+## v0.2.10 整合内容
+
+- Sonnet 5.5 多协议支持、Claude 原生重置额度查询、风控用户白名单、仪表盘费用趋势，以及流式用量、聚合 WS 路由、工具重写、模型白名单映射和 Antigravity 保活修复。目标 commit `2f3fed2fdb0787141294cec81487a5df30426f7f`，33 commits / 118 files / +3,759 / -332；官方 VERSION 仍为 0.2.9，Fork 设为 0.2.10。无新增迁移/依赖。保留全部 Fork 定制、默认今天的仪表盘日期、Kiro credits 与历史模型兜底价格；Claude 原生额度查询与订阅重置卡独立。验证见 `openspec/changes/sync-upstream-v0-2-10/`。
 
 ## v0.2.9 整合内容
 
