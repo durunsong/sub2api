@@ -1,7 +1,7 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.2.10**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.9**（官方无独立 v0.1.174 tag），并保留本 Fork
+当前整合版本为 **v0.2.11**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.11**（官方无独立 v0.1.174 tag），并保留本 Fork
 的全部定制能力。
 
 ## 必须保留的模块
@@ -27,6 +27,11 @@
 - 消费指定期限卡时放弃原剩余时间，清零日/周/月 USD 与 token、重置三个窗口，并从点击时开始新期限；旧 `reset-daily` 兼容映射为 1 天卡。
 - 用户 `/subscriptions` 按期限返回并展示卡数量和“永久有效”；`manual_reset_credits` 保留为发卡加一、消费减一的兼容镜像，不承载期限事实。
 - 高危同步范围：`subscription_service.go`、`user_subscription{,_port}.go`、`user_subscription_repo.go`、`payment_fulfillment.go`、`redeem_service.go`、订阅 handler/routes/DTO、迁移 `224`/`225`、`SubscriptionsView.vue`、订阅 API/types/i18n。
+
+## v0.2.11 整合内容
+
+- 余额在途请求预留、API Key 创建数量/频率限制、Claude 原生额度重置操作、GPT-6.1 Sol、Astra Ultrafast、Codex 远程模型目录/订阅档位识别，以及 Claude Code only 分组兼容入口降级修复。目标 commit `96f4c115c9749078f90cbf210a01d39baf3f53b6`，23 commits / 90 files / +5,146 / -296；官方 VERSION 仍为 0.2.10，Fork 设为 0.2.11。合入 89 个非部署路径，部署示例保持原样；无新增迁移/依赖。保留全部 Fork 定制；原生 Claude 重置与订阅永久重置卡独立。验证见 `openspec/changes/sync-upstream-v0-2-11/`。
+- 新默认：余额预留启用、TTL 900 秒、未传输出上限时估算 8192 token；API Key 未删除数量上限 200、每小时创建 60 次。保留 Kiro credits、订阅 token 口径、历史模型兜底价格与 Wire 注入。未执行真实供应商重置、支付、数据库迁移或部署。
 
 ## v0.2.10 整合内容
 
