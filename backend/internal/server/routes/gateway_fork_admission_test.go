@@ -36,7 +36,7 @@ func TestGatewayRoutesAccessBanPrecedesAdmission(t *testing.T) {
 	}), nil, nil, nil, nil, nil, &config.Config{}, service.NewIPBanService(gatewayBannedClientRepo{}))
 
 	for _, path := range []string{
-		"/v1/messages", "/responses", "/responses/compact", "/chat/completions",
+		"/v1/messages", "/v1/systemone", "/responses", "/responses/compact", "/chat/completions",
 		"/messages/count_tokens", "/images/generations", "/videos/generations", "/x_search",
 		"/backend-api/codex/responses", "/backend-api/codex/realtime/calls",
 		"/v1beta/models/gemini-2.5-pro:generateContent", "/antigravity/v1/messages",

@@ -1085,3 +1085,52 @@ describe('PaymentView subscription feature flag', () => {
     wrapper.unmount()
   })
 })
+
+
+describe('PaymentView Fork recharge promotions', () => {
+  it.each([
+    { mode: 'bonus', credited: '$16.80', pay: '¥102.00', bonus: true },
+    { mode: 'discount', credited: '$14.00', pay: '¥81.60', bonus: false },
+  ])('preserves CNY/XorPay and credited USD with $mode tiers', async ({ mode, credited, pay, bonus }) => {
+    routeState.path = '/purchase'
+    routeState.query = {}
+    window.localStorage.clear()
+    getCheckoutInfo.mockReset().mockResolvedValue(checkoutInfoFixture({
+      balance_recharge_multiplier: 0.14,
+      recharge_fee_rate: 2,
+      recharge_bonus_mode: mode,
+      recharge_bonus_tiers: [{ min_amount: 100, bonus_percent: 20 }],
+      recharge_bonus_notice: '**Sale** <script>alert(1)</script>',
+      methods: {
+        xorpay: { ...checkoutInfoFixture().data.methods.wxpay, currency: 'CNY', display_name: 'XorPay（支付宝）' },
+      },
+    }))
+    const wrapper = shallowMount(PaymentView, {
+      global: {
+        stubs: {
+          AppLayout: { template: '<div><slot /></div>' },
+          AmountInput: false,
+          Teleport: true,
+          Transition: false,
+        },
+      },
+    })
+    try {
+      await flushPromises()
+      await wrapper.get('[data-testid="quick-amount-100"]').trigger('click')
+      await flushPromises()
+      expect(wrapper.get('[data-testid="quick-amount-100"]').text()).toContain('¥100')
+      expect(wrapper.find('[data-testid="quick-amount-2000"]').exists()).toBe(false)
+      expect(wrapper.get('[data-testid="recharge-credited-row"]').text()).toContain(credited)
+      expect(wrapper.find('[data-testid="recharge-bonus-row"]').exists()).toBe(bonus)
+      expect(wrapper.find('[data-testid="recharge-discount-row"]').exists()).toBe(!bonus)
+      expect(wrapper.get('[data-testid="recharge-bonus-notice"]').html()).toContain('<strong>Sale</strong>')
+      expect(wrapper.get('[data-testid="recharge-bonus-notice"]').find('script').exists()).toBe(false)
+      const submit = wrapper.findAll('button').find(button => button.text().includes('payment.rechargeNow'))
+      expect(submit?.text()).toContain(pay)
+      expect(wrapper.text()).not.toContain('payment.rateMultiplier')
+    } finally {
+      wrapper.unmount()
+    }
+  })
+})

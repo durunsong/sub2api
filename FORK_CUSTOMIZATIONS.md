@@ -1,7 +1,7 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.2.11**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.11**（官方无独立 v0.1.174 tag），并保留本 Fork
+当前整合版本为 **v0.2.14**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.14**（官方无独立 v0.1.174 tag），并保留本 Fork
 的全部定制能力。
 
 ## 必须保留的模块
@@ -27,6 +27,12 @@
 - 消费指定期限卡时放弃原剩余时间，清零日/周/月 USD 与 token、重置三个窗口，并从点击时开始新期限；旧 `reset-daily` 兼容映射为 1 天卡。
 - 用户 `/subscriptions` 按期限返回并展示卡数量和“永久有效”；`manual_reset_credits` 保留为发卡加一、消费减一的兼容镜像，不承载期限事实。
 - 高危同步范围：`subscription_service.go`、`user_subscription{,_port}.go`、`user_subscription_repo.go`、`payment_fulfillment.go`、`redeem_service.go`、订阅 handler/routes/DTO、迁移 `224`/`225`、`SubscriptionsView.vue`、订阅 API/types/i18n。
+
+## v0.2.12–v0.2.14 整合内容
+
+- v0.2.12–v0.2.14：TypeSafe Jev System One 原生平台、充值赠金/折扣阶梯、账号优先级快捷调整、API Key 分组排序；验证码原子限次/密码重置单次消费、Antigravity 错误脱敏、匿名订单限流、API Key 删除后的用量结算、EasyPay 回调防伪、新装管理员校验与 Codex 模型发现修复。目标 commit `0363b8cdba8cec3e2ba4b2dbd49c4481143fa55d`，47 commits / 176 files / +6,801 / -475；合入 168 个非部署路径，8 个部署路径保持原样。新增两个 `241` SQL，平台约束同时保留 Kiro 与 TypeSafe；301 个历史 SQL 不变。前端 Axios/Vue/source-map-js 跟随上游安全升级；全部 Fork 定制保留。验证见 `openspec/changes/sync-upstream-v0-2-14/`。
+- 充值页保留人民币符号、最高 1000 的快捷选项及原有布局；新优惠同时显示实付与到账 USD，订阅发卡/退款逻辑不变。TypeSafe 原生入口继承 Access Ban 与提示词审计。
+- 密码重置旧链接需要重新申请；全新自动安装不再使用固定管理员邮箱且检查密码长度。未启动服务、执行迁移、支付或部署。
 
 ## v0.2.11 整合内容
 
@@ -302,4 +308,4 @@
 - `wire.go`、`wire_gen.go`、网关路由、套餐服务、Ops 服务和设置页属于高冲突文件，合并后必须运行对应测试。
 - 同步订阅链路时必须保留迁移 `224`/`225`、购买来源幂等键、有效期快照、过期重开、旧 `reset-daily` → 1 天卡映射，以及 `manual_reset_credits` 兼容镜像。
 
-*最后更新：2026-09-29*
+*最后更新：2026-10-08*
