@@ -19,6 +19,8 @@ const apiMocks = vi.hoisted(() => ({
   deleteBackup: vi.fn(),
 }))
 
+const { listBackups } = apiMocks
+
 const storeMocks = vi.hoisted(() => ({
   showError: vi.fn(),
   showSuccess: vi.fn(),
@@ -247,6 +249,27 @@ describe('admin BackupView 分卷备份', () => {
   afterEach(() => {
     vi.restoreAllMocks()
     document.body.innerHTML = ''
+  })
+
+  it.each(['backup', 'restore'])('does not resume %s polling after navigation during initial loading', async (operation) => {
+    vi.useFakeTimers()
+    let finish!: (value: object) => void
+    listBackups.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+    const wrapper = mountBackupView()
+    try {
+      await flushPromises()
+      wrapper.unmount()
+      finish({ items: [{ ...baseRecord('pending'),
+        status: operation === 'backup' ? 'running' : 'completed',
+        restore_status: operation === 'restore' ? 'running' : undefined,
+      }] })
+      await flushPromises()
+      expect(vi.getTimerCount()).toBe(0)
+    } finally {
+      wrapper.unmount()
+      vi.clearAllTimers()
+      vi.useRealTimers()
+    }
   })
 
   it('显示分卷数并在下载时列出每个分卷链接', async () => {

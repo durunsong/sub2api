@@ -3,8 +3,9 @@
  * Handles user management for administrators
  */
 
+import { listPlatformIds } from '@/constants/platformCatalog'
 import { apiClient } from '../client'
-import type { AdminUser, UpdateUserRequest, PaginatedResponse, ApiKey } from '@/types'
+import type { AdminUser, UpdateUserRequest, PaginatedResponse, ApiKey, AccountPlatform } from '@/types'
 
 export interface AdminBindAuthIdentityChannelRequest {
   channel: string
@@ -346,12 +347,8 @@ export async function bindUserAuthIdentity(
 /**
  * Platform quota types
  */
-// Keep aligned with backend/internal/service/domain_constants.go AllowedQuotaPlatforms.
-export const PLATFORM_QUOTA_PLATFORMS = [
-  'anthropic', 'openai', 'gemini', 'antigravity', 'grok', 'kiro',
-  'kimi', 'zhipu', 'deepseek', 'minimax', 'opencode_go', 'typesafe',
-] as const
-export type PlatformQuotaPlatform = typeof PLATFORM_QUOTA_PLATFORMS[number]
+export type PlatformQuotaPlatform = AccountPlatform
+export function platformQuotaPlatforms(): PlatformQuotaPlatform[] { return listPlatformIds() }
 export type PlatformQuotaWindow = 'daily' | 'weekly' | 'monthly'
 
 export interface PlatformQuotaItem {

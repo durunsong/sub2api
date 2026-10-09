@@ -1,7 +1,7 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.2.14**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.14**（官方无独立 v0.1.174 tag），并保留本 Fork
+当前整合版本为 **v0.2.15**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.15**（官方无独立 v0.1.174 tag），并保留本 Fork
 的全部定制能力。
 
 ## 必须保留的模块
@@ -27,6 +27,10 @@
 - 消费指定期限卡时放弃原剩余时间，清零日/周/月 USD 与 token、重置三个窗口，并从点击时开始新期限；旧 `reset-daily` 兼容映射为 1 天卡。
 - 用户 `/subscriptions` 按期限返回并展示卡数量和“永久有效”；`manual_reset_credits` 保留为发卡加一、消费减一的兼容镜像，不承载期限事实。
 - 高危同步范围：`subscription_service.go`、`user_subscription{,_port}.go`、`user_subscription_repo.go`、`payment_fulfillment.go`、`redeem_service.go`、订阅 handler/routes/DTO、迁移 `224`/`225`、`SubscriptionsView.vue`、订阅 API/types/i18n。
+
+## v0.2.15 整合内容
+
+- v0.2.15：统一平台目录、Command Code/Cline、多协议模型路由与发现、Anthropic 缓存/签名、Responses 工具历史、WS 每轮分组计费与图像用量、监控 TPS 和前端生命周期修复。目标 f2669c8cf62555cd92389b3f55920e9e6e7c6ff2，146 commits / 278 files / +19,277 / -1,241。Kiro 登记到共享目录，保留 XorPay、Access Ban、审计、永久重置卡、Ops、品牌和支付定制。新增 242 迁移仅交付，历史 SQL 不变；Go 1.27.2 与已有依赖安全升级同步到构建配置。验证见 openspec/changes/sync-upstream-v0-2-15/。
 
 ## v0.2.12–v0.2.14 整合内容
 

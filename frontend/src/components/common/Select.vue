@@ -378,6 +378,10 @@ const toggle = () => {
   isOpen.value = !isOpen.value
 }
 
+watch(() => props.disabled, (disabled) => {
+  if (disabled) isOpen.value = false
+})
+
 const handleEscapeWhileOpen = (event: KeyboardEvent) => {
   if (event.key !== 'Escape' || !isOpen.value) return
   // Capture phase: close this dropdown before BaseDialog handles Escape.
