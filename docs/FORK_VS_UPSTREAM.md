@@ -2,10 +2,10 @@
 
 > **上游官方仓库**：[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api)
 > **本 Fork 远程**：`origin` → `durunsong/sub2api`（中转/部署用）
-> **对比基准**：官方 tag **`v0.2.15`**（同步于 2026-10-09；官方无 v0.1.174 tag）
-> **本 Fork 当前版本**：`backend/cmd/server/VERSION` = **0.2.15**
-> **最新同步统计**：官方 v0.2.14→v0.2.15 为 146 commits / 278 files / +19,277 / -1,241；构建配置只升级 Go 工具链，保留部署定制
-> **当前工作区**：已合入官方 v0.2.15，并保留 Kiro / XorPay / Access Ban / 提示词审计 / 订阅重置卡 / Ops / UI 品牌等全部定制，含登录失败自动封禁及重置卡提示
+> **对比基准**：官方 tag **`v0.2.16`**（同步于 2026-10-13；官方无 v0.1.174 tag）
+> **本 Fork 当前版本**：`backend/cmd/server/VERSION` = **0.2.16**
+> **最新同步统计**：官方 v0.2.15→v0.2.16 为 79 commits / 213 files / +13,886 / -727；官方 VERSION 文件仍为 0.2.15
+> **当前工作区**：已合入官方 v0.2.16，并保留 Kiro / XorPay / Access Ban / 提示词审计 / 订阅重置卡 / Ops / UI 品牌等全部定制，含登录失败自动封禁及重置卡提示
 > **维护**：新增 Fork 定制后，请同步更新本文与根目录 `AGENTS.md` 摘要。
 
 ---
@@ -20,7 +20,7 @@
 | **`AGENTS.md`**（项目根） | AI 协作**强制摘要**与禁区，改代码前必读 |
 | **`FORK_CUSTOMIZATIONS.md`**（项目根） | 历史清单，已收敛到本文；保留作快捷索引 |
 
-**注意**：本 Fork 已同步官方至 **v0.2.15**，但 **`upstream/main` 仍可能领先**。与官方同步时以目标 release **tag** 为准，不带入 tag 后的 `main` 内容；merge `main` 前务必先读本文 Fork 定制章节，禁止 blindly 采用上游覆盖 Kiro / XorPay / Access Ban 等模块。
+**注意**：本 Fork 已同步官方至 **v0.2.16**，但 **`upstream/main` 仍可能领先**。与官方同步时以目标 release **tag** 为准，不带入 tag 后的 `main` 内容；merge `main` 前务必先读本文 Fork 定制章节，禁止 blindly 采用上游覆盖 Kiro / XorPay / Access Ban 等模块。
 
 ---
 
@@ -46,7 +46,8 @@
 **以下能力已在官方 v0.1.142+ 中，本 Fork 通过同步拥有，不算 Fork 独有开发**（合并时保留了 Kiro/XorPay 定制）：
 
 
-- **本次同步**：v0.2.15：统一平台目录、Command Code/Cline、多协议模型路由与发现、Anthropic 缓存/签名、Responses 工具历史、WS 每轮分组计费与图像用量、监控 TPS 和前端生命周期修复。目标 f2669c8cf62555cd92389b3f55920e9e6e7c6ff2，146 commits / 278 files / +19,277 / -1,241。Kiro 登记到共享目录，保留 XorPay、Access Ban、审计、永久重置卡、Ops、品牌和支付定制。新增 242 迁移仅交付，历史 SQL 不变；Go 1.27.2 与已有依赖安全升级同步到构建配置。验证见 openspec/changes/sync-upstream-v0-2-15/。
+- **本次同步**：v0.2.16：Claude Haiku 5.5、Gemini 显式上下文缓存、Vertex API Key / 模型同步、AI Studio `AQ.` Key、临时不可调度作用范围、分组多语言和运维账号列，以及 Responses 回退、图像限流、401 规则和支付倒计时等修复。目标 `01842576b3d5c1e2545b5a99ad555d36e28ed306`，79 commits / 213 files / +13,886 / -727。官方 VERSION 文件仍为 0.2.15，Fork 设为 0.2.16。新增 `242_group_i18n.sql` 与既有 `242_drop_platform_check_constraints.sql` 并存，并新增 `243`/`244`/`245`；历史 SQL 不变。Kiro 字段索引保留在分组 `i18n` 之后，缓存存储费继续使用冻结 `pricingAt`。Gemini 缓存路由继续经过 Access Ban。验证见 `openspec/changes/sync-upstream-v0-2-16/`。
+- **v0.2.15**：统一平台目录、Command Code/Cline、多协议模型路由与发现、Anthropic 缓存/签名、Responses 工具历史、WS 每轮分组计费与图像用量、监控 TPS 和前端生命周期修复。目标 f2669c8cf62555cd92389b3f55920e9e6e7c6ff2，146 commits / 278 files / +19,277 / -1,241。Kiro 登记到共享目录，保留 XorPay、Access Ban、审计、永久重置卡、Ops、品牌和支付定制。新增 242 迁移仅交付，历史 SQL 不变；Go 1.27.2 与已有依赖安全升级同步到构建配置。验证见 openspec/changes/sync-upstream-v0-2-15/。
 - **v0.2.12–v0.2.14**：TypeSafe Jev System One 原生平台、充值赠金/折扣阶梯、账号优先级快捷调整、API Key 分组排序；验证码原子限次/密码重置单次消费、Antigravity 错误脱敏、匿名订单限流、API Key 删除后的用量结算、EasyPay 回调防伪、新装管理员校验与 Codex 模型发现修复。目标 commit `0363b8cdba8cec3e2ba4b2dbd49c4481143fa55d`，47 commits / 176 files / +6,801 / -475；合入 168 个非部署路径，8 个部署路径保持原样。新增两个 `241` SQL，平台约束同时保留 Kiro 与 TypeSafe；301 个历史 SQL 不变。前端 Axios/Vue/source-map-js 跟随上游安全升级；全部 Fork 定制保留。验证见 `openspec/changes/sync-upstream-v0-2-14/`。
 - **v0.2.11**：余额在途请求预留、API Key 创建数量/频率限制、Claude 原生额度重置操作、GPT-6.1 Sol、Astra Ultrafast、Codex 远程模型目录/订阅档位识别，以及 Claude Code only 分组兼容入口降级修复。目标 commit `96f4c115c9749078f90cbf210a01d39baf3f53b6`，23 commits / 90 files / +5,146 / -296；官方 VERSION 仍为 0.2.10，Fork 设为 0.2.11。合入 89 个非部署路径，部署示例保持原样；无新增迁移/依赖。保留全部 Fork 定制；原生 Claude 重置与订阅永久重置卡独立。验证见 `openspec/changes/sync-upstream-v0-2-11/`。
 - **v0.2.10**：Sonnet 5.5 多协议支持、Claude 原生重置额度查询、风控用户白名单、仪表盘费用趋势，以及流式用量、聚合 WS 路由、工具重写、模型白名单映射和 Antigravity 保活修复。目标 commit `2f3fed2fdb0787141294cec81487a5df30426f7f`，33 commits / 118 files / +3,759 / -332；官方 VERSION 仍为 0.2.9，Fork 设为 0.2.10。无新增迁移/依赖。保留全部 Fork 定制、默认今天的仪表盘日期、Kiro credits 与历史模型兜底价格；Claude 原生额度查询与订阅重置卡独立。验证见 `openspec/changes/sync-upstream-v0-2-10/`。
@@ -905,4 +906,4 @@ deploy/docker-compose.yml
 
 ---
 
-*最后更新：2026-10-08 · 基准：官方 v0.2.14 · 增量清单见 `FORK_CUSTOMIZATIONS.md` · 工作区：`git status --short`*
+*最后更新：2026-10-13 · 基准：官方 v0.2.16 · 增量清单见 `FORK_CUSTOMIZATIONS.md` · 工作区：`git status --short`*

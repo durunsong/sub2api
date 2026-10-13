@@ -1,7 +1,7 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.2.15**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.15**（官方无独立 v0.1.174 tag），并保留本 Fork
+当前整合版本为 **v0.2.16**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.16**（官方无独立 v0.1.174 tag），并保留本 Fork
 的全部定制能力。
 
 ## 必须保留的模块
@@ -27,6 +27,10 @@
 - 消费指定期限卡时放弃原剩余时间，清零日/周/月 USD 与 token、重置三个窗口，并从点击时开始新期限；旧 `reset-daily` 兼容映射为 1 天卡。
 - 用户 `/subscriptions` 按期限返回并展示卡数量和“永久有效”；`manual_reset_credits` 保留为发卡加一、消费减一的兼容镜像，不承载期限事实。
 - 高危同步范围：`subscription_service.go`、`user_subscription{,_port}.go`、`user_subscription_repo.go`、`payment_fulfillment.go`、`redeem_service.go`、订阅 handler/routes/DTO、迁移 `224`/`225`、`SubscriptionsView.vue`、订阅 API/types/i18n。
+
+## v0.2.16 整合内容
+
+- v0.2.16：Claude Haiku 5.5、Gemini 显式上下文缓存、Vertex API Key / 模型同步、AI Studio `AQ.` Key、临时不可调度作用范围、分组多语言和运维账号列，以及 Responses 回退、图像限流、401 规则和支付倒计时等修复。目标 `01842576b3d5c1e2545b5a99ad555d36e28ed306`，79 commits / 213 files / +13,886 / -727。官方 VERSION 文件仍为 0.2.15，Fork 设为 0.2.16。新增 `242_group_i18n.sql` 与既有 `242_drop_platform_check_constraints.sql` 并存，并新增 `243`/`244`/`245`；历史 SQL 不变。Kiro 字段索引保留在分组 `i18n` 之后，缓存存储费继续使用冻结 `pricingAt`。验证见 `openspec/changes/sync-upstream-v0-2-16/`。
 
 ## v0.2.15 整合内容
 

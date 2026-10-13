@@ -14,8 +14,8 @@ Cursor 场景下还会加载 [`.cursor/rules/sub2api-fork.mdc`](.cursor/rules/su
 | 项 | 值 |
 |----|-----|
 | 上游官方 | https://github.com/Wei-Shaw/sub2api |
-| 已同步基线 | tag **v0.2.15**（官方无 v0.1.174 tag） |
-| 当前 VERSION | `backend/cmd/server/VERSION` = **0.2.15** |
+| 已同步基线 | tag **v0.2.16**（官方无 v0.1.174 tag） |
+| 当前 VERSION | `backend/cmd/server/VERSION` = **0.2.16** |
 | 完整差异文档 | **`docs/FORK_VS_UPSTREAM.md`**（相对历史基线；含 Fork 扩展见文档 §8.2 / §12；快捷清单见 `FORK_CUSTOMIZATIONS.md`） |
 | 快捷索引 | `FORK_CUSTOMIZATIONS.md` |
 
@@ -133,6 +133,8 @@ CHECK (platform IN ('anthropic', 'openai', 'gemini', 'antigravity', 'kiro', 'gro
 
 v0.2.15 新增 `242_drop_platform_check_constraints.sql` 删除 quota/Composite 的平台 CHECK，改由 `domain/platforms.go` 与应用校验同源维护，必须登记 Kiro。历史 SQL 不改，不自动执行迁移；监控 CHECK 不变。
 
+v0.2.16 新增 `242_group_i18n.sql` 与既有 `242_drop_platform_check_constraints.sql` 按完整文件名并存；`243`/`244`/`245` 仅新增 Gemini 显式缓存表及渠道计费、修改租约列。历史 SQL 不改，不自动执行迁移。
+
 Access Ban 迁移顺序：`159` 建表 → `160` 扩展 rule_type / ua_pattern，**不可删除或回退**。
 
 订阅重置卡迁移顺序：`224` 建永久明细表 → `225` 按分组默认期限回填历史 `manual_reset_credits`；同步时不得恢复有效固定期限购买/分配顺延，也不得删除旧 `reset-daily` → 1 天卡和兼容镜像。
@@ -143,6 +145,7 @@ Access Ban 迁移顺序：`159` 建表 → `160` 扩展 rule_type / ua_pattern�
 
 以下来自官方 v0.1.142+，勿误当 Fork 独有而重复实现或删除：
 
+- v0.2.16：Claude Haiku 5.5、Gemini 显式上下文缓存、Vertex API Key / 模型同步、AI Studio `AQ.` Key、临时不可调度作用范围、分组多语言和运维账号列，以及 Responses 回退、图像限流、401 规则和支付倒计时等修复。目标 `01842576b3d5c1e2545b5a99ad555d36e28ed306`，79 commits / 213 files / +13,886 / -727。官方 VERSION 文件仍为 0.2.15，Fork 设为 0.2.16。新增 `242_group_i18n.sql` 与既有 `242_drop_platform_check_constraints.sql` 并存，并新增 `243`/`244`/`245`；历史 SQL 不变。Kiro 字段索引保留在分组 `i18n` 之后，缓存存储费继续使用冻结 `pricingAt`。验证见 `openspec/changes/sync-upstream-v0-2-16/`。
 - v0.2.15：统一平台目录、Command Code/Cline、多协议模型路由与发现、Anthropic 缓存/签名、Responses 工具历史、WS 每轮分组计费与图像用量、监控 TPS 和前端生命周期修复。目标 f2669c8cf62555cd92389b3f55920e9e6e7c6ff2，146 commits / 278 files / +19,277 / -1,241。Kiro 登记到共享目录，保留 XorPay、Access Ban、审计、永久重置卡、Ops、品牌和支付定制。新增 242 迁移仅交付，历史 SQL 不变；Go 1.27.2 与已有依赖安全升级同步到构建配置。验证见 openspec/changes/sync-upstream-v0-2-15/。
 - v0.2.12–v0.2.14：TypeSafe Jev System One 原生平台、充值赠金/折扣阶梯、账号优先级快捷调整、API Key 分组排序；验证码原子限次/密码重置单次消费、Antigravity 错误脱敏、匿名订单限流、API Key 删除后的用量结算、EasyPay 回调防伪、新装管理员校验与 Codex 模型发现修复。目标 commit `0363b8cdba8cec3e2ba4b2dbd49c4481143fa55d`，47 commits / 176 files / +6,801 / -475；合入 168 个非部署路径，8 个部署路径保持原样。新增两个 `241` SQL，平台约束同时保留 Kiro 与 TypeSafe；301 个历史 SQL 不变。前端 Axios/Vue/source-map-js 跟随上游安全升级；全部 Fork 定制保留。验证见 `openspec/changes/sync-upstream-v0-2-14/`。
 - v0.2.11：余额在途请求预留、API Key 创建数量/频率限制、Claude 原生额度重置操作、GPT-6.1 Sol、Astra Ultrafast、Codex 远程模型目录/订阅档位识别，以及 Claude Code only 分组兼容入口降级修复。目标 commit `96f4c115c9749078f90cbf210a01d39baf3f53b6`，23 commits / 90 files / +5,146 / -296；官方 VERSION 仍为 0.2.10，Fork 设为 0.2.11。合入 89 个非部署路径，部署示例保持原样；无新增迁移/依赖。保留全部 Fork 定制；原生 Claude 重置与订阅永久重置卡独立。验证见 `openspec/changes/sync-upstream-v0-2-11/`。
@@ -206,7 +209,7 @@ Access Ban 迁移顺序：`159` 建表 → `160` 扩展 rule_type / ua_pattern�
 
 见 `docs/FORK_VS_UPSTREAM.md` §14。原则：**Kiro + XorPay + Access Ban + 提示词审计 + 套餐续期 + Ops + UI 品牌等全部定制保留**。
 
-`upstream/main` 可能领先于 v0.2.15；同步时以 release tag 为基线，不带入 tag 后的 `main` 内容，并逐文件保留 Fork 模块。
+`upstream/main` 可能领先于 v0.2.16；同步时以 release tag 为基线，不带入 tag 后的 `main` 内容，并逐文件保留 Fork 模块。
 
 ---
 

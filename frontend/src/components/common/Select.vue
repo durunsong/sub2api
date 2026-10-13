@@ -383,7 +383,7 @@ watch(() => props.disabled, (disabled) => {
 })
 
 const handleEscapeWhileOpen = (event: KeyboardEvent) => {
-  if (event.key !== 'Escape' || !isOpen.value) return
+  if (event.key !== 'Escape' || !isOpen.value || event.isComposing) return
   // Capture phase: close this dropdown before BaseDialog handles Escape.
   event.preventDefault()
   event.stopPropagation()
@@ -460,6 +460,7 @@ const onTriggerKeyDown = () => {
 }
 
 const onDropdownKeyDown = (e: KeyboardEvent) => {
+  if (e.isComposing) return
   switch (e.key) {
     case 'ArrowDown':
       e.preventDefault()
