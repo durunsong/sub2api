@@ -1,9 +1,11 @@
 package service
 
 import (
+	"fmt"
 	"net"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -48,6 +50,26 @@ func (p *Proxy) URL() string {
 		u.User = url.UserPassword(p.Username, p.Password)
 	}
 	return u.String()
+}
+
+// ResolveAccountProxyURL enforces the proxy invariant for upstream requests.
+// A configured ProxyID must never silently degrade to a direct connection when
+// the proxy relation was omitted from an account snapshot or the proxy data is
+// malformed. Direct connections remain available only for accounts without a
+// configured proxy (ProxyID == nil).
+func ResolveAccountProxyURL(account *Account) (string, error) {
+	if account == nil || account.ProxyID == nil {
+		return "", nil
+	}
+	if account.Proxy == nil {
+		return "", fmt.Errorf("account %d has proxy_id %d but proxy details are unavailable", account.ID, *account.ProxyID)
+	}
+	proxyURL := strings.TrimSpace(account.Proxy.URL())
+	parsed, err := url.Parse(proxyURL)
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+		return "", fmt.Errorf("account %d proxy %d is invalid", account.ID, *account.ProxyID)
+	}
+	return proxyURL, nil
 }
 
 type ProxyWithAccountCount struct {

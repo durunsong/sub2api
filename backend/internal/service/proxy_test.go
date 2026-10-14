@@ -93,3 +93,21 @@ func TestProxyURL_SpecialCharactersRoundTrip(t *testing.T) {
 		t.Fatalf("password mismatch after parse: got=%q want=%q", pass, proxy.Password)
 	}
 }
+
+func TestResolveAccountProxyURLFailsClosedWhenConfiguredProxyIsMissing(t *testing.T) {
+	id := int64(42)
+	_, err := ResolveAccountProxyURL(&Account{ID: 7, ProxyID: &id})
+	if err == nil {
+		t.Fatal("expected configured proxy without details to fail closed")
+	}
+}
+
+func TestResolveAccountProxyURLAllowsDirectOnlyWhenProxyIsUnset(t *testing.T) {
+	proxyURL, err := ResolveAccountProxyURL(&Account{ID: 7})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if proxyURL != "" {
+		t.Fatalf("expected empty proxy URL, got %q", proxyURL)
+	}
+}

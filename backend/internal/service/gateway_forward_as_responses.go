@@ -159,9 +159,9 @@ func (s *GatewayService) ForwardAsResponses(
 		}
 
 		// 9. Get proxy URL
-		proxyURL := ""
-		if account.ProxyID != nil && account.Proxy != nil {
-			proxyURL = account.Proxy.URL()
+		proxyURL, err := ResolveAccountProxyURL(account)
+		if err != nil {
+			return nil, err
 		}
 
 		// 10. Build upstream request
