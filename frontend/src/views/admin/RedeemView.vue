@@ -48,6 +48,13 @@
               <Icon name="edit" size="md" class="mr-2" />
               {{ t('admin.redeem.batchUpdate') }}
             </button>
+            <button data-test="redeem-email-history-open" @click="showEmailHistory = true" class="btn btn-secondary">
+              {{ t('admin.redeemEmail.openHistory') }}
+            </button>
+            <button data-test="redeem-email-campaign-open" @click="showEmailCampaign = true" class="btn btn-secondary">
+              <Icon name="mail" size="md" class="mr-2" />
+              {{ t('admin.redeemEmail.openCampaign') }}
+            </button>
             <button @click="showGenerateDialog = true" class="btn btn-primary">
               {{ t('admin.redeem.generateCodes') }}
             </button>
@@ -607,6 +614,13 @@
         </div>
       </div>
     </Teleport>
+
+    <RedeemEmailCampaignDialog
+      :show="showEmailCampaign"
+      @close="showEmailCampaign = false"
+      @created="handleEmailBatchCreated"
+    />
+    <RedeemEmailBatchHistoryDialog :show="showEmailHistory" @close="showEmailHistory = false" />
   </AppLayout>
 </template>
 
@@ -641,6 +655,8 @@ import Select from '@/components/common/Select.vue'
 import GroupBadge from '@/components/common/GroupBadge.vue'
 import GroupOptionItem from '@/components/common/GroupOptionItem.vue'
 import Icon from '@/components/icons/Icon.vue'
+import RedeemEmailCampaignDialog from '@/components/admin/redeem/RedeemEmailCampaignDialog.vue'
+import RedeemEmailBatchHistoryDialog from '@/components/admin/redeem/RedeemEmailBatchHistoryDialog.vue'
 
 const { t } = useI18n()
 const appStore = useAppStore()
@@ -657,6 +673,15 @@ interface GroupOption {
 }
 
 const showGenerateDialog = ref(false)
+const showEmailCampaign = ref(false)
+const showEmailHistory = ref(false)
+
+const handleEmailBatchCreated = (batch: { id: number }) => {
+  showEmailCampaign.value = false
+  appStore.showSuccess(t('admin.redeemEmail.confirm.created', { id: batch.id }))
+  showEmailHistory.value = true
+  loadCodes()
+}
 const showResultDialog = ref(false)
 const generatedCodes = ref<RedeemCode[]>([])
 const subscriptionGroups = ref<Group[]>([])

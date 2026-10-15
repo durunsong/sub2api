@@ -8734,7 +8734,7 @@
             </div>
           </div>
 
-          <EmailTemplateEditor />
+          <EmailTemplateEditor :initial-event="initialEmailTemplateEvent" />
 
           <!-- Balance Low Notification -->
           <div class="card">
@@ -9132,6 +9132,12 @@ const settingsTabs = [
   { key: "email" as SettingsTab, icon: "mail" as const },
   { key: "backup" as SettingsTab, icon: "database" as const },
 ];
+
+// Fork：支持 ?tab=email&email_event=<event> 深链到指定邮件模板（兑换码群发向导使用）。
+const settingsUrlQuery = new URLSearchParams(window.location.search);
+const initialSettingsTab = settingsTabs.find((tab) => tab.key === settingsUrlQuery.get("tab"));
+if (initialSettingsTab) activeTab.value = initialSettingsTab.key;
+const initialEmailTemplateEvent = settingsUrlQuery.get("email_event") || "";
 
 const settingsTabKeyboardActions = {
   ArrowLeft: -1,

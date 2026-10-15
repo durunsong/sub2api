@@ -1974,6 +1974,106 @@ export interface RedeemCodeRequest {
   code: string
 }
 
+// ==================== Redeem Email Campaigns (Fork) ====================
+
+export type RedeemEmailSegment = 'inactive_1_2m' | 'inactive_2_3m' | 'inactive_3m_plus' | 'never_used'
+export type RedeemEmailBatchStatus = 'pending' | 'running' | 'succeeded' | 'partial_failed' | 'failed'
+export type RedeemEmailItemStatus = 'pending' | 'sending' | 'sent' | 'failed' | 'skipped'
+export type RedeemEmailLocale = 'zh' | 'en'
+
+export interface RedeemEmailDefaults {
+  /** 邮件模板对应的通知事件，在 /admin/settings 邮件模板中编辑 */
+  template_event: string
+  segment_options: RedeemEmailSegment[]
+  default_segments: RedeemEmailSegment[]
+  rate_per_second: number
+  smtp_configured: boolean
+  max_recipients: number
+  default_expires_in_days: number
+  max_expires_in_days: number
+}
+
+export interface RedeemEmailRecipientFilter {
+  segments: RedeemEmailSegment[]
+  search?: string
+}
+
+export interface RedeemEmailRecipient {
+  user_id: number
+  email: string
+  username: string
+  last_used_at: string | null
+  segment: RedeemEmailSegment
+  /** 已退订余额券邮件；默认不勾选，发送时也会被跳过 */
+  unsubscribed: boolean
+}
+
+export interface RedeemEmailRecipientSearchResult {
+  items: RedeemEmailRecipient[]
+  total: number
+  max_recipients: number
+}
+
+/** never_expires 与 code_expires_in_days 二选一 */
+export interface RedeemEmailCoupon {
+  coupon_value: number
+  code_expires_in_days?: number
+  never_expires?: boolean
+}
+
+export interface RedeemEmailPreviewRequest extends RedeemEmailCoupon {
+  locale: RedeemEmailLocale
+}
+
+export interface RedeemEmailPreview {
+  subject: string
+  html: string
+}
+
+export interface CreateRedeemEmailBatchRequest extends RedeemEmailCoupon {
+  segments: RedeemEmailSegment[]
+  user_ids: number[]
+}
+
+export interface RedeemEmailBatch {
+  id: number
+  status: RedeemEmailBatchStatus
+  segments: RedeemEmailSegment[]
+  reference_time: string
+  coupon_value: number
+  code_expires_at: string | null
+  total_count: number
+  pending_count: number
+  sending_count: number
+  sent_count: number
+  failed_count: number
+  skipped_count: number
+  created_by: number
+  started_at: string | null
+  finished_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface RedeemEmailItem {
+  id: number
+  batch_id: number
+  position: number
+  user_id: number | null
+  recipient_name: string
+  recipient_email: string
+  redeem_code_id: number | null
+  redeem_code: string
+  status: RedeemEmailItemStatus
+  attempt_count: number
+  sent_at: string | null
+  last_attempt_at: string | null
+  error_code: string | null
+  error_message: string | null
+  created_at: string
+  updated_at: string
+}
+
 // ==================== Dashboard & Statistics ====================
 
 export interface DashboardStats {

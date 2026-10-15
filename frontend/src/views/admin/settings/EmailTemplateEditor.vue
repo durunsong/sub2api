@@ -234,6 +234,7 @@ import { extractApiErrorMessage } from "@/utils/apiError";
 import Select from "@/components/common/Select.vue";
 import ConfirmDialog from "@/components/common/ConfirmDialog.vue";
 
+const props = defineProps<{ initialEvent?: string }>();
 const { t, locale } = useI18n();
 const appStore = useAppStore();
 
@@ -254,6 +255,9 @@ const fallbackPlaceholders = [
   "{{recharge_amount}}",
   "{{order_id}}",
   "{{unsubscribe_url}}",
+  "{{coupon_value}}",
+  "{{redeem_code}}",
+  "{{expires_at}}",
   "{{account_id}}",
   "{{account_name}}",
   "{{platform}}",
@@ -395,6 +399,11 @@ const eventDisplayMeta: Record<string, EventDisplayMeta> = {
     timing: "运维日报、周报、错误摘要或账号健康报表到达配置的发送时间时发送；日报和周报的完整指标均可在模板中编辑。",
     categoryLabel: "运维",
   },
+  "redeem.inactive_coupon": {
+    label: "未活跃用户余额券",
+    timing: "管理员在兑换码页面发起「群发余额券」后，按收件人语言逐封发送，每封附带一张独立兑换码；已退订的用户会被跳过。",
+    categoryLabel: "营销",
+  },
 };
 
 const eventDisplayMetaEn: Record<string, EventDisplayMeta> = {
@@ -458,6 +467,11 @@ const eventDisplayMetaEn: Record<string, EventDisplayMeta> = {
     timing: "Sent when a configured daily, weekly, error digest, or account health report reaches its scheduled send time. Every daily and weekly summary metric is editable in this template.",
     categoryLabel: "Ops",
   },
+  "redeem.inactive_coupon": {
+    label: "Inactive User Balance Coupon",
+    timing: "Sent one by one in each recipient's language when an admin starts a balance coupon campaign on the Redeem Codes page. Each email carries a personal redeem code; unsubscribed users are skipped.",
+    categoryLabel: "Marketing",
+  },
 };
 
 function normalizeEventOption(option: EmailTemplateEventOption): EmailTemplateOption {
@@ -502,6 +516,7 @@ function formatCategory(category: string): string {
     admin: { zh: "管理告警", en: "Admin" },
     risk_control: { zh: "风控", en: "Risk Control" },
     ops: { zh: "运维", en: "Ops" },
+    marketing: { zh: "营销", en: "Marketing" },
   };
   const item = labels[normalized];
   return item ? localText(item.zh, item.en) : category;
@@ -631,7 +646,10 @@ async function loadTemplateList() {
     localeOptions.value = response.locales;
     placeholders.value = response.placeholders || [];
     initializingSelection.value = true;
-    selectedEvent.value = eventOptions.value[0]?.value || "";
+    selectedEvent.value =
+      eventOptions.value.find((option) => option.value === props.initialEvent)?.value ||
+      eventOptions.value[0]?.value ||
+      "";
     selectedLocale.value = selectInitialLocale(response.locales);
     await loadTemplate();
     initializingSelection.value = false;

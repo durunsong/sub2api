@@ -892,6 +892,8 @@ var ProviderSet = wire.NewSet(
 	NewAccountService,
 	NewProxyService,
 	NewRedeemService,
+	ProvideRedeemEmailService,
+	ProvideRedeemEmailWorkerRuntime,
 	NewPromoService,
 	NewUsageService,
 	NewDashboardService,

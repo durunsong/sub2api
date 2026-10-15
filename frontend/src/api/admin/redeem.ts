@@ -9,7 +9,16 @@ import type {
   GenerateRedeemCodesRequest,
   BatchUpdateRedeemCodeFields,
   RedeemCodeType,
-  PaginatedResponse
+  PaginatedResponse,
+  RedeemEmailDefaults,
+  RedeemEmailRecipientFilter,
+  RedeemEmailRecipientSearchResult,
+  RedeemEmailPreviewRequest,
+  RedeemEmailPreview,
+  CreateRedeemEmailBatchRequest,
+  RedeemEmailBatch,
+  RedeemEmailItem,
+  RedeemEmailItemStatus
 } from '@/types'
 
 /**
@@ -191,6 +200,85 @@ export async function exportCodes(filters?: {
   return response.data
 }
 
+// ==================== 未活跃用户余额券群发 ====================
+
+interface RequestOptions {
+  signal?: AbortSignal
+}
+
+const emailBatchPath = '/admin/redeem-codes/email-batches'
+
+export async function getEmailDefaults(options?: RequestOptions): Promise<RedeemEmailDefaults> {
+  const { data } = await apiClient.get<RedeemEmailDefaults>(`${emailBatchPath}/defaults`, options)
+  return data
+}
+
+export async function searchEmailRecipients(
+  filter: RedeemEmailRecipientFilter,
+  options?: RequestOptions
+): Promise<RedeemEmailRecipientSearchResult> {
+  const { data } = await apiClient.post<RedeemEmailRecipientSearchResult>(`${emailBatchPath}/recipients/search`, filter, options)
+  return data
+}
+
+export async function previewEmail(payload: RedeemEmailPreviewRequest, options?: RequestOptions): Promise<RedeemEmailPreview> {
+  const { data } = await apiClient.post<RedeemEmailPreview>(`${emailBatchPath}/preview`, payload, options)
+  return data
+}
+
+export async function createEmailBatch(
+  payload: CreateRedeemEmailBatchRequest,
+  idempotencyKey: string,
+  options?: RequestOptions
+): Promise<RedeemEmailBatch> {
+  const { data } = await apiClient.post<RedeemEmailBatch>(emailBatchPath, payload, {
+    headers: { 'Idempotency-Key': idempotencyKey },
+    ...options
+  })
+  return data
+}
+
+export async function listEmailBatches(
+  page = 1,
+  pageSize = 20,
+  options?: RequestOptions
+): Promise<PaginatedResponse<RedeemEmailBatch>> {
+  const { data } = await apiClient.get<PaginatedResponse<RedeemEmailBatch>>(emailBatchPath, {
+    params: { page, page_size: pageSize },
+    ...options
+  })
+  return data
+}
+
+export async function getEmailBatch(id: number, options?: RequestOptions): Promise<RedeemEmailBatch> {
+  const { data } = await apiClient.get<RedeemEmailBatch>(`${emailBatchPath}/${id}`, options)
+  return data
+}
+
+export async function listEmailBatchItems(
+  id: number,
+  page = 1,
+  pageSize = 20,
+  status?: RedeemEmailItemStatus,
+  options?: RequestOptions
+): Promise<PaginatedResponse<RedeemEmailItem>> {
+  const { data } = await apiClient.get<PaginatedResponse<RedeemEmailItem>>(`${emailBatchPath}/${id}/items`, {
+    params: { page, page_size: pageSize, status: status || undefined },
+    ...options
+  })
+  return data
+}
+
+export async function retryFailedEmailItems(id: number, options?: RequestOptions): Promise<RedeemEmailBatch> {
+  const { data } = await apiClient.post<RedeemEmailBatch>(`${emailBatchPath}/${id}/retry-failed`, undefined, options)
+  return data
+}
+
+export async function deleteEmailBatch(id: number, options?: RequestOptions): Promise<{ message: string }> {
+  const { data } = await apiClient.delete<{ message: string }>(`${emailBatchPath}/${id}`, options)
+  return data
+}
+
 export const redeemAPI = {
   list,
   getById,
@@ -200,7 +288,16 @@ export const redeemAPI = {
   batchUpdate,
   expire,
   getStats,
-  exportCodes
+  exportCodes,
+  getEmailDefaults,
+  searchEmailRecipients,
+  previewEmail,
+  createEmailBatch,
+  listEmailBatches,
+  getEmailBatch,
+  listEmailBatchItems,
+  retryFailedEmailItems,
+  deleteEmailBatch
 }
 
 export default redeemAPI

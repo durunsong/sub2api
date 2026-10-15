@@ -579,6 +579,17 @@ func registerRedeemCodeRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
 		codes.POST("/batch-delete", h.Admin.Redeem.BatchDelete)
 		codes.POST("/batch-update", h.Admin.Redeem.BatchUpdate)
 		codes.POST("/:id/expire", h.Admin.Redeem.Expire)
+
+		emailBatches := codes.Group("/email-batches")
+		emailBatches.GET("/defaults", h.Admin.RedeemEmail.Defaults)
+		emailBatches.POST("/recipients/search", h.Admin.RedeemEmail.SearchRecipients)
+		emailBatches.POST("/preview", h.Admin.RedeemEmail.Preview)
+		emailBatches.POST("", h.Admin.RedeemEmail.Create)
+		emailBatches.GET("", h.Admin.RedeemEmail.List)
+		emailBatches.GET("/:batch_id", h.Admin.RedeemEmail.Get)
+		emailBatches.GET("/:batch_id/items", h.Admin.RedeemEmail.ListItems)
+		emailBatches.POST("/:batch_id/retry-failed", h.Admin.RedeemEmail.RetryFailed)
+		emailBatches.DELETE("/:batch_id", h.Admin.RedeemEmail.Delete)
 	}
 }
 

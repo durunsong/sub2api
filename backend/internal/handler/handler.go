@@ -23,6 +23,7 @@ type AdminHandlers struct {
 	CNProvider             *admin.CNProviderHandler
 	Proxy                  *admin.ProxyHandler
 	Redeem                 *admin.RedeemHandler
+	RedeemEmail            *admin.RedeemEmailHandler
 	Promo                  *admin.PromoHandler
 	Setting                *admin.SettingHandler
 	Ops                    *admin.OpsHandler

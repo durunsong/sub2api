@@ -58,6 +58,7 @@ Cursor 场景下还会加载 [`.cursor/rules/sub2api-fork.mdc`](.cursor/rules/su
 - **订阅重置卡**：迁移 `224`/`225` 保存永久期限明细并按 `group.default_validity_days` 回填旧计数；有效固定期限支付/兑换/管理员分配重复获得改发 `validity_days` 快照卡且不改到期时间，过期则直接重开；消费放弃余期、清零日周月 USD/token 并从点击时重开；旧 `reset-daily` 映射 1 天卡，`manual_reset_credits` 仅保留兼容镜像
 - **订阅可用额度筛选**：管理端订阅状态下拉默认选择 `active_available`（“生效中+没用完”）；后端按有效期及当前日/周/月窗口过滤任一额度已耗尽的订阅，无限额订阅保留
 - **重置卡提示**：管理端分页/分组订阅列表批量加载 `reset_cards`，展示数量及期限明细；用户端页面顶部汇总永久卡数量，消费后同步更新；不得使用兼容计数代替卡明细。
+- **未活跃用户余额券群发**：`/admin/redeem` 向导按 `usage_logs` 最后 API 调用把普通用户分为 1–2 / 2–3 / 3+ 个月未用与从未使用四个互斥分段（多选取并集，默认不选从未使用，单批 ≤1000），事务内为每人生成独立余额码，经 leader 锁 Worker 约 1 封/秒发送；邮件模板是可退订通知事件 `redeem.inactive_coupon`（`/admin/settings` 编辑，独立文件 `init` 注册），已退订收件人记为 `skipped`；迁移 `246` 新增两张表，原生 SQL 仓储、不改上游 Ent schema；`RedeemEmailWorkerRuntime` 须在 `provideCleanup` 中停止。详见 `docs/FORK_VS_UPSTREAM.md` §8.6。
 - **UI**：首页/登录靛蓝紫罗兰主题、`logo.svg`、Select/ConfirmDialog 替换原生控件
 - **ProxyAdBanner**：已移除
 

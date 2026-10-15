@@ -56,8 +56,16 @@ vi.mock("@/components/common/ConfirmDialog.vue", () => ({
           ? h("div", { class: "confirm-dialog-stub" }, [
               h("h3", props.title),
               h("p", props.message),
-              h("button", { type: "button", onClick: () => emit("cancel") }, props.cancelText),
-              h("button", { type: "button", onClick: () => emit("confirm") }, props.confirmText),
+              h(
+                "button",
+                { type: "button", onClick: () => emit("cancel") },
+                props.cancelText,
+              ),
+              h(
+                "button",
+                { type: "button", onClick: () => emit("confirm") },
+                props.confirmText,
+              ),
             ])
           : null;
     },
@@ -85,7 +93,10 @@ vi.mock("@/components/common/Select.vue", () => ({
           {
             value: props.modelValue,
             onChange: (event: Event) =>
-              emit("update:modelValue", (event.target as HTMLSelectElement).value),
+              emit(
+                "update:modelValue",
+                (event.target as HTMLSelectElement).value,
+              ),
           },
           (props.options as Array<Record<string, string>>).map((option) =>
             h("option", { value: option.value }, option.label),
@@ -135,14 +146,19 @@ describe("EmailTemplateEditor", () => {
 
     const restoreButton = wrapper
       .findAll("button")
-      .find((button) => button.text() === "admin.settings.emailTemplates.restoreOfficial");
+      .find(
+        (button) =>
+          button.text() === "admin.settings.emailTemplates.restoreOfficial",
+      );
 
     expect(restoreButton).toBeTruthy();
     await restoreButton!.trigger("click");
     await flushPromises();
 
     expect(confirmSpy).not.toHaveBeenCalled();
-    expect(wrapper.html()).toContain("admin.settings.emailTemplates.restoreConfirm");
+    expect(wrapper.html()).toContain(
+      "admin.settings.emailTemplates.restoreConfirm",
+    );
 
     const cancelButton = wrapper
       .findAll("button")
@@ -162,7 +178,10 @@ describe("EmailTemplateEditor", () => {
 
     const restoreButton = wrapper
       .findAll("button")
-      .find((button) => button.text() === "admin.settings.emailTemplates.restoreOfficial");
+      .find(
+        (button) =>
+          button.text() === "admin.settings.emailTemplates.restoreOfficial",
+      );
 
     expect(restoreButton).toBeTruthy();
     await restoreButton!.trigger("click");
@@ -179,7 +198,51 @@ describe("EmailTemplateEditor", () => {
     await confirmButton!.trigger("click");
     await flushPromises();
 
-    expect(apiMocks.restoreOfficialEmailTemplate).toHaveBeenCalledWith("auth.verify_code", "zh-CN");
+    expect(apiMocks.restoreOfficialEmailTemplate).toHaveBeenCalledWith(
+      "auth.verify_code",
+      "zh-CN",
+    );
     confirmSpy.mockRestore();
+  });
+
+  it("按 initialEvent 预选兑换码群发事件并显示营销分类与可退订标记", async () => {
+    apiMocks.getEmailTemplates.mockResolvedValue({
+      events: [
+        { value: "auth.verify_code", label: "Verify Code" },
+        {
+          value: "redeem.inactive_coupon",
+          label: "Inactive User Balance Coupon",
+          category: "marketing",
+          optional: true,
+        },
+      ],
+      locales: ["zh-CN"],
+      placeholders: ["recipient_name"],
+    });
+    const wrapper = mount(EmailTemplateEditor, {
+      props: { initialEvent: "redeem.inactive_coupon" },
+    });
+    await flushPromises();
+
+    expect(apiMocks.getEmailTemplate).toHaveBeenCalledWith(
+      "redeem.inactive_coupon",
+      "zh-CN",
+    );
+    expect(wrapper.text()).toContain("未活跃用户余额券");
+    expect(wrapper.text()).toContain("营销");
+    expect(wrapper.text()).toContain("可退订通知");
+  });
+
+  it("initialEvent 不存在时回退到第一个事件", async () => {
+    const wrapper = mount(EmailTemplateEditor, {
+      props: { initialEvent: "unknown.event" },
+    });
+    await flushPromises();
+
+    expect(apiMocks.getEmailTemplate).toHaveBeenCalledWith(
+      "auth.verify_code",
+      "zh-CN",
+    );
+    wrapper.unmount();
   });
 });
