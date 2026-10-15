@@ -182,6 +182,51 @@ func TestCyberPolicyNoticeTemplateWrapsLongUpstreamMessages(t *testing.T) {
 	}
 }
 
+func TestOfficialEmailTemplatesShareVisualShellWithoutRewritingCopy(t *testing.T) {
+	ctx := context.Background()
+	svc := NewNotificationEmailService(newNotificationEmailMemorySettingRepo(), nil)
+
+	for _, event := range notificationEmailEventOrder {
+		for _, locale := range notificationEmailLocales {
+			tmpl, err := svc.GetTemplate(ctx, event, locale)
+			require.NoError(t, err)
+			require.Contains(t, tmpl.HTML, `src="{{site_logo_url}}"`)
+			require.NotContains(t, tmpl.HTML, "site-logo.png")
+			require.Contains(t, tmpl.HTML, `href="https://21api.site/"`)
+			require.Contains(t, tmpl.HTML, "稳定好用的 AI API 与 Token 服务")
+			require.LessOrEqual(t, len([]byte(tmpl.HTML)), notificationEmailMaxHTMLLength)
+			require.NotContains(t, tmpl.HTML, "data:image/")
+			require.NotContains(t, tmpl.HTML, "#f4f4f5")
+			require.NotContains(t, tmpl.HTML, "#0f766e")
+		}
+	}
+
+	zh, err := svc.GetTemplate(ctx, NotificationEmailEventAuthVerifyCode, notificationEmailLocaleChinese)
+	require.NoError(t, err)
+	require.Contains(t, zh.HTML, "<p>您的验证码是：</p>")
+	require.Contains(t, zh.HTML, "<p>验证码将在 <strong>{{expires_in_minutes}}</strong> 分钟后失效。</p>")
+	require.Contains(t, zh.HTML, "<p>如果不是您本人操作，请忽略此邮件。</p>")
+	require.Contains(t, zh.HTML, `<p class="code">{{verification_code}}</p>`)
+	require.Contains(t, zh.HTML, "此邮件由 {{site_name}} 自动发送，请勿直接回复。")
+	require.NotContains(t, zh.HTML, "您正在进行身份验证")
+
+	en, err := svc.GetTemplate(ctx, NotificationEmailEventAuthVerifyCode, notificationEmailDefaultLocale)
+	require.NoError(t, err)
+	require.Contains(t, en.HTML, "<p>Your verification code is:</p>")
+	require.Contains(t, en.HTML, "<p>This code expires in <strong>{{expires_in_minutes}}</strong> minutes.</p>")
+	require.Contains(t, en.HTML, "<p>If you did not request this code, please ignore this email.</p>")
+	require.Contains(t, en.HTML, "This email was sent by {{site_name}}. Please do not reply directly.")
+
+	t.Setenv(notificationEmailLogoURLEnv, "https://cdn.example.com/logo.png")
+	preview, err := svc.PreviewTemplate(ctx, NotificationEmailPreviewInput{
+		Event:  NotificationEmailEventAuthVerifyCode,
+		Locale: notificationEmailLocaleChinese,
+	})
+	require.NoError(t, err)
+	require.Contains(t, preview.HTML, `src="https://cdn.example.com/logo.png"`)
+	require.NotContains(t, preview.HTML, "{{site_logo_url}}")
+}
+
 func TestOpsScheduledReportTemplateExposesEditableSummaryMetrics(t *testing.T) {
 	ctx := context.Background()
 	svc := NewNotificationEmailService(newNotificationEmailMemorySettingRepo(), nil)

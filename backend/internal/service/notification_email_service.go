@@ -13,6 +13,7 @@ import (
 	"html"
 	"log/slog"
 	"net/url"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -50,7 +51,8 @@ const (
 var (
 	notificationEmailPlaceholderPattern = regexp.MustCompile(`{{\s*([a-zA-Z][a-zA-Z0-9_]*)\s*}}`)
 	notificationEmailLocales            = []string{notificationEmailDefaultLocale, notificationEmailLocaleChinese}
-	notificationEmailCommonPlaceholders = []string{"site_name", "recipient_name", "recipient_email"}
+	notificationEmailCommonPlaceholders = []string{"site_name", "recipient_name", "recipient_email", "site_logo_url"}
+	notificationEmailLogoURLEnv         = "SUB2API_EMAIL_LOGO_URL"
 	// Keep summary values separate so admins can rearrange or omit individual metrics in the template.
 	notificationEmailOpsSummaryPlaceholders = []string{
 		"report_summary_display",
@@ -714,6 +716,10 @@ func renderNotificationEmail(event, subject, htmlBody string, variables map[stri
 	if err := validateNotificationEmailTemplate(event, subject, htmlBody); err != nil {
 		return NotificationEmailPreview{}, err
 	}
+	if variables == nil {
+		variables = map[string]string{}
+	}
+	variables["site_logo_url"] = strings.TrimSpace(os.Getenv(notificationEmailLogoURLEnv))
 	renderedSubject, err := renderNotificationEmailString(event, subject, variables, nil, false)
 	if err != nil {
 		return NotificationEmailPreview{}, err
@@ -1161,7 +1167,7 @@ var notificationEmailOfficialTemplates = map[string]map[string]notificationEmail
 			HTML: notificationEmailCard("#4f46e5", "Email verification code", `
 <p>Hello {{recipient_name}},</p>
 <p>Your verification code is:</p>
-<p style="font-size: 32px; font-weight: 700; letter-spacing: 8px; text-align: center;">{{verification_code}}</p>
+<div class="code-box"><p class="code">{{verification_code}}</p></div>
 <p>This code expires in <strong>{{expires_in_minutes}}</strong> minutes.</p>
 <p>If you did not request this code, please ignore this email.</p>`),
 		},
@@ -1170,7 +1176,7 @@ var notificationEmailOfficialTemplates = map[string]map[string]notificationEmail
 			HTML: notificationEmailCard("#4f46e5", "邮箱验证码", `
 <p>{{recipient_name}}，您好：</p>
 <p>您的验证码是：</p>
-<p style="font-size: 32px; font-weight: 700; letter-spacing: 8px; text-align: center;">{{verification_code}}</p>
+<div class="code-box"><p class="code">{{verification_code}}</p></div>
 <p>验证码将在 <strong>{{expires_in_minutes}}</strong> 分钟后失效。</p>
 <p>如果不是您本人操作，请忽略此邮件。</p>`),
 		},
@@ -1204,7 +1210,7 @@ var notificationEmailOfficialTemplates = map[string]map[string]notificationEmail
 <p>Hello {{recipient_name}},</p>
 <p>You are adding this address as an extra notification email.</p>
 <p>Your verification code is:</p>
-<p style="font-size: 32px; font-weight: 700; letter-spacing: 8px; text-align: center;">{{verification_code}}</p>
+<div class="code-box"><p class="code">{{verification_code}}</p></div>
 <p>This code expires in <strong>{{expires_in_minutes}}</strong> minutes.</p>
 <p>If you did not request this code, please ignore this email.</p>`),
 		},
@@ -1213,7 +1219,7 @@ var notificationEmailOfficialTemplates = map[string]map[string]notificationEmail
 			HTML: notificationEmailCard("#0ea5e9", "通知邮箱验证", `
 <p>{{recipient_name}}，您好：</p>
 <p>您正在添加额外的通知邮箱，请输入以下验证码完成验证。</p>
-<p style="font-size: 32px; font-weight: 700; letter-spacing: 8px; text-align: center;">{{verification_code}}</p>
+<div class="code-box"><p class="code">{{verification_code}}</p></div>
 <p>验证码将在 <strong>{{expires_in_minutes}}</strong> 分钟后失效。</p>
 <p>如果不是您本人操作，请忽略此邮件。</p>`),
 		},
@@ -1438,221 +1444,166 @@ var notificationEmailOfficialTemplates = map[string]map[string]notificationEmail
 	},
 }
 
-func notificationEmailOpsScheduledReportTemplate(locale string) string {
-	if normalizeNotificationLocale(locale) == notificationEmailLocaleChinese {
-		return `<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body { margin: 0; padding: 24px 12px; background: #f4f6f8; color: #1f2937; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
-    .container { width: 100%; max-width: 680px; margin: 0 auto; background: #ffffff; border: 1px solid #dfe7ea; border-radius: 8px; overflow: hidden; }
-    .header { padding: 28px 32px 24px; background: #0f766e; color: #ffffff; }
-    .eyebrow { margin: 0 0 8px; color: #ccfbf1; font-size: 12px; font-weight: 700; letter-spacing: 0; text-transform: uppercase; }
-    h1 { margin: 0; font-size: 26px; line-height: 1.3; }
-    .header p { margin: 8px 0 0; color: #e6fffb; font-size: 14px; }
-    .content { padding: 28px 32px 32px; }
-    .meta { width: 100%; margin: 0 0 20px; border-collapse: collapse; background: #f8fafc; border: 1px solid #e2e8f0; }
-    .meta td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; font-size: 13px; vertical-align: top; }
-    .meta tr:last-child td { border-bottom: 0; }
-    .meta-label { width: 112px; color: #64748b; font-weight: 600; }
-    .section-title { margin: 28px 0 12px; color: #0f172a; font-size: 16px; line-height: 1.4; }
-    .metric-grid { width: 100%; border-collapse: separate; border-spacing: 8px; margin: -8px; }
-    .metric-cell { width: 50%; padding: 14px 16px; border: 1px solid #e2e8f0; background: #ffffff; vertical-align: top; }
-    .metric-label { display: block; color: #64748b; font-size: 12px; line-height: 1.4; }
-    .metric-value { display: block; margin-top: 6px; color: #0f172a; font-size: 20px; font-weight: 700; line-height: 1.2; }
-    .metric-value.good { color: #15803d; }
-    .metric-value.alert { color: #b91c1c; }
-    .detail { width: 100%; border-collapse: collapse; }
-    .detail td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
-    .detail td:first-child { width: 56%; color: #475569; }
-    .detail td:last-child { color: #0f172a; font-weight: 600; text-align: right; }
-    .report-detail { margin-top: 28px; }
-    .report-detail:empty { display: none; }
-    .footer { padding: 18px 32px; background: #f8fafc; border-top: 1px solid #e2e8f0; color: #64748b; font-size: 12px; line-height: 1.6; }
-    @media only screen and (max-width: 620px) {
-      body { padding: 0; }
-      .container { border: 0; border-radius: 0; }
-      .header, .content, .footer { padding-left: 20px; padding-right: 20px; }
-      .metric-grid, .metric-grid tbody, .metric-grid tr, .metric-cell { display: block; width: 100% !important; box-sizing: border-box; }
-      .metric-cell { margin: 8px 0; }
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <p class="eyebrow">运维报表</p>
-      <h1>{{report_name}}</h1>
-      <p>{{site_name}} 的运行概览</p>
-    </div>
-    <div class="content">
-      <table class="meta" role="presentation">
-        <tr><td class="meta-label">报表</td><td>{{report_name}}</td></tr>
-        <tr><td class="meta-label">类型</td><td>{{report_type}}</td></tr>
-        <tr><td class="meta-label">统计周期</td><td>{{report_start_time}} 至 {{report_end_time}} (UTC)</td></tr>
-      </table>
+const notificationEmailStyles = `html,body{margin:0;padding:0;background:#f4f8fc;color:#10243e}
+body{font-family:"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif;-webkit-text-size-adjust:100%}
+table{border-collapse:collapse;border-spacing:0}img{display:block;border:0;outline:none;text-decoration:none}
+a{color:#0878ed}.shell{width:100%;background:#f4f8fc}.card{width:100%;max-width:600px;background:#fff;border:1px solid #dce8f3;border-radius:18px;overflow:hidden;box-shadow:0 18px 50px rgba(15,80,145,.10)}
+.top-line{height:5px;background:#0878ed;background-image:linear-gradient(90deg,#0878ed 0%,#0b80f0 38%,#08cfd1 100%)}
+.pad{padding-left:42px;padding-right:42px}.header{padding-top:30px;padding-bottom:24px}.brand-name{margin:0;color:#10243e;font-size:17px;font-weight:750;letter-spacing:.02em}.brand-tag{margin:5px 0 0;color:#5f7488;font-size:12px;line-height:1.5}
+.content{padding-top:10px;padding-bottom:38px;color:#40566d;font-size:15px;line-height:1.75}.content p{margin:0 0 8px}.content strong{color:#10243e}
+.content .eyebrow{margin:0 0 10px;color:#0878ed;font-size:12px;font-weight:750;letter-spacing:.16em}.title{margin:0 0 22px;color:#10243e;font-size:28px;line-height:1.3;font-weight:750}
+.code-box{margin:20px 0;padding:24px 18px;text-align:center;background:#f1f8ff;border:1px solid #cfe6fb;border-radius:14px}.code-box .code{margin:0;color:#0878ed;font-size:34px;line-height:1.2;font-weight:800;letter-spacing:9px;font-variant-numeric:tabular-nums}
+.content .muted{margin:18px 0 0;color:#69829a;font-size:13px}.button{display:inline-block;margin:12px 0;padding:12px 20px;border-radius:12px;background:#0878ed;color:#ffffff;text-decoration:none;font-weight:700}
+.content table:not([class]){width:100%;margin:12px 0}.content table:not([class]) td{padding:8px 0;border-bottom:1px solid #e4edf5;vertical-align:top}
+.footer{padding-top:22px;padding-bottom:28px;border-top:1px solid #e4edf5;color:#5f7488;font-size:12px;line-height:1.7;text-align:center}.footer a{text-decoration:none;color:#0878ed;font-weight:650}
+.meta{width:100%;margin:0 0 20px;background:#f1f8ff;border:1px solid #cfe6fb}.meta td{padding:10px 12px;border-bottom:1px solid #e4edf5;font-size:13px;vertical-align:top}.meta tr:last-child td{border-bottom:0}.meta-label{width:112px;color:#69829a;font-weight:650}
+.section-title{margin:28px 0 12px;color:#10243e;font-size:16px;line-height:1.4}.metric-grid{width:100%;border-collapse:separate;border-spacing:8px;margin:-8px}.metric-cell{width:50%;padding:14px 16px;border:1px solid #dce8f3;background:#f8fbff;vertical-align:top;border-radius:12px}
+.metric-label{display:block;color:#69829a;font-size:12px;line-height:1.4}.metric-value{display:block;margin-top:6px;color:#10243e;font-size:20px;font-weight:700;line-height:1.2}.metric-value.good{color:#0878ed}.metric-value.alert{color:#d14343}
+.detail{width:100%;border-collapse:collapse}.detail td{padding:10px 12px;border-bottom:1px solid #e4edf5;font-size:13px}.detail td:first-child{width:56%;color:#5f7488}.detail td:last-child{color:#10243e;font-weight:650;text-align:right}
+.report-detail{margin-top:28px}.report-detail:empty{display:none}
+@media only screen and (max-width:640px){.outer{padding:18px 12px!important}.card{border-radius:14px!important}.pad{padding-left:24px!important;padding-right:24px!important}.header{padding-top:24px!important}.content{padding-bottom:30px!important}.title{font-size:24px!important}.code{font-size:29px!important;letter-spacing:6px!important}.metric-grid,.metric-grid tbody,.metric-grid tr,.metric-cell{display:block;width:100%!important;box-sizing:border-box}.metric-cell{margin:8px 0}}`
 
-      <div style="display: {{report_summary_display}};">
-      <h2 class="section-title">请求概览</h2>
-      <table class="metric-grid" role="presentation"><tr>
-        <td class="metric-cell"><span class="metric-label">总请求数</span><span class="metric-value">{{report_total_requests}}</span></td>
-        <td class="metric-cell"><span class="metric-label">成功请求</span><span class="metric-value good">{{report_success_count}}</span></td>
-      </tr><tr>
-        <td class="metric-cell"><span class="metric-label">SLA 错误</span><span class="metric-value alert">{{report_sla_error_count}}</span></td>
-        <td class="metric-cell"><span class="metric-label">业务限流</span><span class="metric-value">{{report_business_limited_count}}</span></td>
-      </tr></table>
-
-      <h2 class="section-title">可靠性</h2>
-      <table class="detail" role="presentation">
-        <tr><td>SLA</td><td>{{report_sla}}</td></tr>
-        <tr><td>错误率</td><td>{{report_error_rate}}</td></tr>
-        <tr><td>上游错误率（不含 429 / 529）</td><td>{{report_upstream_error_rate}}</td></tr>
-        <tr><td>上游错误（不含 429 / 529）</td><td>{{report_upstream_error_count_excl_429_529}}</td></tr>
-        <tr><td>上游 429 / 529</td><td>{{report_upstream_429_count}} / {{report_upstream_529_count}}</td></tr>
-      </table>
-
-      <h2 class="section-title">延迟表现</h2>
-      <table class="detail" role="presentation">
-        <tr><td>请求延迟 p50 / p99</td><td>{{report_latency_p50}} / {{report_latency_p99}}</td></tr>
-        <tr><td>首 Token 时间 p50 / p99</td><td>{{report_ttft_p50}} / {{report_ttft_p99}}</td></tr>
-      </table>
-
-      <h2 class="section-title">吞吐量</h2>
-      <table class="detail" role="presentation">
-        <tr><td>Token 消耗</td><td>{{report_tokens}}</td></tr>
-        <tr><td>QPS（当前 / 峰值 / 平均）</td><td>{{report_qps_current}} / {{report_qps_peak}} / {{report_qps_avg}}</td></tr>
-        <tr><td>TPS（当前 / 峰值 / 平均）</td><td>{{report_tps_current}} / {{report_tps_peak}} / {{report_tps_avg}}</td></tr>
-      </table>
-
-      </div>
-      <div class="report-detail" style="display: {{report_detail_display}};">{{report_html}}</div>
-    </div>
-    <div class="footer">此邮件由 {{site_name}} 自动发送，请勿直接回复。</div>
-  </div>
-</body>
-</html>`
+func notificationEmailLooksChinese(text string) bool {
+	for _, r := range text {
+		if r >= '\u4e00' && r <= '\u9fff' {
+			return true
+		}
 	}
+	return false
+}
 
+func notificationEmailPage(lang, content, footer string) string {
 	return `<!DOCTYPE html>
-<html lang="en">
+<html lang="` + lang + `">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { margin: 0; padding: 24px 12px; background: #f4f6f8; color: #1f2937; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-    .container { width: 100%; max-width: 680px; margin: 0 auto; background: #ffffff; border: 1px solid #dfe7ea; border-radius: 8px; overflow: hidden; }
-    .header { padding: 28px 32px 24px; background: #0f766e; color: #ffffff; }
-    .eyebrow { margin: 0 0 8px; color: #ccfbf1; font-size: 12px; font-weight: 700; letter-spacing: 0; text-transform: uppercase; }
-    h1 { margin: 0; font-size: 26px; line-height: 1.3; }
-    .header p { margin: 8px 0 0; color: #e6fffb; font-size: 14px; }
-    .content { padding: 28px 32px 32px; }
-    .meta { width: 100%; margin: 0 0 20px; border-collapse: collapse; background: #f8fafc; border: 1px solid #e2e8f0; }
-    .meta td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; font-size: 13px; vertical-align: top; }
-    .meta tr:last-child td { border-bottom: 0; }
-    .meta-label { width: 112px; color: #64748b; font-weight: 600; }
-    .section-title { margin: 28px 0 12px; color: #0f172a; font-size: 16px; line-height: 1.4; }
-    .metric-grid { width: 100%; border-collapse: separate; border-spacing: 8px; margin: -8px; }
-    .metric-cell { width: 50%; padding: 14px 16px; border: 1px solid #e2e8f0; background: #ffffff; vertical-align: top; }
-    .metric-label { display: block; color: #64748b; font-size: 12px; line-height: 1.4; }
-    .metric-value { display: block; margin-top: 6px; color: #0f172a; font-size: 20px; font-weight: 700; line-height: 1.2; }
-    .metric-value.good { color: #15803d; }
-    .metric-value.alert { color: #b91c1c; }
-    .detail { width: 100%; border-collapse: collapse; }
-    .detail td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
-    .detail td:first-child { width: 56%; color: #475569; }
-    .detail td:last-child { color: #0f172a; font-weight: 600; text-align: right; }
-    .report-detail { margin-top: 28px; }
-    .report-detail:empty { display: none; }
-    .footer { padding: 18px 32px; background: #f8fafc; border-top: 1px solid #e2e8f0; color: #64748b; font-size: 12px; line-height: 1.6; }
-    @media only screen and (max-width: 620px) {
-      body { padding: 0; }
-      .container { border: 0; border-radius: 0; }
-      .header, .content, .footer { padding-left: 20px; padding-right: 20px; }
-      .metric-grid, .metric-grid tbody, .metric-grid tr, .metric-cell { display: block; width: 100% !important; box-sizing: border-box; }
-      .metric-cell { margin: 8px 0; }
-    }
+` + notificationEmailStyles + `
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <p class="eyebrow">Operations report</p>
-      <h1>{{report_name}}</h1>
-      <p>{{site_name}} runtime overview</p>
-    </div>
-    <div class="content">
-      <table class="meta" role="presentation">
-        <tr><td class="meta-label">Report</td><td>{{report_name}}</td></tr>
-        <tr><td class="meta-label">Type</td><td>{{report_type}}</td></tr>
-        <tr><td class="meta-label">Reporting period</td><td>{{report_start_time}} to {{report_end_time}} (UTC)</td></tr>
+  <table role="presentation" class="shell" width="100%">
+    <tr><td class="outer" align="center" style="padding:38px 16px;">
+      <table role="presentation" class="card" width="600">
+        <tr><td class="top-line"></td></tr>
+        <tr><td class="pad header">
+          <table role="presentation">
+            <tr>
+              <td width="58" valign="middle"><img src="{{site_logo_url}}" width="48" height="48" alt="" style="width:48px;height:48px;border-radius:12px;"></td>
+              <td valign="middle"><p class="brand-name">{{site_name}}</p><p class="brand-tag">稳定好用的 AI API 与 Token 服务</p></td>
+            </tr>
+          </table>
+        </td></tr>
+        <tr><td class="pad content">
+` + content + `
+        </td></tr>
+        <tr><td class="pad footer">` + footer + `<br><a href="https://21api.site/" target="_blank" rel="noopener">21api.site</a></td></tr>
       </table>
-
-      <div style="display: {{report_summary_display}};">
-      <h2 class="section-title">Request Overview</h2>
-      <table class="metric-grid" role="presentation"><tr>
-        <td class="metric-cell"><span class="metric-label">Total Requests</span><span class="metric-value">{{report_total_requests}}</span></td>
-        <td class="metric-cell"><span class="metric-label">Successful Requests</span><span class="metric-value good">{{report_success_count}}</span></td>
-      </tr><tr>
-        <td class="metric-cell"><span class="metric-label">SLA Errors</span><span class="metric-value alert">{{report_sla_error_count}}</span></td>
-        <td class="metric-cell"><span class="metric-label">Business Limited</span><span class="metric-value">{{report_business_limited_count}}</span></td>
-      </tr></table>
-
-      <h2 class="section-title">Reliability</h2>
-      <table class="detail" role="presentation">
-        <tr><td>SLA</td><td>{{report_sla}}</td></tr>
-        <tr><td>Error Rate</td><td>{{report_error_rate}}</td></tr>
-        <tr><td>Upstream Error Rate (excluding 429 / 529)</td><td>{{report_upstream_error_rate}}</td></tr>
-        <tr><td>Upstream Errors (excluding 429 / 529)</td><td>{{report_upstream_error_count_excl_429_529}}</td></tr>
-        <tr><td>Upstream 429 / 529</td><td>{{report_upstream_429_count}} / {{report_upstream_529_count}}</td></tr>
-      </table>
-
-      <h2 class="section-title">Latency</h2>
-      <table class="detail" role="presentation">
-        <tr><td>Request Latency p50 / p99</td><td>{{report_latency_p50}} / {{report_latency_p99}}</td></tr>
-        <tr><td>Time to First Token p50 / p99</td><td>{{report_ttft_p50}} / {{report_ttft_p99}}</td></tr>
-      </table>
-
-      <h2 class="section-title">Throughput</h2>
-      <table class="detail" role="presentation">
-        <tr><td>Tokens Consumed</td><td>{{report_tokens}}</td></tr>
-        <tr><td>QPS (current / peak / average)</td><td>{{report_qps_current}} / {{report_qps_peak}} / {{report_qps_avg}}</td></tr>
-        <tr><td>TPS (current / peak / average)</td><td>{{report_tps_current}} / {{report_tps_peak}} / {{report_tps_avg}}</td></tr>
-      </table>
-
-      </div>
-      <div class="report-detail" style="display: {{report_detail_display}};">{{report_html}}</div>
-    </div>
-    <div class="footer">This email was sent automatically by {{site_name}}. Please do not reply directly.</div>
-  </div>
+    </td></tr>
+  </table>
 </body>
 </html>`
 }
 
-func notificationEmailCard(accent, title, content string) string {
-	return `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body { margin: 0; padding: 24px; background: #f4f4f5; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #18181b; }
-    .container { max-width: 640px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 30px rgba(15, 23, 42, 0.10); }
-    .header { background: ` + accent + `; color: #ffffff; padding: 28px 32px; }
-    .header h1 { margin: 0; font-size: 24px; line-height: 1.25; }
-    .content { padding: 32px; font-size: 15px; line-height: 1.7; }
-    .button { display: inline-block; margin-top: 12px; padding: 11px 18px; border-radius: 8px; background: ` + accent + `; color: #ffffff; text-decoration: none; font-weight: 600; }
-    .muted { color: #71717a; font-size: 13px; }
-    .footer { padding: 18px 32px; background: #fafafa; color: #a1a1aa; font-size: 12px; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header"><h1>` + title + `</h1></div>
-    <div class="content">` + content + `</div>
-    <div class="footer">This email was sent by {{site_name}}. Please do not reply directly.</div>
-  </div>
-</body>
-</html>`
+func notificationEmailOpsScheduledReportTemplate(locale string) string {
+	if normalizeNotificationLocale(locale) == notificationEmailLocaleChinese {
+		return notificationEmailPage("zh-CN", `<p class="eyebrow">运维报表</p>
+<h1 class="title">{{report_name}}</h1>
+<p>{{site_name}} 的运行概览</p>
+<table class="meta" role="presentation">
+  <tr><td class="meta-label">报表</td><td>{{report_name}}</td></tr>
+  <tr><td class="meta-label">类型</td><td>{{report_type}}</td></tr>
+  <tr><td class="meta-label">统计周期</td><td>{{report_start_time}} 至 {{report_end_time}} (UTC)</td></tr>
+</table>
+
+<div style="display: {{report_summary_display}};">
+<h2 class="section-title">请求概览</h2>
+<table class="metric-grid" role="presentation"><tr>
+  <td class="metric-cell"><span class="metric-label">总请求数</span><span class="metric-value">{{report_total_requests}}</span></td>
+  <td class="metric-cell"><span class="metric-label">成功请求</span><span class="metric-value good">{{report_success_count}}</span></td>
+</tr><tr>
+  <td class="metric-cell"><span class="metric-label">SLA 错误</span><span class="metric-value alert">{{report_sla_error_count}}</span></td>
+  <td class="metric-cell"><span class="metric-label">业务限流</span><span class="metric-value">{{report_business_limited_count}}</span></td>
+</tr></table>
+
+<h2 class="section-title">可靠性</h2>
+<table class="detail" role="presentation">
+  <tr><td>SLA</td><td>{{report_sla}}</td></tr>
+  <tr><td>错误率</td><td>{{report_error_rate}}</td></tr>
+  <tr><td>上游错误率（不含 429 / 529）</td><td>{{report_upstream_error_rate}}</td></tr>
+  <tr><td>上游错误（不含 429 / 529）</td><td>{{report_upstream_error_count_excl_429_529}}</td></tr>
+  <tr><td>上游 429 / 529</td><td>{{report_upstream_429_count}} / {{report_upstream_529_count}}</td></tr>
+</table>
+
+<h2 class="section-title">延迟表现</h2>
+<table class="detail" role="presentation">
+  <tr><td>请求延迟 p50 / p99</td><td>{{report_latency_p50}} / {{report_latency_p99}}</td></tr>
+  <tr><td>首 Token 时间 p50 / p99</td><td>{{report_ttft_p50}} / {{report_ttft_p99}}</td></tr>
+</table>
+
+<h2 class="section-title">吞吐量</h2>
+<table class="detail" role="presentation">
+  <tr><td>Token 消耗</td><td>{{report_tokens}}</td></tr>
+  <tr><td>QPS（当前 / 峰值 / 平均）</td><td>{{report_qps_current}} / {{report_qps_peak}} / {{report_qps_avg}}</td></tr>
+  <tr><td>TPS（当前 / 峰值 / 平均）</td><td>{{report_tps_current}} / {{report_tps_peak}} / {{report_tps_avg}}</td></tr>
+</table>
+
+</div>
+<div class="report-detail" style="display: {{report_detail_display}};">{{report_html}}</div>`, `此邮件由 {{site_name}} 自动发送，请勿直接回复。`)
+	}
+
+	return notificationEmailPage("en", `<p class="eyebrow">Operations report</p>
+<h1 class="title">{{report_name}}</h1>
+<p>{{site_name}} runtime overview</p>
+<table class="meta" role="presentation">
+  <tr><td class="meta-label">Report</td><td>{{report_name}}</td></tr>
+  <tr><td class="meta-label">Type</td><td>{{report_type}}</td></tr>
+  <tr><td class="meta-label">Reporting period</td><td>{{report_start_time}} to {{report_end_time}} (UTC)</td></tr>
+</table>
+
+<div style="display: {{report_summary_display}};">
+<h2 class="section-title">Request Overview</h2>
+<table class="metric-grid" role="presentation"><tr>
+  <td class="metric-cell"><span class="metric-label">Total Requests</span><span class="metric-value">{{report_total_requests}}</span></td>
+  <td class="metric-cell"><span class="metric-label">Successful Requests</span><span class="metric-value good">{{report_success_count}}</span></td>
+</tr><tr>
+  <td class="metric-cell"><span class="metric-label">SLA Errors</span><span class="metric-value alert">{{report_sla_error_count}}</span></td>
+  <td class="metric-cell"><span class="metric-label">Business Limited</span><span class="metric-value">{{report_business_limited_count}}</span></td>
+</tr></table>
+
+<h2 class="section-title">Reliability</h2>
+<table class="detail" role="presentation">
+  <tr><td>SLA</td><td>{{report_sla}}</td></tr>
+  <tr><td>Error Rate</td><td>{{report_error_rate}}</td></tr>
+  <tr><td>Upstream Error Rate (excluding 429 / 529)</td><td>{{report_upstream_error_rate}}</td></tr>
+  <tr><td>Upstream Errors (excluding 429 / 529)</td><td>{{report_upstream_error_count_excl_429_529}}</td></tr>
+  <tr><td>Upstream 429 / 529</td><td>{{report_upstream_429_count}} / {{report_upstream_529_count}}</td></tr>
+</table>
+
+<h2 class="section-title">Latency</h2>
+<table class="detail" role="presentation">
+  <tr><td>Request Latency p50 / p99</td><td>{{report_latency_p50}} / {{report_latency_p99}}</td></tr>
+  <tr><td>Time to First Token p50 / p99</td><td>{{report_ttft_p50}} / {{report_ttft_p99}}</td></tr>
+</table>
+
+<h2 class="section-title">Throughput</h2>
+<table class="detail" role="presentation">
+  <tr><td>Tokens Consumed</td><td>{{report_tokens}}</td></tr>
+  <tr><td>QPS (current / peak / average)</td><td>{{report_qps_current}} / {{report_qps_peak}} / {{report_qps_avg}}</td></tr>
+  <tr><td>TPS (current / peak / average)</td><td>{{report_tps_current}} / {{report_tps_peak}} / {{report_tps_avg}}</td></tr>
+</table>
+
+</div>
+<div class="report-detail" style="display: {{report_detail_display}};">{{report_html}}</div>`, `This email was sent automatically by {{site_name}}. Please do not reply directly.`)
+}
+
+func notificationEmailCard(_, title, content string) string {
+	lang := "en"
+	footer := "This email was sent by {{site_name}}. Please do not reply directly."
+	if notificationEmailLooksChinese(title) {
+		lang = "zh-CN"
+		footer = "此邮件由 {{site_name}} 自动发送，请勿直接回复。"
+	}
+	return notificationEmailPage(lang, `<h1 class="title">`+title+`</h1>`+content, footer)
 }
