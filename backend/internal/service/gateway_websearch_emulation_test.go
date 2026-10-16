@@ -503,3 +503,139 @@ func TestShouldEmulateWebSearch_KiroRequiresChannelConfig(t *testing.T) {
 	account := newKiroOAuthAccount()
 	require.False(t, svc.shouldEmulateWebSearch(context.Background(), account, nil, webSearchToolBody))
 }
+
+func TestShouldEmulateWebSearchFor_OpenAIAPIKeyAccountEnabled(t *testing.T) {
+	mgr := websearch.NewManager([]websearch.ProviderConfig{{Type: "brave", APIKey: "k"}}, nil)
+	SetWebSearchManager(mgr)
+	defer SetWebSearchManager(nil)
+
+	setGlobalWebSearchConfig(&WebSearchEmulationConfig{
+		Enabled:   true,
+		Providers: []WebSearchProviderConfig{{Type: "brave", APIKey: "k"}},
+	})
+	defer clearGlobalWebSearchConfig()
+
+	settingSvc := newSettingServiceForWebSearchTest(true)
+	account := &Account{
+		ID:       1,
+		Platform: PlatformOpenAI,
+		Type:     AccountTypeAPIKey,
+		Extra:    map[string]any{featureKeyWebSearchEmulation: WebSearchModeEnabled},
+	}
+	groupID := int64(0)
+	require.True(t, shouldEmulateWebSearchFor(context.Background(), settingSvc, nil, account, &groupID, webSearchToolBody))
+	require.False(t, shouldEmulateWebSearchFor(context.Background(), settingSvc, nil, account, &groupID, nonWebSearchToolBody))
+}
+
+// Exercise the shared interception gate, including channel inheritance.
+func TestShouldEmulateWebSearchFor_AccountChannelModes(t *testing.T) {
+	previousManager := getWebSearchManager()
+	previousConfig := webSearchEmulationCache.Load()
+	SetWebSearchManager(websearch.NewManager([]websearch.ProviderConfig{{Type: "brave", APIKey: "k"}}, nil))
+	t.Cleanup(func() {
+		SetWebSearchManager(previousManager)
+		if previousConfig == nil {
+			clearGlobalWebSearchConfig()
+		} else {
+			webSearchEmulationCache.Store(previousConfig)
+		}
+	})
+
+	settingSvc := newSettingServiceForWebSearchTest(true)
+	groupID := int64(42)
+	for _, platform := range []string{PlatformOpenAI, PlatformAnthropic} {
+		for _, accountType := range []string{AccountTypeAPIKey, AccountTypeOAuth, AccountTypeSetupToken} {
+			for _, mode := range []string{WebSearchModeDefault, WebSearchModeEnabled, WebSearchModeDisabled} {
+				for _, channelEnabled := range []bool{false, true} {
+					channelMode := "channel_off"
+					if channelEnabled {
+						channelMode = "channel_on"
+					}
+					t.Run(platform+"/"+accountType+"/"+mode+"/"+channelMode, func(t *testing.T) {
+						account := &Account{
+							Platform: platform, Type: accountType,
+							Extra: map[string]any{featureKeyWebSearchEmulation: mode},
+						}
+						channelSvc := newChannelServiceWithCache(groupID, &Channel{
+							ID: 10, Status: StatusActive,
+							FeaturesConfig: map[string]any{
+								featureKeyWebSearchEmulation: map[string]any{platform: channelEnabled},
+							},
+						})
+						want := channelEnabled
+						if accountType == AccountTypeAPIKey {
+							switch mode {
+							case WebSearchModeEnabled:
+								want = true
+							case WebSearchModeDisabled:
+								want = false
+							}
+						} else if platform == PlatformOpenAI {
+							want = false
+						}
+						for _, globalEnabled := range []bool{false, true} {
+							setGlobalWebSearchConfig(&WebSearchEmulationConfig{
+								Enabled:   globalEnabled,
+								Providers: []WebSearchProviderConfig{{Type: "brave", APIKey: "k"}},
+							})
+							require.Equal(t, globalEnabled && want, shouldEmulateWebSearchFor(
+								context.Background(), settingSvc, channelSvc, account, &groupID, webSearchToolBody),
+								"globalEnabled=%v", globalEnabled)
+						}
+					})
+				}
+			}
+		}
+	}
+}
+
+func TestShouldEmulateWebSearch_AnthropicOAuthRetainsNativeSearch(t *testing.T) {
+	previousManager := getWebSearchManager()
+	previousConfig := webSearchEmulationCache.Load()
+	SetWebSearchManager(websearch.NewManager([]websearch.ProviderConfig{{Type: "brave", APIKey: "k"}}, nil))
+	setGlobalWebSearchConfig(&WebSearchEmulationConfig{
+		Enabled: true, Providers: []WebSearchProviderConfig{{Type: "brave", APIKey: "k"}},
+	})
+	t.Cleanup(func() {
+		SetWebSearchManager(previousManager)
+		if previousConfig == nil {
+			clearGlobalWebSearchConfig()
+		} else {
+			webSearchEmulationCache.Store(previousConfig)
+		}
+	})
+	groupID := int64(42)
+	svc := &GatewayService{
+		settingService: newSettingServiceForWebSearchTest(true),
+		channelService: newChannelServiceWithCache(groupID, &Channel{
+			ID: 10, Status: StatusActive,
+			FeaturesConfig: map[string]any{featureKeyWebSearchEmulation: map[string]any{PlatformAnthropic: true}},
+		}),
+	}
+	for _, accountType := range []string{AccountTypeOAuth, AccountTypeSetupToken} {
+		require.False(t, svc.shouldEmulateWebSearch(context.Background(), &Account{
+			Platform: PlatformAnthropic, Type: accountType,
+		}, &groupID, webSearchToolBody), accountType)
+	}
+}
+
+// A missing proxy relation must fail before any search provider is selected.
+func TestWebSearchEmulationRejectsUnavailableAccountProxy(t *testing.T) {
+	oldManager := getWebSearchManager()
+	SetWebSearchManager(nil)
+	t.Cleanup(func() { SetWebSearchManager(oldManager) })
+	proxyID := int64(42)
+	for _, platform := range []string{"openai", "anthropic", "kiro"} {
+		t.Run(platform, func(t *testing.T) {
+			account := &Account{ID: 1, Platform: platform, ProxyID: &proxyID}
+			_, _, err := doWebSearch(context.Background(), account, "test query")
+			require.ErrorIs(t, err, websearch.ErrProxyUnavailable)
+			result, err := writeEmulatedWebSearch(context.Background(), nil, account,
+				[]byte(`{"messages":[{"role":"user","content":"test query"}]}`), "test-model", false, nil, nil)
+			require.Nil(t, result)
+			var failover *UpstreamFailoverError
+			require.ErrorAs(t, err, &failover)
+			require.Equal(t, 502, failover.StatusCode)
+		})
+	}
+}
