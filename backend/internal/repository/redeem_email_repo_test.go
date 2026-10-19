@@ -75,6 +75,41 @@ func TestRedeemEmailRepoSearchPassesCutoffsAndSegments(t *testing.T) {
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+func TestRedeemEmailRepoSearchZeroBalanceIgnoresLastUse(t *testing.T) {
+	repo, mock := newRedeemEmailRepoMock(t)
+	last := time.Date(2026, 10, 18, 0, 0, 0, 0, time.UTC)
+	mock.ExpectQuery(regexp.QuoteMeta("u.balance = 0")).
+		WithArgs("%a\\_b%", 1001).
+		WillReturnRows(sqlmock.NewRows(redeemEmailRecipientColumnNames).
+			AddRow(int64(8), "zero@example.com", "zero", last, "zero_balance"))
+
+	got, err := repo.SearchRecipients(context.Background(), []string{service.RedeemEmailSegmentZeroBalance}, " a_b ", service.NewRedeemEmailCutoffs(last), 0)
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	require.Equal(t, "zero_balance", got[0].Segment)
+	require.True(t, last.Equal(*got[0].LastUsedAt))
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestRedeemEmailRepoCreateBatchRechecksZeroBalance(t *testing.T) {
+	repo, mock := newRedeemEmailRepoMock(t)
+	p := redeemEmailCreateParams()
+	p.Segments = []string{service.RedeemEmailSegmentZeroBalance}
+	mock.ExpectBegin()
+	mock.ExpectExec("pg_advisory_xact_lock").WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectQuery("FROM redeem_email_batches WHERE created_by").WillReturnError(sql.ErrNoRows)
+	mock.ExpectExec("FOR SHARE OF u").WillReturnResult(sqlmock.NewResult(0, 2))
+	mock.ExpectQuery(regexp.QuoteMeta("u.balance = 0 AND u.id = ANY($1::bigint[])")).
+		WithArgs(sqlmock.AnyArg()).
+		WillReturnRows(sqlmock.NewRows(redeemEmailRecipientColumnNames).
+			AddRow(int64(3), "a@example.com", "a", nil, "zero_balance"))
+	mock.ExpectRollback()
+
+	_, _, err := repo.CreateBatch(context.Background(), p)
+	require.ErrorIs(t, err, service.ErrRedeemEmailRecipientIneligible)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
 func TestRedeemEmailRepoCreateBatchReplaysSameRequest(t *testing.T) {
 	repo, mock := newRedeemEmailRepoMock(t)
 	p := redeemEmailCreateParams()
@@ -228,6 +263,11 @@ func TestRedeemEmailRepoSQLKeepsEligibilityAndCastContracts(t *testing.T) {
 		require.NotContains(t, sqlText, "%s")
 	}
 	require.Contains(t, redeemEmailSearchSQL, "LIMIT $6")
+	require.Contains(t, redeemEmailZeroBalanceSearchSQL, "u.balance = 0")
+	require.Contains(t, redeemEmailZeroBalanceSearchSQL, "u.deleted_at IS NULL")
+	require.Contains(t, redeemEmailZeroBalanceSearchSQL, "LIMIT $2")
+	require.NotContains(t, redeemEmailZeroBalanceSearchSQL, "THEN 'active'")
+	require.Contains(t, redeemEmailZeroBalanceSelectedSQL, "u.balance = 0 AND u.id = ANY($1::bigint[])")
 	require.Contains(t, redeemEmailCompleteBatchSQL, "skipped_count = skipped_count + $4")
 	require.Contains(t, redeemEmailClaimNextSQL, "FOR UPDATE OF i SKIP LOCKED")
 	require.Contains(t, redeemEmailClaimNextSQL, "make_interval(secs => $3::double precision)")

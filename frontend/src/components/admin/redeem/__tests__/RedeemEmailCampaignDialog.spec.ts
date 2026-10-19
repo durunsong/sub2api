@@ -36,6 +36,7 @@ const defaults = {
     "inactive_2_3m",
     "inactive_3m_plus",
     "never_used",
+    "zero_balance",
   ],
   default_segments: ["inactive_1_2m", "inactive_2_3m", "inactive_3m_plus"],
   rate_per_second: 1,
@@ -242,6 +243,31 @@ describe("RedeemEmailCampaignDialog", () => {
     expect(wrapper.get('[data-test="campaign-error"]').text()).toContain(
       "admin.redeemEmail.recipients.limitExceeded",
     );
+  });
+
+  it("selects zero balance alone and drops inactivity segments", async () => {
+    const wrapper = mountDialog();
+    await goToRecipients(wrapper);
+    await wrapper.get('[data-test="search-recipients"]').trigger("click");
+    await flushPromises();
+
+    await wrapper.get('[data-test="segment-zero_balance"]').trigger("click");
+    await flushPromises();
+    expect(wrapper.get('[data-test="segment-zero_balance"]').attributes("aria-pressed")).toBe("true");
+    expect(wrapper.get('[data-test="segment-inactive_1_2m"]').attributes("aria-pressed")).toBe("false");
+    expect(wrapper.find('[data-test="selected-count"]').exists()).toBe(false);
+
+    await wrapper.get('[data-test="search-recipients"]').trigger("click");
+    await flushPromises();
+    expect(api.search).toHaveBeenLastCalledWith({
+      segments: ["zero_balance"],
+      search: undefined,
+    });
+
+    await wrapper.get('[data-test="segment-inactive_2_3m"]').trigger("click");
+    expect(wrapper.get('[data-test="segment-zero_balance"]').attributes("aria-pressed")).toBe("false");
+    expect(wrapper.get('[data-test="segment-inactive_2_3m"]').attributes("aria-pressed")).toBe("true");
+    expect(wrapper.get('[data-test="segment-inactive_1_2m"]').attributes("aria-pressed")).toBe("false");
   });
 
   it("sends never_expires instead of days, warns about unsubscribed picks and uses a new key when the payload changes", async () => {

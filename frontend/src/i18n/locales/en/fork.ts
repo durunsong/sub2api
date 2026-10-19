@@ -361,16 +361,17 @@ export default {
         expiryInvalid: 'Valid days must be an integer between 1 and {max}',
       },
       recipients: {
-        segments: 'Inactive segments (multi-select)',
+        segments: 'Audience',
         segmentKeepOne: 'Keep at least one segment',
         segment: {
           inactive_1_2m: 'Inactive 1–2 months',
           inactive_2_3m: 'Inactive 2–3 months',
           inactive_3m_plus: 'Inactive 3+ months',
           never_used: 'Never used',
+          zero_balance: 'Zero balance',
         },
         segmentColumn: 'Segment',
-        hint: 'Segments are non-overlapping ranges based on the last API call (usage logs); selected segments are combined. Only active, non-deleted regular users are included. "Never used" means the user has never called the API and is off by default.',
+        hint: 'Inactive segments are non-overlapping ranges based on the last API call and can be combined. Only active, non-deleted regular users are included. "Never used" is off by default. "Zero balance" must be selected alone: it ignores last-use time and includes only users whose wallet balance is exactly 0 (negative balances are excluded).',
         search: 'Search email or username',
         filter: 'Find users',
         filtering: 'Searching...',
@@ -476,7 +477,7 @@ export default {
       },
       errors: {
         generic: 'Request failed. Please try again later.',
-        REDEEM_EMAIL_FILTER_INVALID: 'Select at least one valid inactive segment',
+        REDEEM_EMAIL_FILTER_INVALID: 'Invalid filter: inactivity segments can be combined, but "Zero balance" must be selected alone',
         REDEEM_EMAIL_COUPON_INVALID: 'Invalid coupon value or validity',
         REDEEM_EMAIL_RECIPIENT_INVALID: 'Invalid recipient list',
         REDEEM_EMAIL_RECIPIENT_INELIGIBLE: 'Some selected users are no longer in the selected segments. Search again.',

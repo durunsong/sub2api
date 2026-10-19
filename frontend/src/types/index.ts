@@ -1985,7 +1985,7 @@ export interface RedeemCodeRequest {
 
 // ==================== Redeem Email Campaigns (Fork) ====================
 
-export type RedeemEmailSegment = 'inactive_1_2m' | 'inactive_2_3m' | 'inactive_3m_plus' | 'never_used'
+export type RedeemEmailSegment = 'inactive_1_2m' | 'inactive_2_3m' | 'inactive_3m_plus' | 'never_used' | 'zero_balance'
 export type RedeemEmailBatchStatus = 'pending' | 'running' | 'succeeded' | 'partial_failed' | 'failed'
 export type RedeemEmailItemStatus = 'pending' | 'sending' | 'sent' | 'failed' | 'skipped'
 export type RedeemEmailLocale = 'zh' | 'en'

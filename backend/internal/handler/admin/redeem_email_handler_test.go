@@ -152,6 +152,14 @@ func TestRedeemEmailHandlerSearchPassesSegments(t *testing.T) {
 
 	w = doRedeemEmailRequest(r, http.MethodPost, "/email-batches/recipients/search", map[string]any{"segments": []string{"bogus"}}, nil)
 	require.Equal(t, http.StatusBadRequest, w.Code)
+
+	w = doRedeemEmailRequest(r, http.MethodPost, "/email-batches/recipients/search", map[string]any{"segments": []string{"zero_balance"}}, nil)
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	require.Equal(t, []string{"zero_balance"}, svc.searchFilter.Segments)
+
+	w = doRedeemEmailRequest(r, http.MethodPost, "/email-batches/recipients/search", map[string]any{"segments": []string{"zero_balance", "never_used"}}, nil)
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	require.Equal(t, []string{"zero_balance", "never_used"}, svc.searchFilter.Segments)
 }
 
 func TestRedeemEmailHandlerPreviewPassesLocaleAndCoupon(t *testing.T) {

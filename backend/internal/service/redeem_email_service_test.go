@@ -31,6 +31,14 @@ func TestNormalizeRedeemEmailSegments(t *testing.T) {
 	}
 	require.Equal(t, []string{"inactive_1_2m", "inactive_2_3m", "inactive_3m_plus"}, RedeemEmailDefaultSegments())
 	require.NotContains(t, RedeemEmailDefaultSegments(), RedeemEmailSegmentNeverUsed)
+	require.NotContains(t, RedeemEmailDefaultSegments(), RedeemEmailSegmentZeroBalance)
+
+	got, err = NormalizeRedeemEmailSegments([]string{" zero_balance "})
+	require.NoError(t, err)
+	require.Equal(t, []string{RedeemEmailSegmentZeroBalance}, got)
+	_, err = NormalizeRedeemEmailSegments([]string{RedeemEmailSegmentZeroBalance, RedeemEmailSegmentNeverUsed})
+	require.ErrorIs(t, err, ErrRedeemEmailFilterInvalid)
+	require.Contains(t, RedeemEmailSegmentOptions(), RedeemEmailSegmentZeroBalance)
 }
 
 func TestNormalizeRedeemEmailCouponValue(t *testing.T) {
@@ -183,6 +191,9 @@ func TestRedeemEmailServiceSearchComputesCutoffsServerSide(t *testing.T) {
 
 	_, err = svc.SearchRecipients(context.Background(), RedeemEmailRecipientFilter{})
 	require.ErrorIs(t, err, ErrRedeemEmailFilterInvalid)
+	_, err = svc.SearchRecipients(context.Background(), RedeemEmailRecipientFilter{Segments: []string{"zero_balance", "never_used"}})
+	require.ErrorIs(t, err, ErrRedeemEmailFilterInvalid)
+	require.Equal(t, []string{"inactive_3m_plus", "never_used"}, repo.searchSegments)
 }
 
 func TestRedeemEmailServiceSearchMarksUnsubscribedRecipients(t *testing.T) {
@@ -246,6 +257,7 @@ func TestRedeemEmailServiceCreateBatchRejectsInvalidInputWithoutTouchingRepo(t *
 		"too many days":  {func(in *CreateRedeemEmailBatchInput) { in.CodeExpiresInDays = &bigDays }, ErrRedeemEmailCouponInvalid},
 		"no segments":    {func(in *CreateRedeemEmailBatchInput) { in.Filter.Segments = nil }, ErrRedeemEmailFilterInvalid},
 		"bad segment":    {func(in *CreateRedeemEmailBatchInput) { in.Filter.Segments = []string{"inactive_6m"} }, ErrRedeemEmailFilterInvalid},
+		"mixed zero":     {func(in *CreateRedeemEmailBatchInput) { in.Filter.Segments = []string{"zero_balance", "never_used"} }, ErrRedeemEmailFilterInvalid},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -272,7 +284,8 @@ func TestRedeemEmailServiceCreateBatchRequiresSMTP(t *testing.T) {
 	require.Equal(t, RedeemEmailMaxRecipients, defaults.MaxRecipients)
 	require.Equal(t, NotificationEmailEventRedeemInactiveCoupon, defaults.TemplateEvent)
 	require.Equal(t, RedeemEmailDefaultSegments(), defaults.DefaultSegments)
-	require.Len(t, defaults.SegmentOptions, 4)
+	require.Equal(t, RedeemEmailSegmentOptions(), defaults.SegmentOptions)
+	require.Contains(t, defaults.SegmentOptions, RedeemEmailSegmentZeroBalance)
 }
 
 func TestRedeemEmailServiceCreateBatchNeverExpires(t *testing.T) {

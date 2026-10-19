@@ -318,7 +318,7 @@ const EmailPreview = defineComponent({
 })
 
 const stepKeys = ['coupon', 'recipients', 'template', 'confirm'] as const
-const fallbackSegments: RedeemEmailSegment[] = ['inactive_1_2m', 'inactive_2_3m', 'inactive_3m_plus', 'never_used']
+const fallbackSegments: RedeemEmailSegment[] = ['inactive_1_2m', 'inactive_2_3m', 'inactive_3m_plus', 'never_used', 'zero_balance']
 const previewLocales: RedeemEmailLocale[] = ['zh', 'en']
 const step = ref(0)
 const defaults = ref<RedeemEmailDefaults | null>(null)
@@ -385,12 +385,19 @@ function validateCoupon(): boolean {
 }
 
 function toggleSegment(segment: RedeemEmailSegment) {
-  if (segments.value.includes(segment)) {
-    if (segments.value.length === 1) return
-    segments.value = segments.value.filter((s) => s !== segment)
-  } else {
-    segments.value = segmentOptions.value.filter((s) => s === segment || segments.value.includes(s))
+  // 余额为 0 与未活跃分段互斥：选中后只保留这一项，避免和“未用过 API”取并集。
+  if (segment === 'zero_balance') {
+    if (segments.value.length === 1 && segments.value[0] === 'zero_balance') return
+    segments.value = ['zero_balance']
+    return
   }
+  const current = segments.value.filter((s) => s !== 'zero_balance')
+  if (current.includes(segment)) {
+    if (current.length === 1) return
+    segments.value = current.filter((s) => s !== segment)
+    return
+  }
+  segments.value = segmentOptions.value.filter((s) => s !== 'zero_balance' && (s === segment || current.includes(s)))
 }
 
 // 改变分段后旧结果不再对应提交时的筛选快照，必须重新筛选。

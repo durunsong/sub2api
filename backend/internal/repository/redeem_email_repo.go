@@ -56,6 +56,28 @@ LIMIT $6`
 ORDER BY s.id ASC`
 )
 
+// redeemEmailZeroBalanceUsersSQL 不看最后使用时间，只匹配钱包余额恰好为 0 的合格用户。
+// 负余额不包含。%s 处拼接搜索或指定用户 ID。
+const redeemEmailZeroBalanceUsersSQL = `SELECT s.id, s.email, s.username, s.last_used_at, 'zero_balance' AS segment FROM (
+	SELECT u.id, BTRIM(u.email) AS email, COALESCE(u.username, '') AS username,
+		(SELECT MAX(l.created_at) FROM usage_logs l WHERE l.user_id = u.id) AS last_used_at
+	FROM users u
+	WHERE ` + redeemEmailBaseUserSQL + ` AND u.balance = 0 AND %s
+) s`
+
+var (
+	redeemEmailZeroBalanceSearchSQL = strings.Replace(redeemEmailZeroBalanceUsersSQL, "%s",
+		`($1::text = '' OR u.email ILIKE $1::text ESCAPE '\' OR u.username ILIKE $1::text ESCAPE '\')`, 1) + `
+ORDER BY s.last_used_at ASC NULLS FIRST, s.id ASC
+LIMIT $2`
+	redeemEmailZeroBalanceSelectedSQL = strings.Replace(redeemEmailZeroBalanceUsersSQL, "%s", `u.id = ANY($1::bigint[])`, 1) + `
+ORDER BY s.id ASC`
+)
+
+func redeemEmailZeroBalanceOnly(segments []string) bool {
+	return len(segments) == 1 && segments[0] == service.RedeemEmailSegmentZeroBalance
+}
+
 func redeemEmailCutoffArgs(c service.RedeemEmailCutoffs, segments []string) []any {
 	return []any{c.OneMonth, c.TwoMonths, c.ThreeMonths, pq.Array(segments)}
 }
@@ -81,7 +103,15 @@ func (r *redeemEmailRepository) SearchRecipients(ctx context.Context, segments [
 	if s := strings.TrimSpace(search); s != "" {
 		pattern = "%" + escapeLikeWildcards(s) + "%"
 	}
-	rows, err := r.db.QueryContext(ctx, redeemEmailSearchSQL, append(redeemEmailCutoffArgs(cutoffs, segments), pattern, limit)...)
+	var (
+		rows *sql.Rows
+		err  error
+	)
+	if redeemEmailZeroBalanceOnly(segments) {
+		rows, err = r.db.QueryContext(ctx, redeemEmailZeroBalanceSearchSQL, pattern, limit)
+	} else {
+		rows, err = r.db.QueryContext(ctx, redeemEmailSearchSQL, append(redeemEmailCutoffArgs(cutoffs, segments), pattern, limit)...)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -207,7 +237,13 @@ func lockEligibleRedeemEmailRecipients(ctx context.Context, tx *sql.Tx, p servic
 		pq.Array(p.UserIDs)); err != nil {
 		return nil, err
 	}
-	rows, err := tx.QueryContext(ctx, redeemEmailSelectedUsersSQL, append(redeemEmailCutoffArgs(p.Cutoffs, p.Segments), pq.Array(p.UserIDs))...)
+	query := redeemEmailSelectedUsersSQL
+	args := append(redeemEmailCutoffArgs(p.Cutoffs, p.Segments), pq.Array(p.UserIDs))
+	if redeemEmailZeroBalanceOnly(p.Segments) {
+		query = redeemEmailZeroBalanceSelectedSQL
+		args = []any{pq.Array(p.UserIDs)}
+	}
+	rows, err := tx.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}

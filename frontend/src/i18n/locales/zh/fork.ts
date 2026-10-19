@@ -360,16 +360,17 @@ export default {
         expiryInvalid: '有效天数需为 1-{max} 的整数',
       },
       recipients: {
-        segments: '未活跃分段（可多选）',
+        segments: '收件人范围',
         segmentKeepOne: '至少保留一个分段',
         segment: {
           inactive_1_2m: '1–2 个月未用',
           inactive_2_3m: '2–3 个月未用',
           inactive_3m_plus: '3 个月以上未用',
           never_used: '从未使用',
+          zero_balance: '余额为 0',
         },
         segmentColumn: '分段',
-        hint: '按最后一次 API 调用（用量记录）时间划分互斥区间，多选取并集；仅包含状态正常、未删除的普通用户。「从未使用」指注册后从未调用过 API，默认不选。',
+        hint: '未活跃分段按最后一次 API 调用划分互斥区间，多选取并集；仅包含状态正常、未删除的普通用户。「从未使用」默认不选。「余额为 0」必须单独选择，不限最后使用时间，只包含钱包余额恰好为 0 的用户（负余额不包含）。',
         search: '搜索邮箱或用户名',
         filter: '筛选用户',
         filtering: '筛选中...',
@@ -475,7 +476,7 @@ export default {
       },
       errors: {
         generic: '请求失败，请稍后重试',
-        REDEEM_EMAIL_FILTER_INVALID: '请至少选择一个有效的未活跃分段',
+        REDEEM_EMAIL_FILTER_INVALID: '筛选无效：未活跃分段可多选，「余额为 0」必须单独选择',
         REDEEM_EMAIL_COUPON_INVALID: '面值或有效期不合法',
         REDEEM_EMAIL_RECIPIENT_INVALID: '收件人列表无效',
         REDEEM_EMAIL_RECIPIENT_INELIGIBLE: '部分所选用户已不在所选分段中，请重新筛选',

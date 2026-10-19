@@ -24,7 +24,7 @@ const (
 )
 
 var (
-	ErrRedeemEmailFilterInvalid          = infraerrors.BadRequest("REDEEM_EMAIL_FILTER_INVALID", "segments must be a non-empty subset of inactive_1_2m, inactive_2_3m, inactive_3m_plus, never_used")
+	ErrRedeemEmailFilterInvalid          = infraerrors.BadRequest("REDEEM_EMAIL_FILTER_INVALID", "segments must be a non-empty subset of inactive_1_2m, inactive_2_3m, inactive_3m_plus, never_used, or exactly zero_balance")
 	ErrRedeemEmailCouponInvalid          = infraerrors.BadRequest("REDEEM_EMAIL_COUPON_INVALID", "coupon value must be positive with at most 8 decimals, and expiry must be 1-3650 days")
 	ErrRedeemEmailRecipientInvalid       = infraerrors.BadRequest("REDEEM_EMAIL_RECIPIENT_INVALID", "recipients are invalid")
 	ErrRedeemEmailRecipientIneligible    = infraerrors.BadRequest("REDEEM_EMAIL_RECIPIENT_INELIGIBLE", "some recipients no longer match the inactive filter")
@@ -58,6 +58,8 @@ const (
 	RedeemEmailSegmentInactive2To3Months  = "inactive_2_3m"
 	RedeemEmailSegmentInactive3MonthsPlus = "inactive_3m_plus"
 	RedeemEmailSegmentNeverUsed           = "never_used"
+	// RedeemEmailSegmentZeroBalance 与未活跃分段互斥：不看最后使用时间，只匹配钱包余额恰好为 0 的用户。
+	RedeemEmailSegmentZeroBalance = "zero_balance"
 )
 
 var redeemEmailSegmentOrder = []string{
@@ -68,7 +70,7 @@ var redeemEmailSegmentOrder = []string{
 }
 
 func RedeemEmailSegmentOptions() []string {
-	return append([]string(nil), redeemEmailSegmentOrder...)
+	return append(append([]string(nil), redeemEmailSegmentOrder...), RedeemEmailSegmentZeroBalance)
 }
 
 func RedeemEmailDefaultSegments() []string {
@@ -76,10 +78,17 @@ func RedeemEmailDefaultSegments() []string {
 }
 
 // NormalizeRedeemEmailSegments 去重并按固定顺序排列，保证哈希与存储稳定。
+// zero_balance 不能与未活跃分段取并集，只能单独选择。
 func NormalizeRedeemEmailSegments(segments []string) ([]string, error) {
 	selected := make(map[string]bool, len(segments))
 	for _, s := range segments {
 		selected[strings.TrimSpace(s)] = true
+	}
+	if selected[RedeemEmailSegmentZeroBalance] {
+		if len(selected) != 1 {
+			return nil, ErrRedeemEmailFilterInvalid
+		}
+		return []string{RedeemEmailSegmentZeroBalance}, nil
 	}
 	out := make([]string, 0, len(selected))
 	for _, s := range redeemEmailSegmentOrder {

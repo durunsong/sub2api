@@ -34,3 +34,19 @@ func TestRedeemEmailCampaignsMigration(t *testing.T) {
 	}
 	require.NotContains(t, strings.ToUpper(sql), "DROP TABLE")
 }
+
+func TestRedeemEmailZeroBalanceSegmentMigration(t *testing.T) {
+	content, err := FS.ReadFile("248_redeem_email_zero_balance_segment.sql")
+	require.NoError(t, err)
+	sql := strings.Join(strings.Fields(string(content)), " ")
+	for _, want := range []string{
+		"DROP CONSTRAINT",
+		"redeem_email_batches_segments_check",
+		"'zero_balance'",
+		"NOT ('zero_balance' = ANY (segments)) OR cardinality(segments) = 1",
+	} {
+		require.Contains(t, sql, want)
+	}
+	require.NotContains(t, sql, "DROP TABLE")
+	require.NotContains(t, sql, "246_redeem_email_campaigns.sql")
+}
