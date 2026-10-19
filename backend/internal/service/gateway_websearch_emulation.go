@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/pkg/anthropictokenizer"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/websearch"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -205,7 +206,11 @@ func writeEmulatedWebSearch(
 		model = defaultWebSearchModel
 	}
 
-	inputTokens := estimateKiroInputTokens(ctx, body)
+	alg := anthropictokenizer.AlgorithmOfficial
+	if gateway != nil {
+		alg = gateway.kiroMeteringAlgorithm(ctx)
+	}
+	inputTokens := estimateKiroInputTokens(ctx, alg, body)
 	var cacheUsage *kiroCacheEmulationUsage
 	if gateway != nil {
 		cacheUsage = gateway.buildKiroCacheEmulationUsage(ctx, account, group, body, model, inputTokens)

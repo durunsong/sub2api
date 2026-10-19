@@ -5358,6 +5358,33 @@
                   {{ t("admin.settings.gatewayForwarding.openaiTTFTModeHint") }}
                 </p>
               </div>
+              <div class="border-b border-gray-100 pb-5 dark:border-dark-700 md:col-span-2">
+                <label
+                  for="gateway-kiro-tokenizer"
+                  class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
+                  {{ t("admin.settings.gatewayForwarding.kiroTokenizer") }}
+                </label>
+                <select
+                  id="gateway-kiro-tokenizer"
+                  v-model="form.gateway_kiro_tokenizer"
+                  class="input mt-2 w-full"
+                  data-testid="gateway-kiro-tokenizer"
+                >
+                  <option value="official">
+                    {{ t("admin.settings.gatewayForwarding.kiroTokenizerOfficial") }}
+                  </option>
+                  <option value="charclass">
+                    {{ t("admin.settings.gatewayForwarding.kiroTokenizerCharClass") }}
+                  </option>
+                  <option value="weighted">
+                    {{ t("admin.settings.gatewayForwarding.kiroTokenizerWeighted") }}
+                  </option>
+                </select>
+                <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                  {{ t("admin.settings.gatewayForwarding.kiroTokenizerHint") }}
+                </p>
+              </div>
 
               <!-- Fingerprint Unification -->
               <div class="flex items-center justify-between">
@@ -10039,6 +10066,7 @@ const form = reactive<SettingsForm>({
   openai_advanced_scheduler_weight_session_sticky: "",
   // Gateway forwarding behavior
   openai_ttft_mode: "semantic",
+  gateway_kiro_tokenizer: "official",
   enable_fingerprint_unification: true,
   enable_metadata_passthrough: false,
   enable_cch_signing: false,
@@ -11691,6 +11719,11 @@ async function saveSettings() {
       allow_ungrouped_key_scheduling: form.allow_ungrouped_key_scheduling,
       openai_ttft_mode:
         form.openai_ttft_mode === "visible" ? "visible" : "semantic",
+      gateway_kiro_tokenizer: ["official", "charclass", "weighted"].includes(
+        form.gateway_kiro_tokenizer,
+      )
+        ? form.gateway_kiro_tokenizer
+        : "official",
       enable_fingerprint_unification: form.enable_fingerprint_unification,
       enable_metadata_passthrough: form.enable_metadata_passthrough,
       enable_cch_signing: form.enable_cch_signing,

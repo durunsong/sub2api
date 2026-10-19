@@ -249,11 +249,14 @@ type CreateGroupRequest struct {
 	// 分组 RPM 上限（0 = 不限制）
 	RPMLimit int `json:"rpm_limit"`
 	// Kiro 模拟缓存配置（仅 kiro 分组生效）
-	KiroCacheEmulationEnabled   bool     `json:"kiro_cache_emulation_enabled"`
-	KiroAutoStickyEnabled       *bool    `json:"kiro_auto_sticky_enabled"`
-	KiroStickySessionTTLSeconds *int     `json:"kiro_sticky_session_ttl_seconds"`
-	KiroCacheEmulationRatio     *float64 `json:"kiro_cache_emulation_ratio"`
-	KiroEndpointMode            *string  `json:"kiro_endpoint_mode"`
+	KiroCacheEmulationEnabled       bool     `json:"kiro_cache_emulation_enabled"`
+	KiroAutoStickyEnabled           *bool    `json:"kiro_auto_sticky_enabled"`
+	KiroStickySessionTTLSeconds     *int     `json:"kiro_sticky_session_ttl_seconds"`
+	KiroCacheEmulationRatio         *float64 `json:"kiro_cache_emulation_ratio"`
+	KiroCacheEmulationMode          *string  `json:"kiro_cache_emulation_mode" binding:"omitempty,oneof=uniform independent"`
+	KiroCacheCreationEmulationRatio *float64 `json:"kiro_cache_creation_emulation_ratio"`
+	KiroCacheReadEmulationRatio     *float64 `json:"kiro_cache_read_emulation_ratio"`
+	KiroEndpointMode                *string  `json:"kiro_endpoint_mode"`
 	// Anthropic/OpenAI 请求推理强度上限，空字符串表示不限制。
 	MaxReasoningEffort string `json:"max_reasoning_effort"`
 	// 超过上限时的访问控制：downgrade（默认）或 deny。
@@ -331,11 +334,14 @@ type UpdateGroupRequest struct {
 	// 分组 RPM 上限（0 = 不限制）；nil 表示未提供不改动
 	RPMLimit *int `json:"rpm_limit"`
 	// Kiro 模拟缓存配置（仅 kiro 分组生效）
-	KiroCacheEmulationEnabled   *bool    `json:"kiro_cache_emulation_enabled"`
-	KiroAutoStickyEnabled       *bool    `json:"kiro_auto_sticky_enabled"`
-	KiroStickySessionTTLSeconds *int     `json:"kiro_sticky_session_ttl_seconds"`
-	KiroCacheEmulationRatio     *float64 `json:"kiro_cache_emulation_ratio"`
-	KiroEndpointMode            *string  `json:"kiro_endpoint_mode"`
+	KiroCacheEmulationEnabled       *bool    `json:"kiro_cache_emulation_enabled"`
+	KiroAutoStickyEnabled           *bool    `json:"kiro_auto_sticky_enabled"`
+	KiroStickySessionTTLSeconds     *int     `json:"kiro_sticky_session_ttl_seconds"`
+	KiroCacheEmulationRatio         *float64 `json:"kiro_cache_emulation_ratio"`
+	KiroCacheEmulationMode          *string  `json:"kiro_cache_emulation_mode" binding:"omitempty,oneof=uniform independent"`
+	KiroCacheCreationEmulationRatio *float64 `json:"kiro_cache_creation_emulation_ratio"`
+	KiroCacheReadEmulationRatio     *float64 `json:"kiro_cache_read_emulation_ratio"`
+	KiroEndpointMode                *string  `json:"kiro_endpoint_mode"`
 	// Anthropic/OpenAI 请求推理强度上限；空字符串清除，nil 不修改。
 	MaxReasoningEffort *string `json:"max_reasoning_effort"`
 	// 超过上限时的访问控制；空字符串视为 downgrade，nil 不修改。
@@ -740,6 +746,9 @@ func (h *GroupHandler) Create(c *gin.Context) {
 		KiroAutoStickyEnabled:           req.KiroAutoStickyEnabled,
 		KiroStickySessionTTLSeconds:     req.KiroStickySessionTTLSeconds,
 		KiroCacheEmulationRatio:         req.KiroCacheEmulationRatio,
+		KiroCacheEmulationMode:          req.KiroCacheEmulationMode,
+		KiroCacheCreationEmulationRatio: req.KiroCacheCreationEmulationRatio,
+		KiroCacheReadEmulationRatio:     req.KiroCacheReadEmulationRatio,
 		KiroEndpointMode:                req.KiroEndpointMode,
 		MaxReasoningEffort:              req.MaxReasoningEffort,
 		MaxReasoningEffortOverLimit:     req.MaxReasoningEffortOverLimit,
@@ -892,6 +901,9 @@ func (h *GroupHandler) Update(c *gin.Context) {
 		KiroAutoStickyEnabled:           req.KiroAutoStickyEnabled,
 		KiroStickySessionTTLSeconds:     req.KiroStickySessionTTLSeconds,
 		KiroCacheEmulationRatio:         req.KiroCacheEmulationRatio,
+		KiroCacheEmulationMode:          req.KiroCacheEmulationMode,
+		KiroCacheCreationEmulationRatio: req.KiroCacheCreationEmulationRatio,
+		KiroCacheReadEmulationRatio:     req.KiroCacheReadEmulationRatio,
 		KiroEndpointMode:                req.KiroEndpointMode,
 		MaxReasoningEffort:              req.MaxReasoningEffort,
 		MaxReasoningEffortOverLimit:     req.MaxReasoningEffortOverLimit,

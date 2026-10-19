@@ -134,7 +134,7 @@ v0.1.160 同步时额外补齐 `securityaudit.ProviderSet` 中 `*PromptService` 
 - 429：独立冷却（`kirocooldown`），**跳过**通用 `HandleUpstreamError`，与 DB `rate_limit_reset_at` 双向同步
 - **count_tokens**：Kiro 直连账号（OAuth / 无 base_url 的 API Key）走本地 `estimateKiroInputTokens`，**不打上游**，避免 `jwt auth is not yet supported on count_tokens` → OAuth 401 临时不可调度
 - **v0.2.1 接入**：精简账号列表继续返回 `kiro_quota_*` / `kiro_runtime_*` 六字段；Messages 直连和 Responses/Chat 桥接单独保留真实响应头快照，按账号配置提取上游请求 ID，避免流式包装生成的 Claude ID 混入用量记录。非流式 Web Search 记录最后一次实际上游响应头；合成多步搜索流没有单一真实响应头时保持 NULL。
-- **已同步 nianzs/main（上次合入之后）的 Kiro 增量**：图片视觉 token、`KiroEndpointModeAuto`、API Key 直连/中转分流、`profile_arn` 解析回填、External IdP OAuth 后端、translator tool/filePath/空 input、直连调度 `isKiroDirectModeAccount` 等（前端 External IdP 两阶段引导 UI 仍待补齐）
+- **已同步 nianzs/main（2026-10-17 `1cd5141b8`）的 Kiro 增量**：图片视觉 token、`KiroEndpointModeAuto`、API Key 直连/中转分流、`profile_arn` 解析回填、External IdP OAuth 后端、工具配对与截断、模型别名/输出上限、缓存创建/读取独立比例、可配置计量算法（默认 official）。迁移 `247` 增加分组比例列和 `gateway_kiro_tokenizer`。平台 CHECK 仍保持删除，渠道监控不加入 Kiro。直连与桥接继续保存真实上游响应头快照。前端 External IdP 两阶段引导 UI 仍待补齐
 
 ### 3.2 后端 — 新增文件（独立包）
 

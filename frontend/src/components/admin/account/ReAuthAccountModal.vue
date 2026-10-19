@@ -262,12 +262,9 @@
           </div>
           <div>
             <label class="input-label">{{ t('admin.accounts.oauth.kiro.regionLabel') }}</label>
-            <input
-              v-model="kiroIDCRegion"
-              type="text"
-              class="input"
-              :placeholder="t('admin.accounts.oauth.kiro.regionPlaceholder')"
-            />
+            <select v-model="kiroIDCRegion" class="input">
+              <option v-for="region in kiroRegionOptions" :key="region" :value="region">{{ region }}</option>
+            </select>
           </div>
         </div>
 
@@ -384,6 +381,7 @@ import {
 import { useGeminiOAuth } from '@/composables/useGeminiOAuth'
 import { useGrokOAuth } from '@/composables/useGrokOAuth'
 import { useKiroOAuth } from '@/composables/useKiroOAuth'
+import { KIRO_REGION_CODES } from '@/constants/kiroRegions'
 import { useOpenAIOAuth } from '@/composables/useOpenAIOAuth'
 import { useAppStore } from '@/stores/app'
 import type { Account, AccountPlatform } from '@/types'
@@ -428,6 +426,13 @@ const kiroAccountType = ref<'oauth' | 'idc' | 'import'>('oauth')
 const kiroOAuthProvider = ref<'google' | 'github'>('google')
 const kiroIDCStartUrl = ref('https://view.awsapps.com/start')
 const kiroIDCRegion = ref('us-east-1')
+const kiroRegionOptions = computed(() => {
+  const regions = [...KIRO_REGION_CODES] as string[]
+  if (kiroIDCRegion.value && !regions.includes(kiroIDCRegion.value)) {
+    regions.unshift(kiroIDCRegion.value)
+  }
+  return regions
+})
 const kiroTokenJson = ref('')
 const kiroDeviceRegistrationJson = ref('')
 

@@ -150,6 +150,9 @@ func createGroupRecord(ctx context.Context, client *dbent.Client, groupIn *servi
 		SetKiroAutoStickyEnabled(groupIn.KiroAutoStickyEnabled).
 		SetKiroStickySessionTTLSeconds(groupIn.KiroStickySessionTTLSeconds).
 		SetKiroCacheEmulationRatio(groupIn.KiroCacheEmulationRatio).
+		SetKiroCacheEmulationMode(groupIn.KiroCacheEmulationMode).
+		SetKiroCacheCreationEmulationRatio(groupIn.KiroCacheCreationEmulationRatio).
+		SetKiroCacheReadEmulationRatio(groupIn.KiroCacheReadEmulationRatio).
 		SetKiroEndpointMode(groupIn.KiroEndpointMode).
 		SetMaxReasoningEffort(groupIn.MaxReasoningEffort).
 		SetMaxReasoningEffortOverLimit(groupIn.MaxReasoningEffortOverLimit).
@@ -340,6 +343,9 @@ func (r *groupRepository) Update(ctx context.Context, groupIn *service.Group) er
 		SetKiroAutoStickyEnabled(groupIn.KiroAutoStickyEnabled).
 		SetKiroStickySessionTTLSeconds(groupIn.KiroStickySessionTTLSeconds).
 		SetKiroCacheEmulationRatio(groupIn.KiroCacheEmulationRatio).
+		SetKiroCacheEmulationMode(groupIn.KiroCacheEmulationMode).
+		SetKiroCacheCreationEmulationRatio(groupIn.KiroCacheCreationEmulationRatio).
+		SetKiroCacheReadEmulationRatio(groupIn.KiroCacheReadEmulationRatio).
 		SetKiroEndpointMode(groupIn.KiroEndpointMode).
 		SetMaxReasoningEffort(groupIn.MaxReasoningEffort).
 		SetMaxReasoningEffortOverLimit(groupIn.MaxReasoningEffortOverLimit).

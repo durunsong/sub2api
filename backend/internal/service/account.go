@@ -965,7 +965,14 @@ func (a *Account) isModelMappingSupported(requestedModel string) bool {
 		return true
 	}
 	normalized := normalizeRequestedModelForLookup(a.Platform, requestedModel)
-	return normalized != requestedModel && mappingSupportsRequestedModel(mapping, normalized)
+	if normalized != requestedModel && mappingSupportsRequestedModel(mapping, normalized) {
+		return true
+	}
+	if isKiroDirectModeAccount(a) {
+		_, ok := resolveKiroClaudeAlias(mapping, requestedModel)
+		return ok
+	}
+	return false
 }
 
 // GetMappedModel 获取映射后的模型名（支持通配符，最长优先匹配）。
@@ -988,6 +995,11 @@ func (a *Account) ResolveMappedModel(requestedModel string) (mappedModel string,
 	normalized := normalizeRequestedModelForLookup(a.Platform, requestedModel)
 	if normalized != requestedModel {
 		if mappedModel, matched := resolveRequestedModelInMapping(mapping, normalized); matched {
+			return mappedModel, true
+		}
+	}
+	if isKiroDirectModeAccount(a) {
+		if mappedModel, matched := resolveKiroClaudeAlias(mapping, requestedModel); matched {
 			return mappedModel, true
 		}
 	}

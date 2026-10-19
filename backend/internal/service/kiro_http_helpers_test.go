@@ -5,7 +5,6 @@ package service
 import (
 	"context"
 	"net/http"
-	"strings"
 	"testing"
 
 	kiropkg "github.com/Wei-Shaw/sub2api/internal/pkg/kiro"
@@ -94,11 +93,16 @@ func TestNewKiroJSONRequestAddsConditionalHeaders(t *testing.T) {
 	require.Equal(t, "arn:aws:codewhisperer:us-east-1:123456789012:profile/HEADER", req.Header.Get("x-amzn-kiro-profile-arn"))
 	require.Equal(t, "vibe", req.Header.Get("x-amzn-kiro-agent-mode"))
 	require.Equal(t, "true", req.Header.Get("x-amzn-codewhisperer-optout"))
-	require.Contains(t, req.Header.Get("User-Agent"), "aws-sdk-js/1.0.34")
+	// streamingSDKVersions 是多元素池，seed 决定命中哪一条：直接与 helper 生成的
+	// 参考 UA 全等比较，天然覆盖 aws-sdk-js/ 与 api/codewhispererstreaming# 段。
+	expectedUA := kiropkg.BuildRuntimeUserAgent("account-key", buildKiroMachineID(account))
+	expectedAmzUA := kiropkg.BuildRuntimeAmzUserAgent("account-key", buildKiroMachineID(account))
+	require.Equal(t, expectedUA, req.Header.Get("User-Agent"))
+	require.Equal(t, expectedAmzUA, req.Header.Get("X-Amz-User-Agent"))
 	require.Contains(t, req.Header.Get("User-Agent"), "md/nodejs#22.22.0")
 	require.Contains(t, req.Header.Get("User-Agent"), buildKiroMachineID(account))
 	require.Contains(t, req.Header.Get("X-Amz-User-Agent"), buildKiroMachineID(account))
-	require.True(t, strings.Contains(req.Header.Get("User-Agent"), "api/codewhispererstreaming#1.0.34"))
+	require.Contains(t, req.Header.Get("User-Agent"), "api/codewhispererstreaming#")
 	require.Empty(t, req.Header.Get("Anthropic-Beta"))
 }
 
@@ -319,6 +323,7 @@ func TestBuildKiroPayloadForAccountDoesNotEnableThinkingForNonThinkingAlias(t *t
 
 func TestKiroAPIRegionPrefersAPIRegionOverProfileARN(t *testing.T) {
 	account := &Account{
+		Type: AccountTypeAPIKey,
 		Credentials: map[string]any{
 			"api_region":  "eu-west-1",
 			"profile_arn": "arn:aws:codewhisperer:us-west-2:123456789012:profile/test",
@@ -339,18 +344,43 @@ func TestKiroAPIRegionIgnoresProfileARNRegionFallback(t *testing.T) {
 	require.Equal(t, kiroDefaultRegion, kiroAPIRegion(account))
 }
 
-func TestKiroAPIRegionIgnoresOIDCRegionFallback(t *testing.T) {
-	account := &Account{
-		Credentials: map[string]any{
-			"region": "ap-northeast-2",
+// 推理区域只认凭据 api_region。IdC/SSO 授权写入的 region 是 Identity Center
+// 区域(用于 oidc.{region}.amazonaws.com 换取令牌),与推理端点无关,任何账号
+// 类型下都不得回退到它,否则会把 SSO 区域误当推理区域。
+func TestKiroAPIRegionIgnoresSSORegion(t *testing.T) {
+	cases := []struct {
+		name        string
+		accountType string
+		credentials map[string]any
+	}{
+		{
+			name:        "oauth",
+			accountType: AccountTypeOAuth,
+			credentials: map[string]any{"region": "ap-northeast-2"},
+		},
+		{
+			name:        "oauth idc",
+			accountType: AccountTypeOAuth,
+			credentials: map[string]any{"auth_method": "idc", "region": "eu-central-1"},
+		},
+		{
+			name:        "apikey",
+			accountType: AccountTypeAPIKey,
+			credentials: map[string]any{"region": "eu-central-1"},
 		},
 	}
 
-	require.Equal(t, kiroDefaultRegion, kiroAPIRegion(account))
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			account := &Account{Type: tc.accountType, Credentials: tc.credentials}
+			require.Equal(t, kiroDefaultRegion, kiroAPIRegion(account))
+		})
+	}
 }
 
 func TestBuildKiroEndpointsUsesOnlyAmazonQEndpoint(t *testing.T) {
 	account := &Account{
+		Type: AccountTypeAPIKey,
 		Credentials: map[string]any{
 			"api_region":         "us-west-2",
 			"preferred_endpoint": "cw",
@@ -364,9 +394,25 @@ func TestBuildKiroEndpointsUsesOnlyAmazonQEndpoint(t *testing.T) {
 	require.Empty(t, endpoints[0].AmzTarget)
 }
 
+// 端点构造同样只认 api_region:仅有 SSO region 时落到默认区域,不得据其拼出端点。
+func TestBuildKiroEndpointsIgnoresSSORegion(t *testing.T) {
+	account := &Account{
+		Type: AccountTypeAPIKey,
+		Credentials: map[string]any{
+			"region": "eu-central-1",
+		},
+	}
+
+	endpoints := buildKiroEndpoints(account, KiroEndpointModeQ)
+	require.Len(t, endpoints, 1)
+	require.Equal(t, "AmazonQ", endpoints[0].Name)
+	require.Equal(t, "https://q."+kiroDefaultRegion+".amazonaws.com/generateAssistantResponse", endpoints[0].URL)
+}
+
 func TestBuildKiroEndpointsIgnoresPreferredEndpoint(t *testing.T) {
 	for _, preferred := range []string{"codewhisperer", "cw", "unknown"} {
 		account := &Account{
+			Type: AccountTypeAPIKey,
 			Credentials: map[string]any{
 				"api_region":         "us-west-2",
 				"preferred_endpoint": preferred,
@@ -421,4 +467,98 @@ func TestNormalizeKiroEndpointFieldsAuto(t *testing.T) {
 	g2 := &Group{Platform: PlatformAnthropic, KiroEndpointMode: KiroEndpointModeAuto}
 	normalizeKiroEndpointFields(g2)
 	require.Equal(t, "", g2.KiroEndpointMode)
+}
+
+// TestKiroAccountLacksEnterpriseProfile 验证 BuilderId/Social 被判定为无企业 profile（跳过
+// ListAvailableProfiles），而 Enterprise/ExternalIdp 及未知 provider 一律照旧查询。
+func TestKiroAccountLacksEnterpriseProfile(t *testing.T) {
+	cases := []struct {
+		name        string
+		credentials map[string]any
+		want        bool
+	}{
+		{
+			name:        "provider BuilderId 跳过",
+			credentials: map[string]any{"auth_method": "idc", "provider": "BuilderId"},
+			want:        true,
+		},
+		{
+			name:        "provider 大小写不敏感",
+			credentials: map[string]any{"auth_method": "idc", "provider": "builderid"},
+			want:        true,
+		},
+		{
+			name:        "social 登录跳过",
+			credentials: map[string]any{"auth_method": "social", "provider": "Github"},
+			want:        true,
+		},
+		{
+			name:        "builder id start_url 跳过",
+			credentials: map[string]any{"auth_method": "idc", "start_url": kiropkg.BuilderIDStartURL},
+			want:        true,
+		},
+		{
+			name:        "builder id start_url 末尾斜杠跳过",
+			credentials: map[string]any{"auth_method": "idc", "start_url": kiropkg.BuilderIDStartURL + "/"},
+			want:        true,
+		},
+		{
+			name:        "provider 与 start_url 均缺失视为 BuilderId",
+			credentials: map[string]any{"api_region": "us-west-2"},
+			want:        true,
+		},
+		{
+			name:        "provider Enterprise 照旧查询",
+			credentials: map[string]any{"auth_method": "idc", "provider": "Enterprise"},
+			want:        false,
+		},
+		{
+			name:        "provider Enterprise 大小写不敏感",
+			credentials: map[string]any{"auth_method": "idc", "provider": "enterprise"},
+			want:        false,
+		},
+		{
+			name:        "遗留 provider AWS + 企业 start_url 照旧查询",
+			credentials: map[string]any{"auth_method": "idc", "provider": "AWS", "start_url": "https://d-example.awsapps.com/start"},
+			want:        false,
+		},
+		{
+			name:        "遗留 provider AWS 无 start_url 跳过",
+			credentials: map[string]any{"auth_method": "idc", "provider": "AWS"},
+			want:        true,
+		},
+		{
+			name:        "遗留 provider AWS + builder id start_url 跳过",
+			credentials: map[string]any{"auth_method": "idc", "provider": "AWS", "start_url": kiropkg.BuilderIDStartURL},
+			want:        true,
+		},
+		{
+			name:        "企业 start_url 无 provider 照旧查询",
+			credentials: map[string]any{"auth_method": "idc", "start_url": "https://d-example.awsapps.com/start"},
+			want:        false,
+		},
+		{
+			name:        "external_idp 照旧查询",
+			credentials: map[string]any{"auth_method": "external_idp", "provider": "ExternalIdp"},
+			want:        false,
+		},
+		{
+			name:        "auth_method external_idp 无 provider 照旧查询",
+			credentials: map[string]any{"auth_method": "external_idp"},
+			want:        false,
+		},
+		{
+			name:        "provider BuilderId 优先于企业 start_url 跳过",
+			credentials: map[string]any{"auth_method": "idc", "provider": "BuilderId", "start_url": "https://d-example.awsapps.com/start"},
+			want:        true,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			account := &Account{Platform: PlatformKiro, Type: AccountTypeOAuth, Credentials: tc.credentials}
+			require.Equal(t, tc.want, kiroAccountLacksEnterpriseProfile(account))
+		})
+	}
+
+	require.False(t, kiroAccountLacksEnterpriseProfile(nil))
 }
