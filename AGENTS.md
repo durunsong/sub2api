@@ -148,6 +148,8 @@ Access Ban 迁移顺序：`159` 建表 → `160` 扩展 rule_type / ua_pattern�
 
 ## 5. 与官方已 merge、不算 Fork 独开发的特性
 
+- **上游 PR #8139 定点合入（2026-10-21）**：完整应用 `e068c3d02ff8664c1142d5f7c51a05a82f75ad3d` 的 3 文件增量（+15/-1），将 `response.queued` / `response.metadata` 纳入共享元数据分类，保留实际输出前的过载重试与切号，覆盖普通 SSE、透传及 WS→HTTP 回归测试。未知事件与实际输出后禁止重放的边界保持不变；未引入其余上游提交，不调整重试预算、调度策略、版本或迁移。
+
 以下来自官方 v0.1.142+，勿误当 Fork 独有而重复实现或删除：
 
 - v0.2.17：Gemini 4 Argon、思考档位/摘要透传、OpenAI API Key 搜索模拟、GPT-5.5 订阅退役处理、Responses created_at、协议与模型目录修复、EasyPay 上游确认、Stripe 快照恢复和退款 pending 保留扣减。目标 `060d0160417782cd962a0c7f460f6cd4565d4916`，48 commits / 153 files / +7,035 / -808。官方 VERSION 仍为 0.2.16，Fork 设为 0.2.17。无新增迁移或依赖，历史 SQL 不变；部署示例不改。保留全部 Fork 定制，包括代理故障拒绝直连、邮件样式及未活跃用户余额券群发。搜索保留 Kiro 缓存计量和 Anthropic OAuth 原生边界；退款 pending 审计保存来源卡，成功终结事务中作废，失败保留。验证见 `openspec/changes/sync-upstream-v0-2-17/`。
