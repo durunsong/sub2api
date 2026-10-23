@@ -63,7 +63,9 @@ func TestEstimateImageTokensUsesDimensionsNotEncodedLength(t *testing.T) {
 	}
 	var noisyPNG bytes.Buffer
 	require.NoError(t, png.Encode(&noisyPNG, noisy))
-	require.Greater(t, noisyPNG.Len(), flatPNG.Len())
+	// Compression size ordering can vary by encoder version; only distinct
+	// encoded lengths matter for proving that dimensions determine token usage.
+	require.NotEqual(t, flatPNG.Len(), noisyPNG.Len())
 
 	flatTokens := EstimateImageTokens(context.Background(), "image/png", base64.StdEncoding.EncodeToString(flatPNG.Bytes()))
 	noisyTokens := EstimateImageTokens(context.Background(), "image/png", base64.StdEncoding.EncodeToString(noisyPNG.Bytes()))
