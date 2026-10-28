@@ -2,10 +2,10 @@
 
 > **上游官方仓库**：[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api)
 > **本 Fork 远程**：`origin` → `durunsong/sub2api`（中转/部署用）
-> **对比基准**：官方 tag **`v0.2.18`**（同步于 2026-10-23；官方无 v0.1.174 tag）
-> **本 Fork 当前版本**：`backend/cmd/server/VERSION` = **0.2.18**
-> **最新同步统计**：官方 v0.2.17→v0.2.18 为 45 commits / 114 files / +7,482 / -566；官方 VERSION 文件仍为 0.2.17
-> **当前工作区**：已合入官方 v0.2.18，并保留 Kiro / XorPay / Access Ban / 提示词审计 / 订阅重置卡 / Ops / UI 品牌等全部定制，含登录失败自动封禁及重置卡提示
+> **对比基准**：官方 tag **`v0.2.19`**（同步于 2026-10-28；官方无 v0.1.174 tag）
+> **本 Fork 当前版本**：`backend/cmd/server/VERSION` = **0.2.19**
+> **最新同步统计**：官方 v0.2.18→v0.2.19 增加管理员 API Key、按张图片计费、GPT-6.1 Terra、Grok 模型诊断及 Gemini/计费修复；迁移 247/248；Fork 定制全部保留
+> **当前工作区**：已合入官方 v0.2.19，并保留 Kiro / XorPay / Access Ban / 提示词审计 / 订阅重置卡 / Ops / UI 品牌等全部定制，含登录失败自动封禁及重置卡提示
 > **维护**：新增 Fork 定制后，请同步更新本文与根目录 `AGENTS.md` 摘要。
 
 ---
@@ -20,7 +20,7 @@
 | **`AGENTS.md`**（项目根） | AI 协作**强制摘要**与禁区，改代码前必读 |
 | **`FORK_CUSTOMIZATIONS.md`**（项目根） | 历史清单，已收敛到本文；保留作快捷索引 |
 
-**注意**：本 Fork 已同步官方至 **v0.2.18**，但 **`upstream/main` 仍可能领先**。与官方同步时以目标 release **tag** 为准，不带入 tag 后的 `main` 内容；merge `main` 前务必先读本文 Fork 定制章节，禁止 blindly 采用上游覆盖 Kiro / XorPay / Access Ban 等模块。
+**注意**：本 Fork 已同步官方至 **v0.2.19**，但 **`upstream/main` 仍可能领先**。与官方同步时以目标 release **tag** 为准，不带入 tag 后的 `main` 内容；merge `main` 前务必先读本文 Fork 定制章节，禁止 blindly 采用上游覆盖 Kiro / XorPay / Access Ban 等模块。
 
 ---
 

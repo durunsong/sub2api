@@ -1,8 +1,12 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.2.18**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.18**（官方无独立 v0.1.174 tag），并保留本 Fork
+当前整合版本为 **v0.2.19**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.19**，并保留本 Fork
 的全部定制能力。
+
+## v0.2.19 同步（2026-10-28）
+
+v0.2.19：管理员 API Key 细粒度授权与 IP 白名单、OpenAI/Composite 按图片张数计费、GPT-6.1 Terra、Gemini 同账号重试与模型列表修复、Grok 模型目录诊断及图片/计费安全修复。新增迁移 `247_scoped_admin_api_keys.sql`、`248_group_image_count_billing.sql`，仅交付文件不执行真实迁移。保留 Kiro、XorPay、Access Ban、订阅重置卡、余额券群发、Claude 品牌和 UI 定制。
 
 ## v0.2.18 同步（2026-10-23）
 
