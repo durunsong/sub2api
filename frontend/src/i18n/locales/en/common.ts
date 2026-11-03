@@ -200,6 +200,8 @@ export default {
     recharge: 'Recharge',
     subscribe: 'Subscription',
     docs: 'Docs',
+    support: 'Support',
+    supportWechat: 'Support WeChat',
     myOrders: 'My Orders',
     orderManagement: 'Orders',
     paymentDashboard: 'Payment Dashboard',

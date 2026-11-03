@@ -324,6 +324,7 @@ backend/internal/service/
 | ConfirmDialog | 替换原生 confirm/alert | 多处 admin/account 组件 |
 | 代理广告横幅 | 已移除 | `ProxyAdBanner` 相关引用清理 |
 | 版本徽章 | 隐藏「立即更新」按钮 | `frontend/src/components/common/VersionBadge.vue` |
+| 顶栏客服 | 悬停展示已配置微信号和上传的客服二维码 | `frontend/src/components/layout/AppHeader.vue`，设置项 `contact_qr_code` |
 | Kiro 截图 / 社群 | 文档与资源 | `assets/screenshots/kiro-*.png`, `assets/community/wechat-group.jpg` |
 
 ---

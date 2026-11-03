@@ -225,11 +225,7 @@
                 v-if="subscription.weekly_window_start"
                 class="text-xs text-gray-500 dark:text-dark-400"
               >
-                {{
-                  t('userSubscriptions.resetIn', {
-                    time: formatResetTime(subscription.weekly_window_start, 168)
-                  })
-                }}
+                {{ formatResetTime(subscription, 'weekly') }}
               </p>
             </div>
 
@@ -273,11 +269,7 @@
                 v-if="subscription.monthly_window_start"
                 class="text-xs text-gray-500 dark:text-dark-400"
               >
-                {{
-                  t('userSubscriptions.resetIn', {
-                    time: formatResetTime(subscription.monthly_window_start, 720)
-                  })
-                }}
+                {{ formatResetTime(subscription, 'monthly') }}
               </p>
             </div>
 
@@ -343,7 +335,9 @@ import {
   getExpirationDateRelation,
   getRemainingDurationParts,
   isOneTimeDailyQuota,
+  nextSubscriptionReset,
   type RemainingDurationParts,
+  type SubscriptionResetWindow,
 } from '@/utils/subscriptionQuota'
 
 function platformAccentDotClass(p: string): string {
@@ -468,14 +462,23 @@ function getExpirationClass(expiresAt: string): string {
 
 function formatDurationParts(parts: RemainingDurationParts): string {
   if (parts.days > 0) {
-    return `${parts.days}d ${parts.hours}h`
+    return t('userSubscriptions.durationDaysHours', { days: parts.days, hours: parts.hours })
   }
-
   if (parts.hours > 0) {
-    return `${parts.hours}h ${parts.minutes}m`
+    return t('userSubscriptions.durationHoursMinutes', { hours: parts.hours, minutes: parts.minutes })
   }
+  return t('userSubscriptions.durationMinutes', { minutes: parts.minutes })
+}
 
-  return `${parts.minutes}m`
+function formatResetLabel(subscription: UserSubscription, window: SubscriptionResetWindow): string {
+  const reset = nextSubscriptionReset(subscription, subscription[`${window}_window_start`], window)
+  if (!reset) return t('userSubscriptions.windowNotActive')
+  const parts = getRemainingDurationParts(reset.at)
+  if (!parts) return t('userSubscriptions.windowNotActive')
+  const time = formatDurationParts(parts)
+  return reset.endsWithSubscription
+    ? t('userSubscriptions.quotaEndsIn', { time })
+    : t('userSubscriptions.resetIn', { time })
 }
 
 function formatDailyUsageWindow(subscription: UserSubscription): string {
@@ -488,23 +491,15 @@ function formatDailyUsageWindow(subscription: UserSubscription): string {
     return t('userSubscriptions.quotaEndsIn', { time: formatDurationParts(parts) })
   }
 
-  return t('userSubscriptions.resetIn', {
-    time: formatResetTime(subscription.daily_window_start, 24)
-  })
+  return formatResetLabel(subscription, 'daily')
 }
 
 function formatTokenCount(tokens?: number | null): string {
   return (tokens || 0).toLocaleString()
 }
 
-function formatResetTime(windowStart: string | null, windowHours: number): string {
-  if (!windowStart) return t('userSubscriptions.windowNotActive')
-
-  const start = new Date(windowStart)
-  const end = new Date(start.getTime() + windowHours * 60 * 60 * 1000)
-  const parts = getRemainingDurationParts(end)
-
-  return parts ? formatDurationParts(parts) : t('userSubscriptions.windowNotActive')
+function formatResetTime(subscription: UserSubscription, window: SubscriptionResetWindow): string {
+  return formatResetLabel(subscription, window)
 }
 
 onMounted(() => {

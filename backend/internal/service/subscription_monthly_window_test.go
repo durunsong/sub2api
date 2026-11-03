@@ -148,7 +148,8 @@ func TestNormalizeExpiredWindowsResetsMonthlyUsageWithPartialFinalPeriod(t *test
 	normalizeExpiredWindowsAt(subs, now)
 
 	require.Zero(t, subs[0].MonthlyUsageUSD)
-	require.Nil(t, subs[0].MonthlyWindowStart)
+	require.NotNil(t, subs[0].MonthlyWindowStart)
+	require.Equal(t, startsAt.Add(30*24*time.Hour), *subs[0].MonthlyWindowStart)
 }
 
 func TestValidateAndCheckLimitsKeepsLegacyMonthlyUsageBeforeExpiry(t *testing.T) {

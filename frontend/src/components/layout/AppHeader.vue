@@ -23,6 +23,36 @@
 
       <!-- Right: Announcements + Docs + Language + Subscriptions + Balance + User Dropdown -->
       <div class="flex min-w-0 items-center gap-1 sm:gap-3">
+        <div
+          v-if="showSupportContact"
+          class="group relative"
+        >
+          <button
+            type="button"
+            class="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-dark-400 dark:hover:bg-dark-800 dark:hover:text-white"
+            :aria-label="t('nav.supportWechat')"
+          >
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M9.5 4C5.91 4 3 6.46 3 9.5c0 1.73.86 3.28 2.22 4.31L4.5 16.5l2.72-1.36c.72.2 1.48.36 2.28.36.34 0 .67-.02 1-.06A4.7 4.7 0 0 1 10.2 14c0-2.9 2.69-5.25 6-5.25.17 0 .34.01.5.02C16.05 6.16 13.07 4 9.5 4zm-2 3.25a.9.9 0 1 1 0 1.8.9.9 0 0 1 0-1.8zm4 0a.9.9 0 1 1 0 1.8.9.9 0 0 1 0-1.8zM16.2 10c-2.76 0-5 1.9-5 4.25S13.44 18.5 16.2 18.5c.55 0 1.08-.07 1.57-.2l2.23 1.12-.62-2.05A3.9 3.9 0 0 0 21.2 14.25C21.2 11.9 18.96 10 16.2 10zm-1.7 2.85a.75.75 0 1 1 0 1.5.75.75 0 0 1 0-1.5zm3.4 0a.75.75 0 1 1 0 1.5.75.75 0 0 1 0-1.5z" />
+            </svg>
+            <span class="hidden sm:inline">{{ t('nav.support') }}</span>
+          </button>
+          <div class="absolute right-0 top-full z-50 hidden w-52 pt-2 group-hover:block group-focus-within:block">
+            <div class="rounded-xl border border-gray-200 bg-white p-3 text-center shadow-lg dark:border-dark-700 dark:bg-dark-800">
+              <img
+                v-if="contactQrCode"
+                :src="contactQrCode"
+                alt=""
+                class="mx-auto h-36 w-36 rounded-lg object-contain"
+              />
+              <p v-if="contactInfo" class="mt-2 break-all text-sm font-medium text-gray-900 dark:text-white">
+                {{ contactInfo }}
+              </p>
+              <p class="mt-1 text-xs text-gray-500 dark:text-dark-400">{{ t('nav.supportWechat') }}</p>
+            </div>
+          </div>
+        </div>
+
         <!-- Announcement Bell -->
         <AnnouncementBell v-if="user" />
 
@@ -277,7 +307,9 @@ const onboardingStore = useOnboardingStore()
 const user = computed(() => authStore.user)
 const dropdownOpen = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
-const contactInfo = computed(() => appStore.contactInfo)
+const contactInfo = computed(() => appStore.contactInfo.trim())
+const contactQrCode = computed(() => sanitizeUrl(appStore.contactQrCode, { allowRelative: true, allowDataUrl: true }))
+const showSupportContact = computed(() => Boolean(contactInfo.value || contactQrCode.value))
 const docUrl = computed(() => sanitizeUrl(appStore.docUrl))
 const modelPlazaEnabled = computed(() => isFeatureFlagEnabled(FeatureFlags.modelPlaza))
 const avatarUrl = computed(() => user.value?.avatar_url?.trim() || '')

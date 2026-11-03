@@ -1104,21 +1104,20 @@ func normalizeExpiredWindows(subs []UserSubscription) {
 func normalizeExpiredWindowsAt(subs []UserSubscription, now time.Time) {
 	for i := range subs {
 		sub := &subs[i]
-		// 日窗口过期：清零展示数据
-		if sub.canAutomaticallyResetDailyAt(now) {
-			sub.DailyWindowStart = nil
+		// 过期窗口按当前周期起点展示，而不是清空起点。
+		// 90 天套餐有 3 个 30 天月窗口；清空后前端失去下一次重置时间。
+		if windowStart, ok := sub.automaticDailyWindowStartAt(now); ok {
+			sub.DailyWindowStart = &windowStart
 			sub.DailyUsageUSD = 0
 			sub.DailyUsageTokens = 0
 		}
-		// 周窗口过期：清零展示数据
-		if sub.canAutomaticallyResetWeeklyAt(now) {
-			sub.WeeklyWindowStart = nil
+		if windowStart, ok := sub.automaticWindowStartAt(sub.WeeklyWindowStart, 7*24*time.Hour, now); ok {
+			sub.WeeklyWindowStart = &windowStart
 			sub.WeeklyUsageUSD = 0
 			sub.WeeklyUsageTokens = 0
 		}
-		// 月窗口过期：清零展示数据
-		if sub.canAutomaticallyResetMonthlyAt(now) {
-			sub.MonthlyWindowStart = nil
+		if windowStart, ok := sub.automaticWindowStartAt(sub.MonthlyWindowStart, 30*24*time.Hour, now); ok {
+			sub.MonthlyWindowStart = &windowStart
 			sub.MonthlyUsageUSD = 0
 			sub.MonthlyUsageTokens = 0
 		}

@@ -344,7 +344,7 @@
                       d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
                   </svg>
-                  <span>{{ formatResetTime(row.weekly_window_start, 'weekly') }}</span>
+                  <span>{{ formatResetTime(row, 'weekly') }}</span>
                 </div>
               </div>
 
@@ -388,7 +388,7 @@
                       d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
                   </svg>
-                  <span>{{ formatResetTime(row.monthly_window_start, 'monthly') }}</span>
+                  <span>{{ formatResetTime(row, 'monthly') }}</span>
                 </div>
               </div>
 
@@ -937,7 +937,9 @@ import {
   getRemainingDurationParts,
   getRemainingExpiryDuration,
   isOneTimeDailyQuota,
-  type RemainingDurationParts
+  nextSubscriptionReset,
+  type RemainingDurationParts,
+  type SubscriptionResetWindow,
 } from '@/utils/subscriptionQuota'
 import { GROUP_PLATFORM_OPTIONS } from '@/constants/platforms'
 
@@ -1642,37 +1644,19 @@ const formatDailyUsageWindow = (subscription: UserSubscription): string => {
     return parts ? formatQuotaEndDuration(parts) : t('admin.subscriptions.windowNotActive')
   }
 
-  return formatResetTime(subscription.daily_window_start, 'daily')
+  return formatResetTime(subscription, 'daily')
 }
 
 const formatTokenCount = (tokens?: number | null): string => {
   return (tokens || 0).toLocaleString()
 }
 
-// Format reset time based on window start and period type
-const formatResetTime = (windowStart: string | null, period: 'daily' | 'weekly' | 'monthly'): string => {
-  if (!windowStart) return t('admin.subscriptions.windowNotActive')
-
-  const start = new Date(windowStart)
-  const now = new Date()
-
-  // Calculate reset time based on period
-  let resetTime: Date
-  switch (period) {
-    case 'daily':
-      resetTime = new Date(start.getTime() + 24 * 60 * 60 * 1000)
-      break
-    case 'weekly':
-      resetTime = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000)
-      break
-    case 'monthly':
-      resetTime = new Date(start.getTime() + 30 * 24 * 60 * 60 * 1000)
-      break
-  }
-
-  const parts = getRemainingDurationParts(resetTime, now)
-
-  return parts ? formatResetDuration(parts) : t('admin.subscriptions.windowNotActive')
+const formatResetTime = (subscription: UserSubscription, period: SubscriptionResetWindow): string => {
+  const reset = nextSubscriptionReset(subscription, subscription[`${period}_window_start`], period)
+  if (!reset) return t('admin.subscriptions.windowNotActive')
+  const parts = getRemainingDurationParts(reset.at)
+  if (!parts) return t('admin.subscriptions.windowNotActive')
+  return reset.endsWithSubscription ? formatQuotaEndDuration(parts) : formatResetDuration(parts)
 }
 
 // Handle click outside to close dropdowns

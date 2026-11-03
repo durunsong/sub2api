@@ -132,7 +132,26 @@ func TestNormalizeExpiredWindows_DailyUsageClearsAfterMidnight(t *testing.T) {
 	normalizeExpiredWindowsAt(subs, now)
 
 	require.Zero(t, subs[0].DailyUsageUSD, "跨 0 点后展示的日用量应清零")
-	require.Nil(t, subs[0].DailyWindowStart)
+	require.NotNil(t, subs[0].DailyWindowStart)
+	require.Equal(t, timezone.StartOfDay(now), *subs[0].DailyWindowStart, "展示应推进到当天 0 点，便于计算次日 0 点重置")
+}
+
+func TestNormalizeExpiredWindowsProjectsNinetyDayMonthlyWindow(t *testing.T) {
+	startsAt := time.Date(2026, 7, 1, 15, 5, 0, 0, time.UTC)
+	windowStart := startOfDay(startsAt)
+	now := startsAt.Add(40 * 24 * time.Hour)
+	subs := []UserSubscription{{
+		StartsAt:           startsAt,
+		ExpiresAt:          startsAt.Add(90 * 24 * time.Hour),
+		MonthlyWindowStart: &windowStart,
+		MonthlyUsageUSD:    18,
+	}}
+
+	normalizeExpiredWindowsAt(subs, now)
+
+	require.Zero(t, subs[0].MonthlyUsageUSD)
+	require.NotNil(t, subs[0].MonthlyWindowStart)
+	require.Equal(t, startsAt.Add(30*24*time.Hour), *subs[0].MonthlyWindowStart)
 }
 
 // 日卡（一次性日额度）不受 0 点语义影响：跨 0 点不重置。

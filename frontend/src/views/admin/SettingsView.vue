@@ -6635,6 +6635,22 @@
                 </p>
               </div>
 
+              <div>
+                <label
+                  class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
+                  {{ t("admin.settings.site.contactQrCode") }}
+                </label>
+                <ImageUpload
+                  v-model="form.contact_qr_code"
+                  mode="image"
+                  :upload-label="t('admin.settings.site.uploadImage')"
+                  :remove-label="t('admin.settings.site.remove')"
+                  :hint="t('admin.settings.site.contactQrCodeHint')"
+                  :max-size="512 * 1024"
+                />
+              </div>
+
               <!-- Doc URL -->
               <div>
                 <label
@@ -9823,6 +9839,7 @@ const form = reactive<SettingsForm>({
   site_subtitle: "Subscription to API Conversion Platform",
   api_base_url: "",
   contact_info: "",
+  contact_qr_code: "",
   doc_url: "",
   home_content: "",
   compact_home_enabled: false,
@@ -11538,6 +11555,7 @@ async function saveSettings() {
       site_subtitle: form.site_subtitle,
       api_base_url: form.api_base_url,
       contact_info: form.contact_info,
+      contact_qr_code: form.contact_qr_code,
       doc_url: form.doc_url,
       home_content: form.home_content,
       compact_home_enabled: form.compact_home_enabled,
