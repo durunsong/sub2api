@@ -6,6 +6,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/Wei-Shaw/sub2api/internal/pkg/adminaccess"
+	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
 
@@ -39,4 +41,14 @@ func TestAccountUsageService_GetPassiveUsage_KiroAPIKeySupported(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, usage)
 	require.Equal(t, "passive", usage.Source)
+}
+
+func TestAccountUsageService_GetPassiveUsage_KiroRequiresScopedAccess(t *testing.T) {
+	account := &Account{ID: 9103, Platform: PlatformKiro, Type: AccountTypeAPIKey}
+	repo := &mockAccountRepoForGemini{accountsByID: map[int64]*Account{account.ID: account}}
+	svc := NewAccountUsageService(repo, nil, nil, nil, nil, nil, nil, NewUsageCache(), nil, nil)
+	ctx := adminaccess.WithPrincipal(context.Background(), &adminaccess.Principal{})
+	usage, err := svc.GetPassiveUsage(ctx, account.ID)
+	require.Nil(t, usage)
+	require.Equal(t, 404, infraerrors.Code(err))
 }

@@ -48,7 +48,7 @@ func TestCalculateRecordUsageCost_ImageCountBillingGroupTokenPricing(t *testing.
 	cost := svc.calculateRecordUsageCost(context.Background(), &ForwardResult{
 		Model: model, ImageCount: 2, ImageSize: "1K", ImageEndpoint: true,
 		Usage: ClaudeUsage{InputTokens: 1000, OutputTokens: 1000},
-	}, apiKey, model, 1, 1, time.Time{})
+	}, apiKey, model, 1, 1, time.Time{}, nil)
 
 	require.NotNil(t, cost)
 	require.InDelta(t, 1.0, cost.TotalCost, 1e-12, "应回落分组图片价，而不是 token 定价的 $0")
@@ -75,7 +75,7 @@ func TestCalculateRecordUsageCost_ImageCountBillingChannelTokenPricing(t *testin
 	cost := svc.calculateRecordUsageCost(context.Background(), &ForwardResult{
 		Model: model, ImageCount: 2, ImageSize: "1K", ImageEndpoint: true,
 		Usage: ClaudeUsage{InputTokens: 1_000_000, OutputTokens: 10_000},
-	}, apiKey, model, 1, 1, time.Time{})
+	}, apiKey, model, 1, 1, time.Time{}, nil)
 
 	require.NotNil(t, cost)
 	require.InDelta(t, 0.8, cost.TotalCost, 1e-12)
@@ -102,7 +102,7 @@ func TestCalculateRecordUsageCost_ImageCountBillingIgnoresMixedRequests(t *testi
 	cost := svc.calculateRecordUsageCost(context.Background(), &ForwardResult{
 		Model: model, ImageCount: 1, ImageSize: "1K", ImageEndpoint: false,
 		Usage: ClaudeUsage{InputTokens: 1_000_000, OutputTokens: 10_000},
-	}, apiKey, model, 1, 1, time.Time{})
+	}, apiKey, model, 1, 1, time.Time{}, nil)
 
 	require.NotNil(t, cost)
 	require.Equal(t, string(BillingModeToken), cost.BillingMode)
@@ -216,7 +216,7 @@ func TestCalculateRecordUsageCost_ChannelPerRequestContextTierUsesTokens(t *test
 		cost := svc.calculateRecordUsageCost(context.Background(), &ForwardResult{
 			Model: model, ImageCount: 2, ImageSize: "1K", ImageEndpoint: true,
 			Usage: ClaudeUsage{InputTokens: 5000, OutputTokens: 100},
-		}, apiKey, model, 1, 1, time.Time{})
+		}, apiKey, model, 1, 1, time.Time{}, nil)
 
 		require.NotNil(t, cost)
 		require.InDelta(t, 0.6, cost.TotalCost, 1e-12, "switch=%v: 应按上下文档 0.3 × 2 张结算", switchOn)

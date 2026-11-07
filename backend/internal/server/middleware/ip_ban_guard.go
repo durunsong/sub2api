@@ -22,6 +22,7 @@ func IPBanGuard(ipBanService *service.IPBanService, cfg *config.Config) gin.Hand
 			c.Next()
 			return
 		}
+		c.Abort()
 		if ban != nil && accessban.NormalizeRuleType(ban.RuleType) == accessban.RuleTypeIP {
 			response.ErrorFrom(c, service.ErrIPBanned)
 			return

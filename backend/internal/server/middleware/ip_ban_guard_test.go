@@ -40,6 +40,29 @@ func (s *stubIPBanRepo) RecordHit(_ context.Context, id int64, _ time.Time) erro
 	return nil
 }
 
+func TestIPBanGuardStopsBlockedRequestsBeforeHandler(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	for _, rule := range []service.IPBan{
+		{ID: 1, RuleType: accessban.RuleTypeIP, Pattern: "43.255.119.7", Status: service.IPBanStatusActive},
+		{ID: 2, RuleType: accessban.RuleTypeUA, Pattern: "blocked-agent", Status: service.IPBanStatusActive},
+	} {
+		t.Run(rule.RuleType, func(t *testing.T) {
+			repo := &stubIPBanRepo{active: []service.IPBan{rule}}
+			router := gin.New()
+			called := false
+			router.Use(IPBanGuard(service.NewIPBanService(repo), nil))
+			router.POST("/operation", func(c *gin.Context) { called = true })
+			req := httptest.NewRequest(http.MethodPost, "/operation", nil)
+			req.RemoteAddr = "43.255.119.7:1234"
+			req.Header.Set("User-Agent", "blocked-agent")
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+			require.Equal(t, http.StatusForbidden, w.Code)
+			require.False(t, called, "blocked requests must not execute downstream operations")
+		})
+	}
+}
+
 func TestIPBanGuardAutomaticRulesUseTrustedIP(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	for _, tc := range []struct {

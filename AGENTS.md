@@ -11,13 +11,13 @@ Cursor 场景下还会加载 [`.cursor/rules/sub2api-fork.mdc`](.cursor/rules/su
 
 ## 1. 项目身份
 
-| 项 | 值 |
-|----|-----|
-| 上游官方 | https://github.com/Wei-Shaw/sub2api |
-| 已同步基线 | tag **v0.2.18**（官方无 v0.1.174 tag） |
-| 当前 VERSION | `backend/cmd/server/VERSION` = **0.2.18** |
+| 项           | 值                                                                                                                 |
+| ------------ | ------------------------------------------------------------------------------------------------------------------ |
+| 上游官方     | https://github.com/Wei-Shaw/sub2api                                                                                |
+| 已同步基线   | tag **v0.2.20**（官方无 v0.1.174 tag）                                                                             |
+| 当前 VERSION | `backend/cmd/server/VERSION` = **0.2.20**                                                                          |
 | 完整差异文档 | **`docs/FORK_VS_UPSTREAM.md`**（相对历史基线；含 Fork 扩展见文档 §8.2 / §12；快捷清单见 `FORK_CUSTOMIZATIONS.md`） |
-| 快捷索引 | `FORK_CUSTOMIZATIONS.md` |
+| 快捷索引     | `FORK_CUSTOMIZATIONS.md`                                                                                           |
 
 **本 Fork 不是官方纯净版**。不得为了「与上游一致」删除 Kiro、XorPay、Access Ban 或 UI/支付定制。
 
@@ -144,6 +144,8 @@ v0.2.17 无新增迁移。退款待确认审计新增已扣款保留及来源重
 
 `248_redeem_email_zero_balance_segment.sql` 只放宽余额券批次 `segments` 检查，允许单独的 `zero_balance`；不修改 `246`，不自动执行迁移。
 
+v0.2.20 新增 `249_mcp_oauth.sql`，仅创建 MCP OAuth 授权与凭据摘要表；MCP 默认关闭，需显式 `mcp.public_url`。新 MCP/OAuth 入口必须挂 Access Ban，普通 IPBanGuard 命中后必须 Abort 以阻止下游操作；邮箱精确黑名单不得替代 Fork 的格式校验与后缀封禁。历史 SQL 不改、不自动执行迁移。
+
 Access Ban 迁移顺序：`159` 建表 → `160` 扩展 rule_type / ua_pattern，**不可删除或回退**。
 
 订阅重置卡迁移顺序：`224` 建永久明细表 → `225` 按分组默认期限回填历史 `manual_reset_credits`；同步时不得恢复有效固定期限购买/分配顺延，也不得删除旧 `reset-daily` → 1 天卡和兼容镜像。
@@ -156,6 +158,8 @@ Access Ban 迁移顺序：`159` 建表 → `160` 扩展 rule_type / ua_pattern�
 
 以下来自官方 v0.1.142+，勿误当 Fork 独有而重复实现或删除：
 
+- v0.2.20：管理 MCP/OAuth、管理员密钥权限扩展、精确邮箱黑名单、图片尺寸分流与 GPT Image 2.6、资源预算/JSON 热路径优化及协议兼容修复。官方目标 `dab829a4e9b7d1cc307189aea8b0319eb29e29d0`，112 commits / 459 files / +29,482 / -1,457；官方 VERSION 仍为 0.2.19，Fork 设为 0.2.20。保留全部 Fork 定制及同期批量兑换码功能；新增 `249_mcp_oauth.sql` 仅交付、不执行，历史 SQL 与部署配置不变。验证见 `openspec/changes/sync-upstream-v0-2-20/`。
+- v0.2.19：管理员 API Key、按张图片计费、GPT-6.1 Terra、Grok 模型诊断及 Gemini/计费修复；新增 247/248 SQL 与 Fork 同号迁移共存。
 - v0.2.18：Vertex service_account 配额、Gemini/Antigravity 生图门禁、流式断连计费与错误收尾、Codex 过载恢复和身份收敛、调度快照/模型映射优化、Grok Fast 定价及图片/工具兼容修复。目标 `ac1b8f1271be0d674fa6f074403c1410f30a3a81`，45 commits / 114 files / +7,482 / -566。官方 VERSION 仍为 0.2.17，Fork 设为 0.2.18；Go 1.27.3、DOMPurify 3.4.17、follow-redirects 1.16.1 随上游升级。新增 `246_enable_gemini_image_generation_groups.sql` 与 Fork 246 邮件迁移并存，历史 SQL 不改、不执行迁移。保留全部 Fork 定制，含 nianzs Kiro 增量、零余额群发和 PR #8139；Kiro Responses credits 继续在新流式收尾中累计。验证见 `openspec/changes/sync-upstream-v0-2-18/`。
 - v0.2.17：Gemini 4 Argon、思考档位/摘要透传、OpenAI API Key 搜索模拟、GPT-5.5 订阅退役处理、Responses created_at、协议与模型目录修复、EasyPay 上游确认、Stripe 快照恢复和退款 pending 保留扣减。目标 `060d0160417782cd962a0c7f460f6cd4565d4916`，48 commits / 153 files / +7,035 / -808。官方 VERSION 仍为 0.2.16，Fork 设为 0.2.17。无新增迁移或依赖，历史 SQL 不变；部署示例不改。保留全部 Fork 定制，包括代理故障拒绝直连、邮件样式及未活跃用户余额券群发。搜索保留 Kiro 缓存计量和 Anthropic OAuth 原生边界；退款 pending 审计保存来源卡，成功终结事务中作废，失败保留。验证见 `openspec/changes/sync-upstream-v0-2-17/`。
 - v0.2.16：Claude Haiku 5.5、Gemini 显式上下文缓存、Vertex API Key / 模型同步、AI Studio `AQ.` Key、临时不可调度作用范围、分组多语言和运维账号列，以及 Responses 回退、图像限流、401 规则和支付倒计时等修复。目标 `01842576b3d5c1e2545b5a99ad555d36e28ed306`，79 commits / 213 files / +13,886 / -727。官方 VERSION 文件仍为 0.2.15，Fork 设为 0.2.16。新增 `242_group_i18n.sql` 与既有 `242_drop_platform_check_constraints.sql` 并存，并新增 `243`/`244`/`245`；历史 SQL 不变。Kiro 字段索引保留在分组 `i18n` 之后，缓存存储费继续使用冻结 `pricingAt`。验证见 `openspec/changes/sync-upstream-v0-2-16/`。
@@ -222,7 +226,7 @@ Access Ban 迁移顺序：`159` 建表 → `160` 扩展 rule_type / ua_pattern�
 
 见 `docs/FORK_VS_UPSTREAM.md` §14。原则：**Kiro + XorPay + Access Ban + 提示词审计 + 套餐续期 + Ops + UI 品牌等全部定制保留**。
 
-`upstream/main` 可能领先于 v0.2.18；同步时以 release tag 为基线，不带入 tag 后的 `main` 内容，并逐文件保留 Fork 模块。
+`upstream/main` 可能领先于 v0.2.20；同步时以 release tag 为基线，不带入 tag 后的 `main` 内容，并逐文件保留 Fork 模块。
 
 ---
 
@@ -237,4 +241,4 @@ Access Ban 迁移顺序：`159` 建表 → `160` 扩展 rule_type / ua_pattern�
 
 ---
 
-*维护：Fork 差异变更时同步更新 `docs/FORK_VS_UPSTREAM.md` 与本文件。*
+_维护：Fork 差异变更时同步更新 `docs/FORK_VS_UPSTREAM.md` 与本文件。_

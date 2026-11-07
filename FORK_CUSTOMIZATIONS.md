@@ -1,8 +1,15 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.2.19**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.19**，并保留本 Fork
+当前整合版本为 **v0.2.20**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.20**，并保留本 Fork
 的全部定制能力。
+
+## v0.2.20 同步（2026-11-07）
+
+管理 MCP/OAuth、管理员密钥权限扩展、精确邮箱黑名单、图片尺寸分流与 GPT Image 2.6、资源预算/JSON 热路径优化及协议兼容修复。官方目标 `dab829a4e9b7d1cc307189aea8b0319eb29e29d0`，112 commits / 459 files / +29,482 / -1,457；官方 VERSION 仍为 0.2.19，Fork 设为 0.2.20。保留全部 Fork 定制及同期批量兑换码功能；新增 `249_mcp_oauth.sql` 仅交付、不执行，历史 SQL 与部署配置不变。验证见 `openspec/changes/sync-upstream-v0-2-20/`。
+
+- MCP 接入现有封禁，邮箱规则并存；保留 Kiro 会话/计费缓存和受限密钥校验。最近的客服二维码、订阅倒计时与用户端批量兑换码一并保留。
+- MCP 默认关闭，需部署负责人显式配置公开地址并执行迁移；本次仅更新源码。
 
 ## v0.2.19 同步（2026-10-28）
 

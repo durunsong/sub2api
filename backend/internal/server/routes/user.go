@@ -16,6 +16,7 @@ func RegisterUserRoutes(
 	auditLog middleware.AuditLogMiddleware,
 	settingService *service.SettingService,
 	panelRateLimiter *middleware.PanelRateLimiter,
+	mcpAccessBan gin.HandlerFunc,
 ) {
 	authenticated := v1.Group("")
 	authenticated.Use(gin.HandlerFunc(jwtAuth))
@@ -29,6 +30,14 @@ func RegisterUserRoutes(
 		user := authenticated.Group("/user")
 		{
 			user.GET("/profile", h.User.GetProfile)
+			if h.MCPOAuth != nil {
+				mcp := user.Group("/mcp", mcpAccessBan)
+				mcp.GET("/config", h.MCPOAuth.ConnectionConfig)
+				mcp.GET("/grants", h.MCPOAuth.ListGrants)
+				mcp.DELETE("/grants/:id", h.MCPOAuth.RevokeGrant)
+				mcp.GET("/authorize", h.MCPOAuth.Preview)
+				mcp.POST("/authorize", h.MCPOAuth.Decide)
+			}
 			user.PUT("/password", h.User.ChangePassword)
 			user.PUT("", h.User.UpdateProfile)
 			user.GET("/aff", h.User.GetAffiliate)

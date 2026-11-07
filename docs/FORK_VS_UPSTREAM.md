@@ -2,25 +2,25 @@
 
 > **上游官方仓库**：[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api)
 > **本 Fork 远程**：`origin` → `durunsong/sub2api`（中转/部署用）
-> **对比基准**：官方 tag **`v0.2.19`**（同步于 2026-10-28；官方无 v0.1.174 tag）
-> **本 Fork 当前版本**：`backend/cmd/server/VERSION` = **0.2.19**
-> **最新同步统计**：官方 v0.2.18→v0.2.19 增加管理员 API Key、按张图片计费、GPT-6.1 Terra、Grok 模型诊断及 Gemini/计费修复；迁移 247/248；Fork 定制全部保留
-> **当前工作区**：已合入官方 v0.2.19，并保留 Kiro / XorPay / Access Ban / 提示词审计 / 订阅重置卡 / Ops / UI 品牌等全部定制，含登录失败自动封禁及重置卡提示
+> **对比基准**：官方 tag **`v0.2.20`**（同步于 2026-11-07；官方无 v0.1.174 tag）
+> **本 Fork 当前版本**：`backend/cmd/server/VERSION` = **0.2.20**
+> **最新同步统计**：管理 MCP/OAuth、管理员密钥权限扩展、精确邮箱黑名单、图片尺寸分流与 GPT Image 2.6、资源预算/JSON 热路径优化及协议兼容修复。官方目标 `dab829a4e9b7d1cc307189aea8b0319eb29e29d0`，112 commits / 459 files / +29,482 / -1,457；官方 VERSION 仍为 0.2.19，Fork 设为 0.2.20。保留全部 Fork 定制及同期批量兑换码功能；新增 `249_mcp_oauth.sql` 仅交付、不执行，历史 SQL 与部署配置不变。验证见 `openspec/changes/sync-upstream-v0-2-20/`。
+> **当前工作区**：已合入官方 v0.2.20，并保留 Kiro / XorPay / Access Ban / 提示词审计 / 订阅重置卡 / Ops / UI 品牌等全部定制，含登录失败自动封禁及重置卡提示
 > **维护**：新增 Fork 定制后，请同步更新本文与根目录 `AGENTS.md` 摘要。
 
 ---
 
 ## 1. 仓库关系与阅读顺序
 
-| 角色 | 说明 |
-|------|------|
-| **Wei-Shaw/sub2api** | 官方上游，功能与版本以该仓库 Releases / tag 为准 |
-| **durunsong/sub2api** | 本 Fork 的 `origin`，在官方之上叠加 Kiro / XorPay / UI 等定制 |
-| **本文档** | AI 与开发者改代码前的**完整差异清单** |
-| **`AGENTS.md`**（项目根） | AI 协作**强制摘要**与禁区，改代码前必读 |
-| **`FORK_CUSTOMIZATIONS.md`**（项目根） | 历史清单，已收敛到本文；保留作快捷索引 |
+| 角色                                   | 说明                                                          |
+| -------------------------------------- | ------------------------------------------------------------- |
+| **Wei-Shaw/sub2api**                   | 官方上游，功能与版本以该仓库 Releases / tag 为准              |
+| **durunsong/sub2api**                  | 本 Fork 的 `origin`，在官方之上叠加 Kiro / XorPay / UI 等定制 |
+| **本文档**                             | AI 与开发者改代码前的**完整差异清单**                         |
+| **`AGENTS.md`**（项目根）              | AI 协作**强制摘要**与禁区，改代码前必读                       |
+| **`FORK_CUSTOMIZATIONS.md`**（项目根） | 历史清单，已收敛到本文；保留作快捷索引                        |
 
-**注意**：本 Fork 已同步官方至 **v0.2.19**，但 **`upstream/main` 仍可能领先**。与官方同步时以目标 release **tag** 为准，不带入 tag 后的 `main` 内容；merge `main` 前务必先读本文 Fork 定制章节，禁止 blindly 采用上游覆盖 Kiro / XorPay / Access Ban 等模块。
+**注意**：本 Fork 已同步官方至 **v0.2.20**，但 **`upstream/main` 仍可能领先**。与官方同步时以目标 release **tag** 为准，不带入 tag 后的 `main` 内容；merge `main` 前务必先读本文 Fork 定制章节，禁止 blindly 采用上游覆盖 Kiro / XorPay / Access Ban 等模块。
 
 ---
 
@@ -28,27 +28,28 @@
 
 - **上游 PR #8139 定点合入（2026-10-21）**：完整应用 `e068c3d02ff8664c1142d5f7c51a05a82f75ad3d` 的 3 文件增量（+15/-1），将 `response.queued` / `response.metadata` 纳入共享元数据分类，保留实际输出前的过载重试与切号，覆盖普通 SSE、透传及 WS→HTTP 回归测试。未知事件与实际输出后禁止重放的边界保持不变；未引入其余上游提交，不调整重试预算、调度策略、版本或迁移。
 
-| # | 模块 | 类型 | 一句话 |
-|---|------|------|--------|
-| 1 | **Kiro 平台** | 新增 | AWS Kiro 全链路：OAuth、翻译、缓存模拟、粘性会话、计费 credits、429 冷却 |
-| 2 | **XorPay 支付** | 新增 | 支付宝扫码聚合支付，含 webhook、管理端配置、用户端 QR 流程 |
-| 3 | **Grok + Kiro 配额口径** | 修改 | 平台常量、默认配额、`157` 迁移 CHECK 约束同时含 `kiro` + `grok` |
-| 4 | **UI / 品牌** | 修改 | 首页/登录注册靛蓝紫罗兰主题、`logo.svg`、Kiro 紫色平台图标 |
-| 5 | **组件规范化** | 修改 | 原生 `<select>` → `Select.vue`；原生 `confirm/alert` → `ConfirmDialog` |
-| 6 | **支付 UX** | 修改 | 隐藏用户端倍率；XorPay 前端展示为「XorPay（支付宝）」；二维码金额展示优化 |
-| 7 | **版本弹窗** | 修改 | 管理员版本下拉**隐藏「立即更新」**，保留版本提示与更新日志链接 |
-| 8 | **Ops 错误日志** | 新增 | 管理员按条件批量删除 ops error logs |
-| 9 | **全局访问封禁（Access Ban）** | 新增 | v0.1.146 之后 Fork 自研：IP/CIDR 封禁 + 中间件拦截注册/API；扩展 UA / IP+UA / 邮箱后缀 |
-| 10 | **代理广告** | 删除/禁用 | 移除 `ProxyAdBanner` 相关展示 |
-| 11 | **构建与部署** | 修改 | Docker 使用 npmmirror、Kiro 环境变量、`.dockerignore` 文档打包调整 |
-| 12 | **资源与文档** | 新增 | Kiro 截图、微信群二维码；`docs/FORK_VS_UPSTREAM.md`、`AGENTS.md`；`docs/legal/` 合规文案 |
-| 13 | **管理端批量删用户** | 新增 | `POST /api/v1/admin/users/batch-delete`，UsersView 多选批量删除（跳过 admin） |
-| 14 | **订阅重置卡** | 新增 | 固定期限支付/正数订阅兑换重复购买改发永久重置卡；按购买时 `validity_days` 快照消费并从点击时重开周期 |
+| #   | 模块                           | 类型      | 一句话                                                                                               |
+| --- | ------------------------------ | --------- | ---------------------------------------------------------------------------------------------------- |
+| 1   | **Kiro 平台**                  | 新增      | AWS Kiro 全链路：OAuth、翻译、缓存模拟、粘性会话、计费 credits、429 冷却                             |
+| 2   | **XorPay 支付**                | 新增      | 支付宝扫码聚合支付，含 webhook、管理端配置、用户端 QR 流程                                           |
+| 3   | **Grok + Kiro 配额口径**       | 修改      | 平台常量、默认配额、`157` 迁移 CHECK 约束同时含 `kiro` + `grok`                                      |
+| 4   | **UI / 品牌**                  | 修改      | 首页/登录注册靛蓝紫罗兰主题、`logo.svg`、Kiro 紫色平台图标                                           |
+| 5   | **组件规范化**                 | 修改      | 原生 `<select>` → `Select.vue`；原生 `confirm/alert` → `ConfirmDialog`                               |
+| 6   | **支付 UX**                    | 修改      | 隐藏用户端倍率；XorPay 前端展示为「XorPay（支付宝）」；二维码金额展示优化                            |
+| 7   | **版本弹窗**                   | 修改      | 管理员版本下拉**隐藏「立即更新」**，保留版本提示与更新日志链接                                       |
+| 8   | **Ops 错误日志**               | 新增      | 管理员按条件批量删除 ops error logs                                                                  |
+| 9   | **全局访问封禁（Access Ban）** | 新增      | v0.1.146 之后 Fork 自研：IP/CIDR 封禁 + 中间件拦截注册/API；扩展 UA / IP+UA / 邮箱后缀               |
+| 10  | **代理广告**                   | 删除/禁用 | 移除 `ProxyAdBanner` 相关展示                                                                        |
+| 11  | **构建与部署**                 | 修改      | Docker 使用 npmmirror、Kiro 环境变量、`.dockerignore` 文档打包调整                                   |
+| 12  | **资源与文档**                 | 新增      | Kiro 截图、微信群二维码；`docs/FORK_VS_UPSTREAM.md`、`AGENTS.md`；`docs/legal/` 合规文案             |
+| 13  | **管理端批量删用户**           | 新增      | `POST /api/v1/admin/users/batch-delete`，UsersView 多选批量删除（跳过 admin）                        |
+| 14  | **订阅重置卡**                 | 新增      | 固定期限支付/正数订阅兑换重复购买改发永久重置卡；按购买时 `validity_days` 快照消费并从点击时重开周期 |
 
 **以下能力已在官方 v0.1.142+ 中，本 Fork 通过同步拥有，不算 Fork 独有开发**（合并时保留了 Kiro/XorPay 定制）：
 
-
-- **本次同步**：v0.2.18：Vertex service_account 配额、Gemini/Antigravity 生图门禁、流式断连计费与错误收尾、Codex 过载恢复和身份收敛、调度快照/模型映射优化、Grok Fast 定价及图片/工具兼容修复。目标 `ac1b8f1271be0d674fa6f074403c1410f30a3a81`，45 commits / 114 files / +7,482 / -566。官方 VERSION 仍为 0.2.17，Fork 设为 0.2.18；Go 1.27.3、DOMPurify 3.4.17、follow-redirects 1.16.1 随上游升级。新增 `246_enable_gemini_image_generation_groups.sql` 与 Fork 246 邮件迁移并存，历史 SQL 不改、不执行迁移。保留全部 Fork 定制，含 nianzs Kiro 增量、零余额群发和 PR #8139；Kiro Responses credits 继续在新流式收尾中累计。验证见 `openspec/changes/sync-upstream-v0-2-18/`。
+- **本次同步**：v0.2.20：管理 MCP/OAuth、管理员密钥权限扩展、精确邮箱黑名单、图片尺寸分流与 GPT Image 2.6、资源预算/JSON 热路径优化及协议兼容修复。官方目标 `dab829a4e9b7d1cc307189aea8b0319eb29e29d0`，112 commits / 459 files / +29,482 / -1,457；官方 VERSION 仍为 0.2.19，Fork 设为 0.2.20。保留全部 Fork 定制及同期批量兑换码功能；新增 `249_mcp_oauth.sql` 仅交付、不执行，历史 SQL 与部署配置不变。验证见 `openspec/changes/sync-upstream-v0-2-20/`。
+- **v0.2.19**：管理员 API Key、按张图片计费、GPT-6.1 Terra、Grok 模型诊断及 Gemini/计费修复；新增 247/248 SQL，与 Fork 同号迁移共存。
+- **v0.2.18**：Vertex service_account 配额、Gemini/Antigravity 生图门禁、流式断连计费与错误收尾、Codex 过载恢复和身份收敛、调度快照/模型映射优化、Grok Fast 定价及图片/工具兼容修复。目标 `ac1b8f1271be0d674fa6f074403c1410f30a3a81`，45 commits / 114 files / +7,482 / -566。官方 VERSION 仍为 0.2.17，Fork 设为 0.2.18；Go 1.27.3、DOMPurify 3.4.17、follow-redirects 1.16.1 随上游升级。新增 `246_enable_gemini_image_generation_groups.sql` 与 Fork 246 邮件迁移并存，历史 SQL 不改、不执行迁移。保留全部 Fork 定制，含 nianzs Kiro 增量、零余额群发和 PR #8139；Kiro Responses credits 继续在新流式收尾中累计。验证见 `openspec/changes/sync-upstream-v0-2-18/`。
 - **v0.2.17**：Gemini 4 Argon、思考档位/摘要透传、OpenAI API Key 搜索模拟、GPT-5.5 订阅退役处理、Responses created_at、协议与模型目录修复、EasyPay 上游确认、Stripe 快照恢复和退款 pending 保留扣减。目标 `060d0160417782cd962a0c7f460f6cd4565d4916`，48 commits / 153 files / +7,035 / -808。官方 VERSION 仍为 0.2.16，Fork 设为 0.2.17。无新增迁移或依赖，历史 SQL 不变；部署示例不改。保留全部 Fork 定制，包括代理故障拒绝直连、邮件样式及未活跃用户余额券群发。搜索保留 Kiro 缓存计量和 Anthropic OAuth 原生边界；退款 pending 审计保存来源卡，成功终结事务中作废，失败保留。验证见 `openspec/changes/sync-upstream-v0-2-17/`。
 - **v0.2.16**：Claude Haiku 5.5、Gemini 显式上下文缓存、Vertex API Key / 模型同步、AI Studio `AQ.` Key、临时不可调度作用范围、分组多语言和运维账号列，以及 Responses 回退、图像限流、401 规则和支付倒计时等修复。目标 `01842576b3d5c1e2545b5a99ad555d36e28ed306`，79 commits / 213 files / +13,886 / -727。官方 VERSION 文件仍为 0.2.15，Fork 设为 0.2.16。新增 `242_group_i18n.sql` 与既有 `242_drop_platform_check_constraints.sql` 并存，并新增 `243`/`244`/`245`；历史 SQL 不变。Kiro 字段索引保留在分组 `i18n` 之后，缓存存储费继续使用冻结 `pricingAt`。Gemini 缓存路由继续经过 Access Ban。验证见 `openspec/changes/sync-upstream-v0-2-16/`。
 - **v0.2.15**：统一平台目录、Command Code/Cline、多协议模型路由与发现、Anthropic 缓存/签名、Responses 工具历史、WS 每轮分组计费与图像用量、监控 TPS 和前端生命周期修复。目标 f2669c8cf62555cd92389b3f55920e9e6e7c6ff2，146 commits / 278 files / +19,277 / -1,241。Kiro 登记到共享目录，保留 XorPay、Access Ban、审计、永久重置卡、Ops、品牌和支付定制。新增 242 迁移仅交付，历史 SQL 不变；Go 1.27.2 与已有依赖安全升级同步到构建配置。验证见 openspec/changes/sync-upstream-v0-2-15/。
@@ -111,6 +112,15 @@
 v0.1.160 同步时额外补齐 `securityaudit.ProviderSet` 中 `*PromptService` 到 `PromptAdminService` 的 Wire 接口绑定，确保当前 Fork 可重新生成 `wire_gen.go`；其余提示词审计实现保持官方版本。
 
 ---
+
+## v0.2.20 同步边界（2026-11-07）
+
+- 以 v0.2.19 为三方基线，保留 Kiro、XorPay、Access Ban、永久重置卡、余额券群发、客服二维码、订阅倒计时及同期新增的批量兑换码；不带入目标标签后的 main。
+- MCP transport、OAuth 注册/令牌/撤销/发现以及用户授权接口接入 Access Ban；新精确邮箱黑名单与旧格式校验、邮箱后缀封禁并存，既有账号按上游规则登录。普通 IPBanGuard 命中后显式终止处理链，防止返回403后继续执行下游。
+- 修复公共图片计费入口遗漏的按张开关判断：专用图片端点按组配置计费，混合请求仍遵循 token 定价，保留 Kiro opts。
+- 新请求解析缓存保存/恢复 Kiro `BodySessionID` 并复制标量字符串；鉴权缓存同时保留 Kiro 配置、图片张数计费与隐私门；Kiro 被动用量查询遵守受限管理员密钥权限。
+- 新 `249_mcp_oauth.sql` 只新增授权、一次性授权码与令牌摘要表；MCP 默认关闭，需显式配置 `mcp.public_url`。不执行迁移；部署前备份并验证 OAuth 撤销/轮换。回退二进制不删除表，已发授权应先撤销。
+- MCP go-sdk 1.4.1 / moego 0.1.0-alpha.1 及安全升级按上游锁定；vue-i18n 11.4.16，CI Node 24。六个部署配置路径保持原样，新参数可用应用默认值；容器启用 MCP 时须由部署负责人显式传入配置。
 
 ## v0.2.18 同步边界（2026-10-23）
 
@@ -186,52 +196,52 @@ backend/internal/service/
 
 ### 3.3 后端 — 修改的接线文件（节选）
 
-| 文件 | 改动 |
-|------|------|
-| `backend/cmd/server/wire.go` / `wire_gen.go` | 注入 `kiroTokenProvider`（**在 grok 之前**） |
-| `backend/internal/handler/admin/account_handler.go` | Kiro 可用模型分支 |
-| `backend/internal/service/account_test_service.go` | 构造参数含 Kiro/Grok provider |
-| `backend/internal/service/account_usage_service.go` | `ProvideAccountUsageService` 注入 Kiro |
-| `backend/internal/handler/gateway_handler*.go` | Kiro 路由与转发 |
-| `backend/internal/service/gateway_service.go` 等 | Kiro 运行时调度 |
-| `backend/ent/schema/group.go` | Kiro group 字段 |
-| `backend/internal/repository/usage_log_repo.go` | `kiro_credits` 读写 |
+| 文件                                                | 改动                                         |
+| --------------------------------------------------- | -------------------------------------------- |
+| `backend/cmd/server/wire.go` / `wire_gen.go`        | 注入 `kiroTokenProvider`（**在 grok 之前**） |
+| `backend/internal/handler/admin/account_handler.go` | Kiro 可用模型分支                            |
+| `backend/internal/service/account_test_service.go`  | 构造参数含 Kiro/Grok provider                |
+| `backend/internal/service/account_usage_service.go` | `ProvideAccountUsageService` 注入 Kiro       |
+| `backend/internal/handler/gateway_handler*.go`      | Kiro 路由与转发                              |
+| `backend/internal/service/gateway_service.go` 等    | Kiro 运行时调度                              |
+| `backend/ent/schema/group.go`                       | Kiro group 字段                              |
+| `backend/internal/repository/usage_log_repo.go`     | `kiro_credits` 读写                          |
 
 ### 3.4 数据库迁移（Fork 新增）
 
-| 文件 | 作用 |
-|------|------|
-| `135_add_group_kiro_cache_emulation.sql` | Group 缓存模拟字段 |
-| `145_allow_kiro_user_platform_quotas.sql` | CHECK 约束加入 `kiro` |
-| `151_add_group_kiro_auto_sticky.sql` | 自动粘性开关 |
-| `152_add_group_kiro_sticky_session_ttl.sql` | 粘性 TTL |
-| `153_add_group_kiro_endpoint_mode.sql` | 端点模式 q/krs |
-| `153_add_usage_log_kiro_credits.sql` | 用量表 kiro_credits |
-| `157_user_platform_quotas_add_grok.sql` | **已改**：CHECK 含 `anthropic, openai, gemini, antigravity, kiro, grok` |
+| 文件                                        | 作用                                                                    |
+| ------------------------------------------- | ----------------------------------------------------------------------- |
+| `135_add_group_kiro_cache_emulation.sql`    | Group 缓存模拟字段                                                      |
+| `145_allow_kiro_user_platform_quotas.sql`   | CHECK 约束加入 `kiro`                                                   |
+| `151_add_group_kiro_auto_sticky.sql`        | 自动粘性开关                                                            |
+| `152_add_group_kiro_sticky_session_ttl.sql` | 粘性 TTL                                                                |
+| `153_add_group_kiro_endpoint_mode.sql`      | 端点模式 q/krs                                                          |
+| `153_add_usage_log_kiro_credits.sql`        | 用量表 kiro_credits                                                     |
+| `157_user_platform_quotas_add_grok.sql`     | **已改**：CHECK 含 `anthropic, openai, gemini, antigravity, kiro, grok` |
 
 ### 3.5 前端
 
-| 路径 | 作用 |
-|------|------|
-| `frontend/src/api/admin/kiro.ts` | Kiro 管理 API |
-| `frontend/src/composables/useKiroOAuth.ts` | OAuth 流程 |
-| `frontend/src/utils/platformColors.ts` | Kiro 紫色主题 |
-| `frontend/src/components/common/PlatformIcon.vue` / `PlatformTypeBadge.vue` | 平台图标 |
-| `frontend/src/types/index.ts` | `GroupPlatform` / `AccountPlatform` 含 `'kiro'`；Kiro 相关字段 |
-| 账号/分组/用量相关 View 与 Modal | 创建编辑账号、用量统计、配额等 |
+| 路径                                                                        | 作用                                                           |
+| --------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `frontend/src/api/admin/kiro.ts`                                            | Kiro 管理 API                                                  |
+| `frontend/src/composables/useKiroOAuth.ts`                                  | OAuth 流程                                                     |
+| `frontend/src/utils/platformColors.ts`                                      | Kiro 紫色主题                                                  |
+| `frontend/src/components/common/PlatformIcon.vue` / `PlatformTypeBadge.vue` | 平台图标                                                       |
+| `frontend/src/types/index.ts`                                               | `GroupPlatform` / `AccountPlatform` 含 `'kiro'`；Kiro 相关字段 |
+| 账号/分组/用量相关 View 与 Modal                                            | 创建编辑账号、用量统计、配额等                                 |
 
 #### 用户端 Kiro → Claude 品牌别名（2026-07-14）
 
 用户端采用展示别名，覆盖以下页面：
 
-| 页面 | 路由 | 改动记录 |
-|------|------|----------|
-| 用户仪表盘 | `/dashboard` | 平台用量统计中的 `kiro` 显示为 Claude |
-| API Key 管理 | `/keys` | 分组名称、描述、徽章、图标和下拉选项显示 Claude；搜索 `claude` 可命中内部 Kiro 分组 |
-| 可用渠道 | `/available-channels` | 渠道、平台、分组及模型区域使用 Claude 名称、图标和配色；搜索 `claude` 可命中 Kiro 渠道 |
-| 我的订阅 | `/subscriptions` | 订阅分组名称、描述、平台徽章、卡片边框和操作按钮使用 Claude 展示 |
-| 购买 / 续费 | `/purchase` | Kiro 与 Anthropic 套餐合并为 `Claude Max` 分类并统一徽章；OpenAI 协议下名称、分组名或描述含 `GLM` 的套餐独立显示为 `智普-GLM Plan MAX`，并从普通 OpenAI 分类排除；套餐卡片、确认页、续费弹窗和已有订阅使用 Claude 名称与配色 |
-| 用量—错误请求 | `/usage` | 错误列表和详情的平台字段显示 Claude |
+| 页面          | 路由                  | 改动记录                                                                                                                                                                                                                     |
+| ------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 用户仪表盘    | `/dashboard`          | 平台用量统计中的 `kiro` 显示为 Claude                                                                                                                                                                                        |
+| API Key 管理  | `/keys`               | 分组名称、描述、徽章、图标和下拉选项显示 Claude；搜索 `claude` 可命中内部 Kiro 分组                                                                                                                                          |
+| 可用渠道      | `/available-channels` | 渠道、平台、分组及模型区域使用 Claude 名称、图标和配色；搜索 `claude` 可命中 Kiro 渠道                                                                                                                                       |
+| 我的订阅      | `/subscriptions`      | 订阅分组名称、描述、平台徽章、卡片边框和操作按钮使用 Claude 展示                                                                                                                                                             |
+| 购买 / 续费   | `/purchase`           | Kiro 与 Anthropic 套餐合并为 `Claude Max` 分类并统一徽章；OpenAI 协议下名称、分组名或描述含 `GLM` 的套餐独立显示为 `智普-GLM Plan MAX`，并从普通 OpenAI 分类排除；套餐卡片、确认页、续费弹窗和已有订阅使用 Claude 名称与配色 |
+| 用量—错误请求 | `/usage`              | 错误列表和详情的平台字段显示 Claude                                                                                                                                                                                          |
 
 实现边界：
 
@@ -294,12 +304,12 @@ backend/internal/service/
 
 ### 4.3 Fork 支付 UX 定制（相对官方 + XorPay 本身）
 
-| 改动 | 文件/说明 |
-|------|-----------|
-| 用户端隐藏倍率展示 | `PaymentView.vue`、`UsageView.vue` CSV 导出等 |
-| XorPay 显示名 | 前端统一为 **「XorPay（支付宝）」** |
-| 二维码支付金额 | `AmountInput.vue`、`PaymentStatusPanel.vue` — `payAmount` / `creditedAmount` 分离展示 |
-| 充值订阅页优化 | 提交 `9a8786ff` 等近期支付流程调整 |
+| 改动               | 文件/说明                                                                             |
+| ------------------ | ------------------------------------------------------------------------------------- |
+| 用户端隐藏倍率展示 | `PaymentView.vue`、`UsageView.vue` CSV 导出等                                         |
+| XorPay 显示名      | 前端统一为 **「XorPay（支付宝）」**                                                   |
+| 二维码支付金额     | `AmountInput.vue`、`PaymentStatusPanel.vue` — `payAmount` / `creditedAmount` 分离展示 |
+| 充值订阅页优化     | 提交 `9a8786ff` 等近期支付流程调整                                                    |
 
 ---
 
@@ -316,16 +326,16 @@ backend/internal/service/
 
 ## 6. UI / 品牌 / 交互
 
-| 项 | 说明 | 主要文件 |
-|----|------|----------|
-| 首页与认证页配色 | 靛蓝紫罗兰主题 + 动效 | `frontend/src/views/HomeView.vue`, `components/layout/AuthLayout.vue` |
-| Logo | Fork 自定义 SVG | `frontend/public/logo.svg`（Flymux 风格） |
-| Select 组件 | 替换原生 `<select>` | 各 admin/account View；`components/common/Select.vue` |
-| ConfirmDialog | 替换原生 confirm/alert | 多处 admin/account 组件 |
-| 代理广告横幅 | 已移除 | `ProxyAdBanner` 相关引用清理 |
-| 版本徽章 | 隐藏「立即更新」按钮 | `frontend/src/components/common/VersionBadge.vue` |
-| 顶栏客服 | 悬停展示已配置微信号和上传的客服二维码 | `frontend/src/components/layout/AppHeader.vue`，设置项 `contact_qr_code` |
-| Kiro 截图 / 社群 | 文档与资源 | `assets/screenshots/kiro-*.png`, `assets/community/wechat-group.jpg` |
+| 项               | 说明                                   | 主要文件                                                                 |
+| ---------------- | -------------------------------------- | ------------------------------------------------------------------------ |
+| 首页与认证页配色 | 靛蓝紫罗兰主题 + 动效                  | `frontend/src/views/HomeView.vue`, `components/layout/AuthLayout.vue`    |
+| Logo             | Fork 自定义 SVG                        | `frontend/public/logo.svg`（Flymux 风格）                                |
+| Select 组件      | 替换原生 `<select>`                    | 各 admin/account View；`components/common/Select.vue`                    |
+| ConfirmDialog    | 替换原生 confirm/alert                 | 多处 admin/account 组件                                                  |
+| 代理广告横幅     | 已移除                                 | `ProxyAdBanner` 相关引用清理                                             |
+| 版本徽章         | 隐藏「立即更新」按钮                   | `frontend/src/components/common/VersionBadge.vue`                        |
+| 顶栏客服         | 悬停展示已配置微信号和上传的客服二维码 | `frontend/src/components/layout/AppHeader.vue`，设置项 `contact_qr_code` |
+| Kiro 截图 / 社群 | 文档与资源                             | `assets/screenshots/kiro-*.png`, `assets/community/wechat-group.jpg`     |
 
 ---
 
@@ -333,13 +343,13 @@ backend/internal/service/
 
 官方 v0.1.142 **无**此 API；本 Fork 新增：
 
-| 层 | 文件 |
-|----|------|
-| 路由 | `backend/internal/server/routes/admin.go` — `DELETE /ops/errors` |
-| Handler | `backend/internal/handler/admin/ops_handler.go` — `DeleteErrorLogs` |
-| Service | `backend/internal/service/ops_service.go` |
-| Repository | `backend/internal/repository/ops_repo.go` |
-| 前端 | `frontend/src/api/admin/ops.ts`, `OpsSystemLogTable.vue` 等 |
+| 层         | 文件                                                                |
+| ---------- | ------------------------------------------------------------------- |
+| 路由       | `backend/internal/server/routes/admin.go` — `DELETE /ops/errors`    |
+| Handler    | `backend/internal/handler/admin/ops_handler.go` — `DeleteErrorLogs` |
+| Service    | `backend/internal/service/ops_service.go`                           |
+| Repository | `backend/internal/repository/ops_repo.go`                           |
+| 前端       | `frontend/src/api/admin/ops.ts`, `OpsSystemLogTable.vue` 等         |
 
 删除需带时间范围等过滤条件（见 repository 测试 `ops_repo_error_where_test.go`）。
 
@@ -376,12 +386,12 @@ frontend/src/views/admin/IpBansView.vue
 
 在 IP 封禁基础上扩展为多类型 **Access Ban**：
 
-| 规则类型 | `rule_type` | 匹配逻辑 |
-|----------|-------------|----------|
-| IP / CIDR | `ip` | `ippkg.MatchesPattern(clientIP, pattern)` |
-| User-Agent 子串 | `ua` | UA contains pattern（不区分大小写） |
-| IP + UA 组合 | `ip_ua` | 同时匹配 `pattern` + `ua_pattern` |
-| 邮箱后缀 | `email_suffix` | 注册/绑邮时匹配 `@domain` 或 `*.domain` |
+| 规则类型        | `rule_type`    | 匹配逻辑                                  |
+| --------------- | -------------- | ----------------------------------------- |
+| IP / CIDR       | `ip`           | `ippkg.MatchesPattern(clientIP, pattern)` |
+| User-Agent 子串 | `ua`           | UA contains pattern（不区分大小写）       |
+| IP + UA 组合    | `ip_ua`        | 同时匹配 `pattern` + `ua_pattern`         |
+| 邮箱后缀        | `email_suffix` | 注册/绑邮时匹配 `@domain` 或 `*.domain`   |
 
 **新增/变更文件**
 
@@ -508,44 +518,44 @@ v0.2.12–v0.2.14 新增两个 `241` 迁移：订单 `bonus_amount DECIMAL(20,2)
 
 改动或 merge 前**必须先读现有实现**：
 
-| 文件 | Fork 改动性质 |
-|------|---------------|
-| `backend/cmd/server/wire.go` / `wire_gen.go` | Kiro + Grok TokenProvider / UsageService 注入 |
-| `backend/internal/domain/constants.go` | `PlatformKiro`, `PlatformGrok` |
-| `backend/internal/handler/admin/account_handler.go` | Kiro + Grok 可用模型分支 |
-| `backend/internal/service/account_test_service.go` | struct + 构造含 kiro/grok |
-| `backend/internal/service/account_usage_service.go` | Provide 版注入 Kiro |
-| `backend/internal/payment/types.go` / `provider/factory.go` | `TypeXorPay` |
-| `backend/migrations/157_user_platform_quotas_add_grok.sql` | CHECK 含 kiro+grok |
-| `backend/internal/i18n/*` + `frontend/src/i18n/locales/{zh,en}.ts` | Kiro / XorPay 文案 |
-| `frontend/src/types/index.ts` / `types/payment.ts` | Kiro / XorPay 类型 |
-| `frontend/src/views/user/PaymentView.vue` | 倍率隐藏 + 支付金额 UX |
-| `frontend/src/components/common/VersionBadge.vue` | 隐藏在线更新按钮 |
-| `backend/internal/service/ip_ban_service.go` | Access Ban 多规则类型 |
-| `backend/internal/server/middleware/ip_ban_guard.go` | Gateway/Auth 封禁中间件 |
-| `backend/internal/service/auth_service.go` | 注册邮箱校验 + 邮箱后缀封禁 |
-| `backend/migrations/159_create_ip_bans.sql` / `160_extend_access_ban_rules.sql` | Access Ban 表结构 |
-| `frontend/src/views/admin/IpBansView.vue` | 封禁规则管理 UI |
-| `backend/internal/server/routes/gateway.go` | Access Ban 中间件；官方新增 `/x_search` 须同步挂 `ipBanAnthropic` |
-| `backend/internal/handler/admin/group_handler.go` | 分组 `oneof` 含 `kiro`；合入官方字段时不可丢掉 |
-| `backend/internal/service/subscription_service.go` / `user_subscription_port.go` | 固定期限重复购买发卡、过期重开、按期限消费与兼容镜像 |
-| `backend/internal/repository/user_subscription_repo.go` | 重置卡幂等发放、行锁消费、用量/窗口原子重开与聚合查询 |
-| `backend/internal/service/payment_fulfillment.go` / `redeem_service.go` | 支付订单与正数订阅兑换的来源引用、`validity_days` 快照 |
-| `backend/internal/service/payment_refund.go` | 未消费来源卡与 REFUNDED 同事务作废；REFUNDING 重入不重复打网关 |
-| `backend/internal/handler/subscription_handler.go` / `server/routes/user.go` | 新消费接口及旧 `reset-daily` → 1 天卡兼容映射 |
-| `backend/migrations/224_create_user_subscription_reset_cards.sql` / `225_backfill_user_subscription_reset_cards.sql` | 永久卡明细、历史兼容计数按分组默认期限回填 |
-| `frontend/src/views/user/SubscriptionsView.vue` / `api/subscriptions.ts` / `types/index.ts` | `/subscriptions` 按期限展示永久重置卡与消费动作 |
+| 文件                                                                                                                 | Fork 改动性质                                                     |
+| -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `backend/cmd/server/wire.go` / `wire_gen.go`                                                                         | Kiro + Grok TokenProvider / UsageService 注入                     |
+| `backend/internal/domain/constants.go`                                                                               | `PlatformKiro`, `PlatformGrok`                                    |
+| `backend/internal/handler/admin/account_handler.go`                                                                  | Kiro + Grok 可用模型分支                                          |
+| `backend/internal/service/account_test_service.go`                                                                   | struct + 构造含 kiro/grok                                         |
+| `backend/internal/service/account_usage_service.go`                                                                  | Provide 版注入 Kiro                                               |
+| `backend/internal/payment/types.go` / `provider/factory.go`                                                          | `TypeXorPay`                                                      |
+| `backend/migrations/157_user_platform_quotas_add_grok.sql`                                                           | CHECK 含 kiro+grok                                                |
+| `backend/internal/i18n/*` + `frontend/src/i18n/locales/{zh,en}.ts`                                                   | Kiro / XorPay 文案                                                |
+| `frontend/src/types/index.ts` / `types/payment.ts`                                                                   | Kiro / XorPay 类型                                                |
+| `frontend/src/views/user/PaymentView.vue`                                                                            | 倍率隐藏 + 支付金额 UX                                            |
+| `frontend/src/components/common/VersionBadge.vue`                                                                    | 隐藏在线更新按钮                                                  |
+| `backend/internal/service/ip_ban_service.go`                                                                         | Access Ban 多规则类型                                             |
+| `backend/internal/server/middleware/ip_ban_guard.go`                                                                 | Gateway/Auth 封禁中间件                                           |
+| `backend/internal/service/auth_service.go`                                                                           | 注册邮箱校验 + 邮箱后缀封禁                                       |
+| `backend/migrations/159_create_ip_bans.sql` / `160_extend_access_ban_rules.sql`                                      | Access Ban 表结构                                                 |
+| `frontend/src/views/admin/IpBansView.vue`                                                                            | 封禁规则管理 UI                                                   |
+| `backend/internal/server/routes/gateway.go`                                                                          | Access Ban 中间件；官方新增 `/x_search` 须同步挂 `ipBanAnthropic` |
+| `backend/internal/handler/admin/group_handler.go`                                                                    | 分组 `oneof` 含 `kiro`；合入官方字段时不可丢掉                    |
+| `backend/internal/service/subscription_service.go` / `user_subscription_port.go`                                     | 固定期限重复购买发卡、过期重开、按期限消费与兼容镜像              |
+| `backend/internal/repository/user_subscription_repo.go`                                                              | 重置卡幂等发放、行锁消费、用量/窗口原子重开与聚合查询             |
+| `backend/internal/service/payment_fulfillment.go` / `redeem_service.go`                                              | 支付订单与正数订阅兑换的来源引用、`validity_days` 快照            |
+| `backend/internal/service/payment_refund.go`                                                                         | 未消费来源卡与 REFUNDED 同事务作废；REFUNDING 重入不重复打网关    |
+| `backend/internal/handler/subscription_handler.go` / `server/routes/user.go`                                         | 新消费接口及旧 `reset-daily` → 1 天卡兼容映射                     |
+| `backend/migrations/224_create_user_subscription_reset_cards.sql` / `225_backfill_user_subscription_reset_cards.sql` | 永久卡明细、历史兼容计数按分组默认期限回填                        |
+| `frontend/src/views/user/SubscriptionsView.vue` / `api/subscriptions.ts` / `types/index.ts`                          | `/subscriptions` 按期限展示永久重置卡与消费动作                   |
 
 ---
 
 ## 11. 构建与部署差异
 
-| 文件 | Fork 改动 |
-|------|-----------|
-| `Dockerfile` | `NPM_CONFIG_REGISTRY` 默认 npmmirror；`pnpm install --ignore-scripts` |
-| `.dockerignore` | 保留 `docs/`、`docs/legal/` 供前端合规页构建 |
-| `deploy/docker-compose*.yml` | 与 Fork 环境相关的挂载/标签（含 SELinux `:Z` 等历史修复） |
-| `deploy/.env.example` | Kiro 相关 env 示例 |
+| 文件                         | Fork 改动                                                             |
+| ---------------------------- | --------------------------------------------------------------------- |
+| `Dockerfile`                 | `NPM_CONFIG_REGISTRY` 默认 npmmirror；`pnpm install --ignore-scripts` |
+| `.dockerignore`              | 保留 `docs/`、`docs/legal/` 供前端合规页构建                          |
+| `deploy/docker-compose*.yml` | 与 Fork 环境相关的挂载/标签（含 SELinux `:Z` 等历史修复）             |
+| `deploy/.env.example`        | Kiro 相关 env 示例                                                    |
 
 ---
 
@@ -942,12 +952,12 @@ deploy/docker-compose.yml
 
 ## 16. 相关文档
 
-| 文档 | 说明 |
-|------|------|
-| [PAYMENT_CN.md](./PAYMENT_CN.md) | 支付配置（官方文档；XorPay 配置见代码与第 4 节） |
-| [ADMIN_PAYMENT_INTEGRATION_API.md](./ADMIN_PAYMENT_INTEGRATION_API.md) | 外部支付对接 Admin API |
-| [legal/admin-compliance.zh.md](./legal/admin-compliance.zh.md) | 管理端合规文案 |
+| 文档                                                                   | 说明                                             |
+| ---------------------------------------------------------------------- | ------------------------------------------------ |
+| [PAYMENT_CN.md](./PAYMENT_CN.md)                                       | 支付配置（官方文档；XorPay 配置见代码与第 4 节） |
+| [ADMIN_PAYMENT_INTEGRATION_API.md](./ADMIN_PAYMENT_INTEGRATION_API.md) | 外部支付对接 Admin API                           |
+| [legal/admin-compliance.zh.md](./legal/admin-compliance.zh.md)         | 管理端合规文案                                   |
 
 ---
 
-*最后更新：2026-10-23 · 基准：官方 v0.2.18 · 增量清单见 `FORK_CUSTOMIZATIONS.md` · 工作区：`git status --short`*
+_最后更新：2026-11-07 · 基准：官方 v0.2.20 · 增量清单见 `FORK_CUSTOMIZATIONS.md` · 工作区：`git status --short`_

@@ -77,7 +77,7 @@ func TestReadOpenAICompatBufferedTerminalMergesKiroCredits(t *testing.T) {
 	}
 
 	svc := &OpenAIGatewayService{}
-	finalResponse, usage, _, err := svc.readOpenAICompatBufferedTerminal(resp, c, "test buffered", "rid_buffered_kiro_credits")
+	finalResponse, usage, _, _, err := svc.readOpenAICompatBufferedTerminal(resp, c, &Account{ID: 1, Platform: PlatformKiro}, "test buffered", "rid_buffered_kiro_credits")
 	require.NoError(t, err)
 	require.NotNil(t, finalResponse)
 	require.Equal(t, 31, usage.InputTokens)

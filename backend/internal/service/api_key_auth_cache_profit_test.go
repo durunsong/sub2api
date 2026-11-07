@@ -84,6 +84,8 @@ func TestAPIKeyAuthSnapshotKiroPolicyRoundtrip(t *testing.T) {
 	svc := &APIKeyService{}
 	apiKey := profitAuthTestAPIKey()
 	apiKey.Group.Platform = PlatformKiro
+	apiKey.Group.RequirePrivacySet = true
+	apiKey.Group.ImageCountBilling = true
 	apiKey.Group.KiroCacheEmulationEnabled = true
 	apiKey.Group.KiroAutoStickyEnabled = true
 	apiKey.Group.KiroStickySessionTTLSeconds = 7200
@@ -95,6 +97,8 @@ func TestAPIKeyAuthSnapshotKiroPolicyRoundtrip(t *testing.T) {
 
 	materialized := svc.snapshotToAPIKey(apiKey.Key, snapshot)
 	require.NotNil(t, materialized.Group)
+	require.True(t, materialized.Group.RequirePrivacySet)
+	require.True(t, materialized.Group.ImageCountBilling)
 	require.True(t, materialized.Group.KiroCacheEmulationEnabled)
 	require.True(t, materialized.Group.KiroAutoStickyEnabled)
 	require.Equal(t, 7200, materialized.Group.KiroStickySessionTTLSeconds)

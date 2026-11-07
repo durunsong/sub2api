@@ -126,6 +126,13 @@ describe("SubscriptionPlanCard", () => {
     expect(text).not.toContain("/ 1天");
   });
 
+  it("renders plural admin-form validity units instead of mislabeled days (#4607)", () => {
+    expect(mountPlanCard("openai", { validity_days: 1, validity_unit: "months" }).text()).toContain("/ 月");
+    expect(mountPlanCard("openai", { validity_days: 3, validity_unit: "months" }).text()).toContain("/ 3月");
+    expect(mountPlanCard("openai", { validity_days: 2, validity_unit: "weeks" }).text()).toContain("/ 2周");
+    expect(mountPlanCard("openai", { validity_days: 30, validity_unit: "day" }).text()).toContain("/ 30天");
+  });
+
   it("uses the configured currency symbol while preserving USD for legacy plans", () => {
     const cnyPlan = mountPlanCard("openai", { currency: "CNY", original_price: 20 }).text();
 
