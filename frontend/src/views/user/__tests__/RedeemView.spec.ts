@@ -35,7 +35,7 @@ async function submitCode() {
     global: { stubs: { AppLayout: { template: '<div><slot /></div>' }, Icon: true } },
   })
   await flushPromises()
-  await wrapper.get('input#code').setValue(' REDEEM-CODE ')
+  await wrapper.get('textarea#code').setValue(' REDEEM-CODE ')
   await wrapper.get('form').trigger('submit')
   await flushPromises()
   return wrapper
@@ -71,8 +71,8 @@ describe('RedeemView refresh after redemption', () => {
       expect(showSuccess).toHaveBeenCalledWith('redeem.codeRedeemSuccess')
       expect(wrapper.text()).toContain('Code applied')
       expect(wrapper.text()).not.toContain('redeem.failedToRedeem')
-      expect((wrapper.get('input#code').element as HTMLInputElement).value).toBe('')
-      expect((wrapper.get('input#code').element as HTMLInputElement).disabled).toBe(false)
+      expect((wrapper.get('textarea#code').element as HTMLTextAreaElement).value).toBe('')
+      expect((wrapper.get('textarea#code').element as HTMLTextAreaElement).disabled).toBe(false)
       expect(getHistory).toHaveBeenCalledTimes(2)
       expect(wrapper.text()).toContain('REDEEM-C...')
       if (type === 'subscription') {
@@ -110,7 +110,7 @@ describe('RedeemView refresh after redemption', () => {
     expect(getHistory).toHaveBeenLastCalledWith(2, 100)
     expect(button('pagination.next').attributes('disabled')).toBeDefined()
     getHistory.mockResolvedValue({ items: [], total: 102 })
-    await wrapper.get('input#code').setValue('NEW-CODE')
+    await wrapper.get('textarea#code').setValue('NEW-CODE')
     await wrapper.get('form').trigger('submit')
     await flushPromises()
     expect(getHistory).toHaveBeenLastCalledWith(1, 100)
@@ -207,7 +207,7 @@ describe('RedeemView refresh after redemption', () => {
     expect(showWarning).not.toHaveBeenCalled()
     expect(showError).not.toHaveBeenCalled()
     expect(showSuccess).toHaveBeenCalledWith('redeem.codeRedeemSuccess')
-    expect((wrapper.get('input#code').element as HTMLInputElement).value).toBe('')
+    expect((wrapper.get('textarea#code').element as HTMLTextAreaElement).value).toBe('')
     wrapper.unmount()
   })
 
@@ -230,12 +230,92 @@ describe('RedeemView refresh after redemption', () => {
     expect(showError).toHaveBeenCalledWith('redeem.redeemFailed')
     expect(wrapper.text()).toContain('Invalid code')
     expect(wrapper.text()).not.toContain('Code applied')
-    expect((wrapper.get('input#code').element as HTMLInputElement).value).toBe(' REDEEM-CODE ')
+    expect((wrapper.get('textarea#code').element as HTMLTextAreaElement).value).toBe(' REDEEM-CODE ')
     expect(refreshUser).not.toHaveBeenCalled()
     expect(fetchActiveSubscriptions).not.toHaveBeenCalled()
     expect(getHistory).toHaveBeenCalledOnce()
     expect(showSuccess).not.toHaveBeenCalled()
     expect(showWarning).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  async function mountRedeem() {
+    const wrapper = mount(RedeemView, {
+      global: { stubs: { AppLayout: { template: '<div><slot /></div>' }, Icon: true } },
+    })
+    await flushPromises()
+    return wrapper
+  }
+
+  it('redeems each pasted code once and leaves only the failed code for retry', async () => {
+    redeem.mockImplementation(async (code: string) => {
+      if (code === 'BAD') return Promise.reject({ response: { data: { detail: 'Invalid code' } } })
+      if (code === 'SUB') return { type: 'subscription', value: 30, message: 'sub ok', group_name: 'Pro', validity_days: 30 }
+      return { type: 'balance', value: 5, message: `ok ${code}`, new_balance: 15 }
+    })
+    const wrapper = await mountRedeem()
+    await wrapper.get('textarea#code').setValue('GOOD\nBAD\nGOOD\nSUB')
+    expect(wrapper.text()).toContain('redeem.recognizedCount')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+
+    expect(redeem.mock.calls.map((call) => call[0])).toEqual(['GOOD', 'BAD', 'SUB'])
+    expect(wrapper.text()).toContain('ok GOOD')
+    expect(wrapper.text()).toContain('Invalid code')
+    expect(wrapper.text()).toContain('sub ok')
+    expect((wrapper.get('textarea#code').element as HTMLTextAreaElement).value).toBe('BAD')
+    expect(refreshUser).toHaveBeenCalledOnce()
+    expect(fetchActiveSubscriptions).toHaveBeenCalledWith(true)
+    expect(getHistory).toHaveBeenCalledTimes(2)
+    expect(showWarning).toHaveBeenCalledWith('redeem.batchPartialSuccess')
+    expect(showSuccess).not.toHaveBeenCalled()
+    expect(showError).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('stops after a rate limit and keeps the unsent codes', async () => {
+    redeem
+      .mockResolvedValueOnce({ type: 'balance', value: 1, message: 'ok first' })
+      .mockRejectedValueOnce({ status: 429, reason: 'REDEEM_RATE_LIMITED', message: 'too many failed attempts' })
+    const wrapper = await mountRedeem()
+    await wrapper.get('textarea#code').setValue('OK1\nBAD\nLATER')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+
+    expect(redeem.mock.calls.map((call) => call[0])).toEqual(['OK1', 'BAD'])
+    expect(wrapper.text()).toContain('too many failed attempts')
+    expect(wrapper.text()).toContain('redeem.batchStopped')
+    expect(wrapper.text()).toContain('redeem.notAttempted')
+    expect((wrapper.get('textarea#code').element as HTMLTextAreaElement).value).toBe('BAD\nLATER')
+    expect(showWarning).toHaveBeenCalledWith('redeem.batchPartialSuccess')
+    expect(refreshUser).toHaveBeenCalledOnce()
+    wrapper.unmount()
+  })
+
+  it('clears the box when every pasted code succeeds', async () => {
+    const wrapper = await mountRedeem()
+    await wrapper.get('textarea#code').setValue('A B')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+
+    expect(redeem).toHaveBeenCalledTimes(2)
+    expect((wrapper.get('textarea#code').element as HTMLTextAreaElement).value).toBe('')
+    expect(showSuccess).toHaveBeenCalledWith('redeem.batchAllSuccess')
+    expect(wrapper.text()).toContain('Code applied')
+    wrapper.unmount()
+  })
+
+  it('does not call the API when more than 50 codes are pasted', async () => {
+    const codes = Array.from({ length: 51 }, (_, index) => `CODE${String(index).padStart(3, '0')}`)
+    const wrapper = await mountRedeem()
+    await wrapper.get('textarea#code').setValue(codes.join('\n'))
+    expect(wrapper.get('button[type="submit"]').attributes('disabled')).toBeDefined()
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+
+    expect(redeem).not.toHaveBeenCalled()
+    expect(showError).toHaveBeenCalledWith('redeem.tooManyCodes')
+    expect((wrapper.get('textarea#code').element as HTMLTextAreaElement).value).toBe(codes.join('\n'))
     wrapper.unmount()
   })
 })

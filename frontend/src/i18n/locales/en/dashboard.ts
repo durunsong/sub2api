@@ -771,8 +771,8 @@ export default {
     concurrency: 'Concurrency',
     requests: 'requests',
     redeemCodeLabel: 'Redeem Code',
-    redeemCodePlaceholder: 'Enter your redeem code',
-    redeemCodeHint: 'Redeem codes are case-sensitive',
+    redeemCodePlaceholder: 'One code per line, or paste several at once',
+    redeemCodeHint: 'Codes are case-sensitive. Separate multiple codes with new lines, spaces, or commas',
     redeeming: 'Redeeming...',
     redeemButton: 'Redeem Code',
     redeemSuccess: 'Code Redeemed Successfully!',
@@ -805,7 +805,16 @@ export default {
     historyLoadFailed: 'Failed to load activity. Please try again.',
     userRefreshFailed: 'Redeemed successfully, but failed to refresh account information.',
     subscriptionRefreshFailed: 'Redeemed successfully, but failed to refresh subscription status.',
-    pleaseEnterCode: 'Please enter a redeem code'
+    pleaseEnterCode: 'Please enter a redeem code',
+    recognizedCount: '{count} codes recognized',
+    redeemButtonCount: 'Redeem {count} codes',
+    redeemingProgress: 'Redeeming {current}/{total}',
+    batchAllSuccess: 'All codes redeemed',
+    batchPartialSuccess: 'Some codes were redeemed',
+    batchSummary: '{success} succeeded, {failed} failed',
+    tooManyCodes: 'You can redeem at most {max} codes at a time',
+    batchStopped: 'Stopped because of a rate limit or temporary error. Remaining codes were not submitted.',
+    notAttempted: 'Not submitted'
   },
 
   // Profile

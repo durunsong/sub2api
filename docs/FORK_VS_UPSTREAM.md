@@ -472,6 +472,15 @@ frontend/src/i18n/locales/en/misc.ts
 - 已知取舍：不做跨批次去重，同一用户可在多个批次中各收到一张券。
 - 关键文件：`backend/internal/service/redeem_email_{models,renderer,service,worker}.go`、`backend/internal/repository/redeem_email_repo.go`、`backend/internal/handler/admin/redeem_email_handler.go`、`backend/internal/server/routes/admin.go`、`backend/internal/server/middleware/audit_log.go`、Wire 接线（`cmd/server/wire.go`、`wire_gen.go`、`internal/{handler,service,repository}/wire.go`、`internal/handler/handler.go`）、`frontend/src/components/admin/redeem/`、`frontend/src/views/admin/RedeemView.vue`、`frontend/src/api/admin/redeem.ts`、`frontend/src/types/index.ts`、`frontend/src/i18n/locales/{zh,en}/fork.ts`。
 
+### 8.7 用户端批量兑换（Fork 新增，2026-11-07）
+
+用户端 `/redeem` 支持把多条兑换码直接粘贴进同一个输入框后一次兑换。群发邮件里的 32 位十六进制码、管理端 `XXXX-XXXX-XXXX-XXXX` 码都可以按行粘贴。
+
+- 解析：按换行、空格、逗号和分号拆分，去掉首尾引号和行首序号/项目符号，去重并保留原大小写。单次最多 50 条。
+- 提交：仍逐条调用既有 `POST /api/v1/redeem`，不新增接口，每条兑换保持原来的事务、锁和失败计数。单条「不存在 / 已使用 / 已过期」继续处理后面的码；遇到限流（429 / `REDEEM_RATE_LIMITED`）、未登录、网络错误或 5xx 时停止，剩余码标记为未提交。
+- 结果：全部成功则清空输入框；有失败或未提交时，只把这些码留在输入框里，避免重试时再次提交已成功的码。离开页面后停止后续请求。
+- 关键文件：`frontend/src/views/user/RedeemView.vue`、`frontend/src/views/user/redeemCodes.ts`、`frontend/src/i18n/locales/{zh,en}/dashboard.ts`。
+
 ---
 
 ## 9. 迁移红线（必守）

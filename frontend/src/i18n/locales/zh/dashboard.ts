@@ -775,8 +775,8 @@ export default {
     concurrency: '并发数',
     requests: '请求',
     redeemCodeLabel: '兑换码',
-    redeemCodePlaceholder: '请输入兑换码',
-    redeemCodeHint: '兑换码区分大小写',
+    redeemCodePlaceholder: '每行一个兑换码，可直接粘贴多条',
+    redeemCodeHint: '兑换码区分大小写。多条可用换行、空格或逗号分隔',
     redeeming: '兑换中...',
     redeemButton: '兑换',
     redeemSuccess: '兑换成功！',
@@ -809,7 +809,16 @@ export default {
     historyLoadFailed: '加载兑换记录失败，请重试。',
     userRefreshFailed: '兑换成功，但账户信息刷新失败。',
     subscriptionRefreshFailed: '兑换成功，但订阅状态刷新失败。',
-    pleaseEnterCode: '请输入兑换码'
+    pleaseEnterCode: '请输入兑换码',
+    recognizedCount: '已识别 {count} 个兑换码',
+    redeemButtonCount: '兑换 {count} 个',
+    redeemingProgress: '兑换中 {current}/{total}',
+    batchAllSuccess: '全部兑换成功',
+    batchPartialSuccess: '部分兑换成功',
+    batchSummary: '成功 {success} 个，失败 {failed} 个',
+    tooManyCodes: '一次最多兑换 {max} 个兑换码',
+    batchStopped: '请求过于频繁或服务暂时不可用，剩余兑换码未继续提交',
+    notAttempted: '未提交'
   },
 
   // Profile

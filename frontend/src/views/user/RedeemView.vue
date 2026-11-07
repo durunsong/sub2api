@@ -28,27 +28,32 @@
                 {{ t('redeem.redeemCodeLabel') }}
               </label>
               <div class="relative mt-1">
-                <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                <div class="pointer-events-none absolute left-0 top-0 flex items-start pl-4 pt-3">
                   <Icon name="gift" size="md" class="text-gray-400 dark:text-dark-500" />
                 </div>
-                <input
+                <textarea
                   id="code"
                   v-model="redeemCode"
-                  type="text"
-                  required
+                  rows="6"
                   :placeholder="t('redeem.redeemCodePlaceholder')"
                   :disabled="submitting"
-                  class="input py-3 pl-12 text-lg"
-                />
+                  class="input min-h-36 resize-y py-3 pl-12 font-mono leading-6"
+                ></textarea>
               </div>
               <p class="input-hint">
                 {{ t('redeem.redeemCodeHint') }}
+              </p>
+              <p v-if="parsedCodes.length > MAX_REDEEM_BATCH" class="input-error-text">
+                {{ t('redeem.tooManyCodes', { max: MAX_REDEEM_BATCH }) }}
+              </p>
+              <p v-else-if="parsedCodes.length > 1" class="input-hint">
+                {{ t('redeem.recognizedCount', { count: parsedCodes.length }) }}
               </p>
             </div>
 
             <button
               type="submit"
-              :disabled="!redeemCode || submitting"
+              :disabled="submitting || parsedCodes.length === 0 || parsedCodes.length > MAX_REDEEM_BATCH"
               class="btn btn-primary w-full py-3"
             >
               <svg
@@ -72,7 +77,15 @@
                 ></path>
               </svg>
               <Icon v-else name="checkCircle" size="md" class="mr-2" />
-              {{ submitting ? t('redeem.redeeming') : t('redeem.redeemButton') }}
+              {{
+                submitting
+                  ? redeemTotal > 1
+                    ? t('redeem.redeemingProgress', { current: redeemCurrent, total: redeemTotal })
+                    : t('redeem.redeeming')
+                  : parsedCodes.length > 1
+                    ? t('redeem.redeemButtonCount', { count: parsedCodes.length })
+                    : t('redeem.redeemButton')
+              }}
             </button>
           </form>
         </div>
@@ -131,6 +144,46 @@
           </div>
         </div>
       </transition>
+
+      <div v-if="batchOutcomes.length" class="card">
+        <div class="p-6">
+          <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
+            {{
+              batchSuccessCount > 0 && batchFailedCount + batchSkippedCount > 0
+                ? t('redeem.batchPartialSuccess')
+                : batchSuccessCount > 0
+                  ? t('redeem.batchAllSuccess')
+                  : t('redeem.redeemFailed')
+            }}
+          </h3>
+          <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+            {{ t('redeem.batchSummary', { success: batchSuccessCount, failed: batchFailedCount }) }}
+          </p>
+          <p v-if="batchSkippedCount" class="mt-1 text-sm text-amber-700 dark:text-amber-300">
+            {{ t('redeem.batchStopped') }}
+          </p>
+          <ul class="mt-4 space-y-2">
+            <li
+              v-for="item in batchOutcomes"
+              :key="item.code"
+              class="rounded-xl px-4 py-3 text-sm"
+              :class="
+                item.status === 'success'
+                  ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300'
+                  : item.status === 'failed'
+                    ? 'bg-red-50 text-red-800 dark:bg-red-900/20 dark:text-red-300'
+                    : 'bg-gray-50 text-gray-600 dark:bg-dark-800 dark:text-gray-300'
+              "
+            >
+              <p class="break-all font-mono text-xs">{{ item.code }}</p>
+              <p v-if="item.status === 'skipped' || item.message" class="mt-1">
+                {{ item.status === 'skipped' ? t('redeem.notAttempted') : item.message }}
+              </p>
+              <p v-if="item.result" class="mt-1 font-medium">{{ addedLabel(item.result) }}</p>
+            </li>
+          </ul>
+        </div>
+      </div>
 
       <!-- Error Message -->
       <transition name="fade">
@@ -366,7 +419,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onBeforeUnmount, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useAppStore } from '@/stores/app'
@@ -375,6 +428,7 @@ import { redeemAPI, authAPI, type RedeemHistoryItem } from '@/api'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Icon from '@/components/icons/Icon.vue'
 import { formatDateTime } from '@/utils/format'
+import { MAX_REDEEM_BATCH, parseRedeemCodes } from './redeemCodes'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
@@ -383,9 +437,7 @@ const subscriptionStore = useSubscriptionStore()
 
 const user = computed(() => authStore.user)
 
-const redeemCode = ref('')
-const submitting = ref(false)
-const redeemResult = ref<{
+type RedeemResult = {
   message: string
   type: string
   value: number
@@ -393,8 +445,27 @@ const redeemResult = ref<{
   new_concurrency?: number
   group_name?: string
   validity_days?: number
-} | null>(null)
+  group?: { name?: string }
+}
+
+type BatchOutcome = {
+  code: string
+  status: 'success' | 'failed' | 'skipped'
+  message: string
+  result?: RedeemResult
+}
+
+const redeemCode = ref('')
+const submitting = ref(false)
+const redeemResult = ref<RedeemResult | null>(null)
 const errorMessage = ref('')
+const batchOutcomes = ref<BatchOutcome[]>([])
+const redeemTotal = ref(0)
+const redeemCurrent = ref(0)
+const parsedCodes = computed(() => parseRedeemCodes(redeemCode.value))
+const batchSuccessCount = computed(() => batchOutcomes.value.filter((item) => item.status === 'success').length)
+const batchFailedCount = computed(() => batchOutcomes.value.filter((item) => item.status === 'failed').length)
+const batchSkippedCount = computed(() => batchOutcomes.value.filter((item) => item.status === 'skipped').length)
 
 // History data
 const history = ref<RedeemHistoryItem[]>([])
@@ -405,6 +476,7 @@ const historyTotal = ref(0)
 let historyRequest = 0
 let loadedHistoryPageSize = 20
 const contactInfo = ref('')
+let redeemGeneration = 0
 
 // Helper functions for history display
 const isBalanceType = (type: string) => {
@@ -471,55 +543,128 @@ const fetchHistory = async (page = 1) => {
   }
 }
 
+const redeemErrorText = (error: any) => {
+  const message = error?.message || error?.response?.data?.message || error?.response?.data?.detail
+  return typeof message === 'string' && message.trim() ? message : t('redeem.failedToRedeem')
+}
+
+const shouldStopBatch = (error: any) => {
+  if (error?.reason === 'REDEEM_RATE_LIMITED') return true
+  const status = typeof error?.status === 'number' ? error.status : error?.response?.status
+  return status === 429 || status === 401 || status === 0 || (typeof status === 'number' && status >= 500)
+}
+
+const addedLabel = (result: RedeemResult) => {
+  if (result.type === 'balance' && typeof result.value === 'number') {
+    return `${t('redeem.added')}: $${result.value.toFixed(2)}`
+  }
+  if (result.type === 'concurrency' && typeof result.value === 'number') {
+    return `${t('redeem.added')}: ${result.value} ${t('redeem.concurrentRequests')}`
+  }
+  if (result.type === 'subscription') {
+    const name = result.group_name || result.group?.name
+    const days = result.validity_days ? t('redeem.subscriptionDays', { days: result.validity_days }) : ''
+    return [t('redeem.subscriptionAssigned'), name ? `- ${name}` : '', days].filter(Boolean).join(' ')
+  }
+  return result.message
+}
+
 const handleRedeem = async () => {
-  if (!redeemCode.value.trim()) {
+  if (submitting.value) return
+  const codes = parsedCodes.value
+  if (codes.length === 0) {
     appStore.showError(t('redeem.pleaseEnterCode'))
     return
   }
+  if (codes.length > MAX_REDEEM_BATCH) {
+    appStore.showError(t('redeem.tooManyCodes', { max: MAX_REDEEM_BATCH }))
+    return
+  }
 
+  const generation = ++redeemGeneration
   submitting.value = true
   errorMessage.value = ''
   redeemResult.value = null
+  batchOutcomes.value = []
+  redeemTotal.value = codes.length
+  redeemCurrent.value = 0
 
+  const outcomes: BatchOutcome[] = []
   try {
-    const result = await redeemAPI.redeem(redeemCode.value.trim())
-
-    redeemResult.value = result
-
-    // Refresh user data to get updated balance/concurrency
-    try {
-      await authStore.refreshUser()
-    } catch (error) {
-      console.error('Failed to refresh user after redeem:', error)
-      appStore.showWarning(t('redeem.userRefreshFailed'))
-    }
-
-    // If subscription type, immediately refresh subscription status
-    if (result.type === 'subscription') {
+    for (let index = 0; index < codes.length; index += 1) {
+      if (generation !== redeemGeneration) return
+      const code = codes[index]
+      redeemCurrent.value = index + 1
       try {
-        await subscriptionStore.fetchActiveSubscriptions(true) // force refresh
-      } catch (error) {
-        console.error('Failed to refresh subscriptions after redeem:', error)
-        appStore.showWarning(t('redeem.subscriptionRefreshFailed'))
+        const result = await redeemAPI.redeem(code)
+        if (generation !== redeemGeneration) return
+        outcomes.push({ code, status: 'success', message: result.message, result })
+      } catch (error: any) {
+        if (generation !== redeemGeneration) return
+        outcomes.push({ code, status: 'failed', message: redeemErrorText(error) })
+        if (codes.length > 1 && shouldStopBatch(error)) {
+          for (const rest of codes.slice(index + 1)) {
+            outcomes.push({ code: rest, status: 'skipped', message: t('redeem.batchStopped') })
+          }
+          break
+        }
+      }
+    }
+    if (generation !== redeemGeneration) return
+
+    const successes = outcomes.filter((item) => item.status === 'success')
+    const unfinished = outcomes.filter((item) => item.status !== 'success')
+    if (codes.length === 1) {
+      const only = outcomes[0]
+      if (only?.status === 'success' && only.result) {
+        redeemResult.value = only.result
+        redeemCode.value = ''
+        appStore.showSuccess(t('redeem.codeRedeemSuccess'))
+      } else {
+        errorMessage.value = only?.message || t('redeem.failedToRedeem')
+        appStore.showError(t('redeem.redeemFailed'))
+      }
+    } else {
+      batchOutcomes.value = outcomes
+      if (unfinished.length === 0) {
+        redeemCode.value = ''
+        appStore.showSuccess(t('redeem.batchAllSuccess'))
+      } else {
+        redeemCode.value = unfinished.map((item) => item.code).join('\n')
+        if (successes.length > 0) appStore.showWarning(t('redeem.batchPartialSuccess'))
+        else appStore.showError(t('redeem.redeemFailed'))
       }
     }
 
-    // Clear the input
-    redeemCode.value = ''
-
-    // Refresh history
-    await fetchHistory()
-
-    // Show success toast
-    appStore.showSuccess(t('redeem.codeRedeemSuccess'))
-  } catch (error: any) {
-    errorMessage.value = error.response?.data?.detail || t('redeem.failedToRedeem')
-
-    appStore.showError(t('redeem.redeemFailed'))
+    if (successes.length > 0) {
+      try {
+        await authStore.refreshUser()
+      } catch (error) {
+        console.error('Failed to refresh user after redeem:', error)
+        appStore.showWarning(t('redeem.userRefreshFailed'))
+      }
+      if (successes.some((item) => item.result?.type === 'subscription')) {
+        try {
+          await subscriptionStore.fetchActiveSubscriptions(true)
+        } catch (error) {
+          console.error('Failed to refresh subscriptions after redeem:', error)
+          appStore.showWarning(t('redeem.subscriptionRefreshFailed'))
+        }
+      }
+      await fetchHistory()
+    }
   } finally {
-    submitting.value = false
+    if (generation === redeemGeneration) {
+      submitting.value = false
+      redeemTotal.value = 0
+      redeemCurrent.value = 0
+    }
   }
 }
+
+onBeforeUnmount(() => {
+  redeemGeneration += 1
+})
 
 onMounted(async () => {
   fetchHistory()
