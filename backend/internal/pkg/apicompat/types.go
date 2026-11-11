@@ -7,6 +7,9 @@ package apicompat
 import (
 	"bytes"
 	"encoding/json"
+
+	"github.com/Wei-Shaw/sub2api/internal/pkg/openai"
+	"github.com/tidwall/gjson"
 )
 
 // ---------------------------------------------------------------------------
@@ -417,6 +420,9 @@ type ResponsesOutput struct {
 	Arguments string `json:"arguments,omitempty"`
 	// 来源为 namespace 子工具时的归属命名空间（codex 按 namespace+name 路由该调用）。
 	Namespace string `json:"namespace,omitempty"`
+	// Preserve the upstream encryption marker, including explicit null/[];
+	// omitting it can make sealed arguments appear to be plaintext.
+	EncryptedFunctionArgs json.RawMessage `json:"encrypted_function_args,omitempty"`
 
 	// type=custom_tool_call（custom/freeform 工具，input 为自由文本）
 	Input string `json:"input,omitempty"`
@@ -504,6 +510,10 @@ type ResponsesUsage struct {
 	TotalTokens              int `json:"total_tokens"`
 	CacheCreationInputTokens int `json:"cache_creation_input_tokens,omitempty"`
 
+	// Validated internal counters; only upstream nested details determine TTL.
+	CacheCreation30mInputTokens int `json:"-"`
+	CacheCreation12hInputTokens int `json:"-"`
+
 	// Optional detailed breakdown
 	InputTokensDetails  *ResponsesInputTokensDetails  `json:"input_tokens_details,omitempty"`
 	OutputTokensDetails *ResponsesOutputTokensDetails `json:"output_tokens_details,omitempty"`
@@ -572,6 +582,7 @@ func (u *ResponsesUsage) UnmarshalJSON(data []byte) error {
 	if canonicalCacheCreationTokens != nil {
 		u.CacheCreationInputTokens = max(*canonicalCacheCreationTokens, 0)
 	}
+	u.CacheCreation30mInputTokens, u.CacheCreation12hInputTokens = openai.CacheCreationTTLTokensFromUsage(gjson.ParseBytes(data), u.CacheCreationInputTokens)
 	if u.TotalTokens == 0 && (u.InputTokens != 0 || u.OutputTokens != 0) {
 		u.TotalTokens = u.InputTokens + u.OutputTokens
 	}

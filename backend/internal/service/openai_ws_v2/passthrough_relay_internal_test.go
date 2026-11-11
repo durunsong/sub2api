@@ -400,6 +400,51 @@ func TestRelayUsageTerminalNonZeroReplacesFallbackAsWhole(t *testing.T) {
 	require.Equal(t, Usage{InputTokens: 3}, state.usage)
 }
 
+func TestRelayUsageCacheWriteTTLSnapshotReplacement(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name, event, usage string
+		total, short, long int
+	}{
+		{"terminal replaces", "response.completed", `{"input_tokens":8,"output_tokens":1,"input_tokens_details":{"cache_write_tokens":7,"cache_write_tokens_details":{"ttl_30m_tokens":7,"ttl_12h_tokens":0}}}`, 7, 7, 0},
+		{"terminal missing details", "response.completed", `{"input_tokens":8,"output_tokens":1,"input_tokens_details":{"cache_write_tokens":7}}`, 7, 0, 0},
+		{"terminal invalid details", "response.completed", `{"input_tokens":8,"output_tokens":1,"input_tokens_details":{"cache_write_tokens":7,"cache_write_tokens_details":{"ttl_30m_tokens":2,"ttl_12h_tokens":18}}}`, 7, 0, 0},
+		{"terminal canonical zero", "response.completed", `{"input_tokens":8,"output_tokens":1,"cache_creation_input_tokens":20,"input_tokens_details":{"cache_write_tokens":0}}`, 0, 0, 0},
+		{"progress replaces", "response.in_progress", `{"input_tokens_details":{"cache_write_tokens":7,"cache_write_tokens_details":{"ttl_30m_tokens":7,"ttl_12h_tokens":0}}}`, 7, 7, 0},
+		{"progress missing details", "response.in_progress", `{"input_tokens_details":{"cache_write_tokens":7}}`, 7, 0, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			state := &relayState{}
+			parseUsageAndAccumulate(state, []byte(`{"usage":{"input_tokens":30,"output_tokens":2,"input_tokens_details":{"cache_write_tokens":20,"cache_write_tokens_details":{"ttl_30m_tokens":2,"ttl_12h_tokens":18}}}}`), "response.in_progress", nil)
+			require.Equal(t, 18, state.turnUsage.CacheCreation12hInputTokens)
+			parseUsageAndAccumulate(state, []byte(`{"usage":`+tc.usage+`}`), tc.event, nil)
+			turn := finalizeRelayTurnUsage(state)
+			require.Equal(t, tc.total, turn.CacheCreationInputTokens)
+			require.Equal(t, tc.short, turn.CacheCreation30mInputTokens)
+			require.Equal(t, tc.long, turn.CacheCreation12hInputTokens)
+			require.Equal(t, turn, state.usage)
+			require.Equal(t, Usage{}, state.turnUsage)
+			require.Equal(t, Usage{}, finalizeRelayTurnUsage(state))
+			require.Equal(t, turn, state.usage, "finalization must not double-count a turn")
+		})
+	}
+}
+
+func TestRelayUsageCacheWriteTTLMultiTurn(t *testing.T) {
+	t.Parallel()
+	state := &relayState{}
+	for _, usage := range []string{
+		`{"input_tokens":30,"output_tokens":2,"input_tokens_details":{"cache_write_tokens":20,"cache_write_tokens_details":{"ttl_30m_tokens":2,"ttl_12h_tokens":18}}}`,
+		`{"input_tokens":8,"output_tokens":1,"input_tokens_details":{"cache_write_tokens":7,"cache_write_tokens_details":{"ttl_30m_tokens":7,"ttl_12h_tokens":0}}}`,
+	} {
+		parseUsageAndAccumulate(state, []byte(`{"usage":`+usage+`}`), "response.completed", nil)
+		finalizeRelayTurnUsage(state)
+	}
+	result := &RelayResult{}
+	enrichResult(result, state, time.Second)
+	require.Equal(t, Usage{InputTokens: 38, OutputTokens: 3, CacheCreationInputTokens: 27, CacheCreation30mInputTokens: 9, CacheCreation12hInputTokens: 18}, result.Usage)
+}
+
 func TestObserveUpstreamMessageBareErrorClearsTurnStateAndFinalizesUsageOnce(t *testing.T) {
 	t.Parallel()
 

@@ -46,7 +46,7 @@ func TestHandleAnthropicStreamingResponseMergesKiroCredits(t *testing.T) {
 			``,
 			`data: {"type":"response.output_text.delta","delta":"ok"}`,
 			``,
-			`data: {"type":"response.completed","response":{"id":"resp_kiro","object":"response","model":"gpt-5.6-terra","status":"completed","output":[{"type":"message","id":"msg_1","role":"assistant","status":"completed","content":[{"type":"output_text","text":"ok"}]}],"usage":{"input_tokens":31,"output_tokens":7,"total_tokens":38,"input_tokens_details":{"cached_tokens":5},"_sub2api_kiro_credits":0.41}}}`,
+			`data: {"type":"response.completed","response":{"id":"resp_kiro","object":"response","model":"gpt-5.6-terra","status":"completed","output":[{"type":"message","id":"msg_1","role":"assistant","status":"completed","content":[{"type":"output_text","text":"ok"}]}],"usage":{"input_tokens":31,"output_tokens":7,"total_tokens":38,"input_tokens_details":{"cached_tokens":5,"cache_write_tokens":20,"cache_write_tokens_details":{"ttl_30m_tokens":2,"ttl_12h_tokens":18}},"_sub2api_kiro_credits":0.41}}}`,
 			``,
 		}, "\n"))),
 	}
@@ -58,6 +58,9 @@ func TestHandleAnthropicStreamingResponseMergesKiroCredits(t *testing.T) {
 	require.Equal(t, 31, result.Usage.InputTokens)
 	require.Equal(t, 7, result.Usage.OutputTokens)
 	require.Equal(t, 5, result.Usage.CacheReadInputTokens)
+	require.Equal(t, 20, result.Usage.CacheCreationInputTokens)
+	require.Equal(t, 2, result.Usage.CacheCreation30mInputTokens)
+	require.Equal(t, 18, result.Usage.CacheCreation12hInputTokens)
 	require.InDelta(t, 0.41, result.Usage.KiroCredits, 0.000001)
 	require.Contains(t, rec.Body.String(), `message_stop`)
 	require.NotContains(t, rec.Body.String(), `_sub2api_kiro_credits`)
@@ -71,7 +74,7 @@ func TestReadOpenAICompatBufferedTerminalMergesKiroCredits(t *testing.T) {
 	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
 	resp := &http.Response{
 		Body: io.NopCloser(strings.NewReader(strings.Join([]string{
-			`data: {"type":"response.completed","response":{"id":"resp_kiro","object":"response","model":"gpt-5.6-terra","status":"completed","output":[],"usage":{"input_tokens":31,"output_tokens":7,"total_tokens":38,"input_tokens_details":{"cached_tokens":5},"_sub2api_kiro_credits":0.41}}}`,
+			`data: {"type":"response.completed","response":{"id":"resp_kiro","object":"response","model":"gpt-5.6-terra","status":"completed","output":[],"usage":{"input_tokens":31,"output_tokens":7,"total_tokens":38,"input_tokens_details":{"cached_tokens":5,"cache_write_tokens":20,"cache_write_tokens_details":{"ttl_30m_tokens":2,"ttl_12h_tokens":18}},"_sub2api_kiro_credits":0.41}}}`,
 			``,
 		}, "\n"))),
 	}
@@ -83,5 +86,8 @@ func TestReadOpenAICompatBufferedTerminalMergesKiroCredits(t *testing.T) {
 	require.Equal(t, 31, usage.InputTokens)
 	require.Equal(t, 7, usage.OutputTokens)
 	require.Equal(t, 5, usage.CacheReadInputTokens)
+	require.Equal(t, 20, usage.CacheCreationInputTokens)
+	require.Equal(t, 2, usage.CacheCreation30mInputTokens)
+	require.Equal(t, 18, usage.CacheCreation12hInputTokens)
 	require.InDelta(t, 0.41, usage.KiroCredits, 0.000001)
 }

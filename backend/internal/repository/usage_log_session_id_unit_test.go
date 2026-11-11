@@ -32,7 +32,7 @@ func newSessionIDUsageLog(sessionID *string) *service.UsageLog {
 // arg slice / arg-type table so the five INSERT column lists stay in sync. session_id
 // remains after kiro_credits/upstream_request_id and before native_compaction_v2.
 func TestPrepareUsageLogInsert_SessionIDArgWiring(t *testing.T) {
-	require.Len(t, usageLogInsertArgTypes, 63, "arg-type table must include upstream model audit, kiro_credits, upstream_request_id, session_id, and native compaction")
+	require.Len(t, usageLogInsertArgTypes, 65, "arg-type table must include upstream model audit, kiro_credits, upstream_request_id, session_id, native compaction, and OpenAI cache TTLs")
 
 	sessionID := "sess-persisted-123"
 	upstreamID := "upstream-persisted-456"
@@ -40,42 +40,46 @@ func TestPrepareUsageLogInsert_SessionIDArgWiring(t *testing.T) {
 	log := newSessionIDUsageLog(&sessionID)
 	log.UpstreamRequestID = &upstreamID
 	log.KiroCredits = &credits
+	log.CacheCreation30mTokens = 123
+	log.CacheCreation12hTokens = 456
 	prepared := prepareUsageLogInsert(log)
 
 	require.Len(t, prepared.args, len(usageLogInsertArgTypes),
 		"prepared args must match the arg-type table length")
 
-	// created_at is last; native_compaction_v2 is penultimate; session_id precedes it.
-	sessionArg := prepared.args[len(prepared.args)-3]
+	// Tail: kiro_credits, upstream_request_id, session_id, native_compaction_v2, 30m, 12h, created_at.
+	sessionArg := prepared.args[len(prepared.args)-5]
 	ns, ok := sessionArg.(sql.NullString)
 	require.True(t, ok, "session_id arg should be a sql.NullString, got %T", sessionArg)
 	require.True(t, ns.Valid)
 	require.Equal(t, sessionID, ns.String)
 
-	require.Equal(t, "text", usageLogInsertArgTypes[len(usageLogInsertArgTypes)-3],
+	require.Equal(t, "text", usageLogInsertArgTypes[len(usageLogInsertArgTypes)-5],
 		"session_id arg type must be text")
-	require.Equal(t, "text", usageLogInsertArgTypes[len(usageLogInsertArgTypes)-4],
+	require.Equal(t, "text", usageLogInsertArgTypes[len(usageLogInsertArgTypes)-6],
 		"upstream_request_id arg type must be text")
-	require.Equal(t, "numeric", usageLogInsertArgTypes[len(usageLogInsertArgTypes)-5],
+	require.Equal(t, "numeric", usageLogInsertArgTypes[len(usageLogInsertArgTypes)-7],
 		"kiro_credits arg type must remain numeric")
-	require.Equal(t, &credits, prepared.args[len(prepared.args)-5])
-	require.Equal(t, sql.NullString{String: upstreamID, Valid: true}, prepared.args[len(prepared.args)-4])
-	require.Equal(t, "boolean", usageLogInsertArgTypes[len(usageLogInsertArgTypes)-2],
+	require.Equal(t, &credits, prepared.args[len(prepared.args)-7])
+	require.Equal(t, sql.NullString{String: upstreamID, Valid: true}, prepared.args[len(prepared.args)-6])
+	require.Equal(t, "boolean", usageLogInsertArgTypes[len(usageLogInsertArgTypes)-4],
 		"native_compaction_v2 arg type must be boolean")
+	require.Equal(t, 123, prepared.args[len(prepared.args)-3])
+	require.Equal(t, 456, prepared.args[len(prepared.args)-2])
 }
 
 // TestPrepareUsageLogInsert_SessionIDNullWhenAbsent proves an absent session id is
 // persisted as SQL NULL rather than an empty string.
 func TestPrepareUsageLogInsert_SessionIDNullWhenAbsent(t *testing.T) {
 	prepared := prepareUsageLogInsert(newSessionIDUsageLog(nil))
-	sessionArg := prepared.args[len(prepared.args)-3]
+	sessionArg := prepared.args[len(prepared.args)-5]
 	ns, ok := sessionArg.(sql.NullString)
 	require.True(t, ok, "session_id arg should be a sql.NullString, got %T", sessionArg)
 	require.False(t, ns.Valid, "absent session id must be NULL, not empty string")
 
 	empty := ""
 	preparedEmpty := prepareUsageLogInsert(newSessionIDUsageLog(&empty))
-	nsEmpty := preparedEmpty.args[len(preparedEmpty.args)-3].(sql.NullString)
+	nsEmpty := preparedEmpty.args[len(preparedEmpty.args)-5].(sql.NullString)
 	require.False(t, nsEmpty.Valid, "empty session id must also be NULL")
 }
 

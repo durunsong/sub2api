@@ -1,8 +1,16 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.2.20**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.20**，并保留本 Fork
+当前整合版本为 **v0.2.21**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.21**，并保留本 Fork
 的全部定制能力。
+
+## v0.2.21 同步（2026-11-11）
+
+Claude Fable/Mythos 5.2、OpenAI 30m/12h 缓存写入计费、自适应请求体内存预算、账号/API Key 页面性能、EasyPay 退款成功码及认证/协议/调度修复。官方目标 10ba8f9b4dc2e6023d4a9879ab77b21841babd10，82 commits / 200 files / +6,699 / -541；官方 VERSION 仍为 0.2.20，Fork 设为 0.2.21。同步 199 个非部署配置路径（含版本），保留全部定制和初始 3 个未提交兑换文件；新增两个 SQL 仅交付、不执行，315 份历史 SQL 不变。验证见 openspec/changes/sync-upstream-v0-2-21/。
+
+- Kiro credits 与缓存 TTL 落库/计费并存；XorPay、永久重置卡、访问封禁、余额券群发、批量兑换、客服二维码和用户端品牌保持。
+- 补齐目标版本遗漏的 WS v2、Messages/Chat 兼容转换缓存 TTL 传递，共用上游严格校验，保证逐轮扣费与账号统计使用相同 30m/12h 分档；异常或缺失明细仍回退通用价，Kiro credits 不受影响。
+- 新迁移只交付源码，部署前备份并验证；源码整合阶段未执行迁移、部署、提交或推送。后续用户授权的审查与推送准备见 `openspec/changes/sync-upstream-v0-2-21/verification.md`。
 
 ## v0.2.20 同步（2026-11-07）
 
@@ -337,4 +345,4 @@ v0.2.18：Vertex service_account 配额、Gemini/Antigravity 生图门禁、流�
 - `wire.go`、`wire_gen.go`、网关路由、套餐服务、Ops 服务和设置页属于高冲突文件，合并后必须运行对应测试。
 - 同步订阅链路时必须保留迁移 `224`/`225`、购买来源幂等键、有效期快照、过期重开、旧 `reset-daily` → 1 天卡映射，以及 `manual_reset_credits` 兼容镜像。
 
-*最后更新：2026-10-16*
+*最后更新：2026-11-11*
