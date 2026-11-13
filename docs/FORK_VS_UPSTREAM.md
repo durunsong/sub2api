@@ -342,6 +342,8 @@ backend/internal/service/
 | ---------------- | -------------------------------------- | ------------------------------------------------------------------------ |
 | 首页与认证页配色 | 靛蓝紫罗兰主题 + 动效                  | `frontend/src/views/HomeView.vue`, `components/layout/AuthLayout.vue`    |
 | 登录页公开配置 | 复用 App Store 的服务端注入、缓存及在途请求，避免重复请求失败导致注册/找回密码入口消失；保留注册开关与后台模式限制 | `frontend/src/views/auth/LoginView.vue` |
+| CC Switch 导入品牌 | Codex 的供应商标识、配置节及显示名使用站点名并安全转义；空名回退 `sub2api`，内置保留 ID 同名时加 `-custom`，端点、模型及鉴权保持不变 | `frontend/src/utils/ccswitchImport.ts` |
+| 密钥可用模型弹窗 | `/keys` 在“使用密钥”前增加“查看可用模型”；所有平台使用当前密钥读取网关 `/v1/models`，保留账号映射（含 Antigravity 自定义别名）与分组授权，显示真实分组名及模型、支持点击复制、加载/无分组/空列表/失败重试；取消过期请求防止串组，移动端换行，保留 Kiro→Claude 用户端别名；不改后端权限或模型路由 | `frontend/src/components/keys/AvailableModelsModal.vue`、`frontend/src/api/keyModels.ts`、`frontend/src/views/user/KeysView.vue` |
 | Logo             | Fork 自定义 SVG                        | `frontend/public/logo.svg`（Flymux 风格）                                |
 | Select 组件      | 替换原生 `<select>`                    | 各 admin/account View；`components/common/Select.vue`                    |
 | ConfirmDialog    | 替换原生 confirm/alert                 | 多处 admin/account 组件                                                  |

@@ -62,6 +62,8 @@ Cursor 场景下还会加载 [`.cursor/rules/sub2api-fork.mdc`](.cursor/rules/su
 - **用户端批量兑换**：`/redeem` 文本框可一次粘贴多条兑换码（换行、空格或逗号分隔，去重，保留大小写，单次最多 50）。仍逐条调用既有 `POST /api/v1/redeem`；成功项从输入框移除，单条业务失败继续，遇到限流、网络或 5xx 则停止并把未成功的码留在输入框。无新接口、无迁移。详见 `docs/FORK_VS_UPSTREAM.md` §8.7。
 - **UI**：首页/登录靛蓝紫罗兰主题、`logo.svg`、Select/ConfirmDialog 替换原生控件
 - **登录页公开配置**：通过 `appStore.fetchPublicSettings()` 复用注入配置、缓存与在途请求；不得恢复独立重复请求导致弱网下注册/找回密码入口消失，注册开关与后台模式限制保持不变。
+- **CC Switch 导入品牌**：`/keys` 的 Codex 内嵌配置以站点名生成 `model_provider`、对应配置节和显示名；TOML 键名安全引用，空名回退 `sub2api`，与 Codex 内置保留 ID 同名时仅内部 ID 加 `-custom`，不得恢复硬编码品牌。
+- **密钥可用模型**：`/keys` 行操作支持“查看可用模型”，所有平台使用所选密钥查询网关 `/v1/models`，按后端账号映射与分组授权展示并支持复制；Antigravity 不得改用会遗漏自定义别名的静态专用目录，不得用管理员候选名单或前端默认模型代替，不经面板 JWT 客户端，关闭/切换时取消旧请求，移动端操作项和模型标签可换行。
 - **顶栏客服**：`/admin/settings` 的客服微信号旁可上传二维码；上传后顶栏悬停展示二维码和微信号
 - **ProxyAdBanner**：已移除
 

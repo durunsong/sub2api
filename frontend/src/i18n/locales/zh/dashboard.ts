@@ -116,6 +116,17 @@ export default {
     copyToClipboard: '复制到剪贴板',
     copied: '已复制！',
     importToCcSwitch: '导入到 CCS',
+    viewAvailableModels: '查看可用模型',
+    availableModels: {
+      modelName: '模型名称',
+      hint: '仅显示所选分组授权的模型，点击模型名称复制',
+      empty: '当前分组暂无可用模型',
+      noGroup: '请先为此密钥选择分组，再查看可用模型。',
+      failed: '获取模型失败，请检查密钥状态、分组授权或网络后重试。',
+      retry: '重试',
+      copy: '复制模型名称 {model}',
+      copied: '模型名称已复制'
+    },
     enable: '启用',
     disable: '禁用',
     nameLabel: '名称',

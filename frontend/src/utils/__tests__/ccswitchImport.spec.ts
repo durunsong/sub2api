@@ -12,6 +12,11 @@ function paramsFromDeeplink(deeplink: string): URLSearchParams {
   return new URLSearchParams(query)
 }
 
+function codexConfigFromParams(params: URLSearchParams): string {
+  const bytes = Uint8Array.from(atob(params.get('config') || ''), (char) => char.charCodeAt(0))
+  return JSON.parse(new TextDecoder().decode(bytes)).config
+}
+
 describe('ccswitchImport utils', () => {
   it('defaults OpenAI CC Switch imports to the current Codex model', () => {
     expect(OPENAI_CC_SWITCH_CODEX_MODEL).toBe('gpt-6.1-sol')
@@ -27,6 +32,41 @@ describe('ccswitchImport utils', () => {
     apiKey: 'sk-test',
     usageScript: 'return true'
   }
+
+  it.each([
+    ['21API', '"21API"'],
+    ['  21API  ', '"21API"'],
+    ['我的.API "主站"\\线路', String.raw`"我的.API \"主站\"\\线路"`],
+    ['My\nSite\tAPI', '"My\\nSite\\tAPI"'],
+    ['My\u007fSite', '"My\\u007fSite"'],
+    ['', '"sub2api"'],
+    ['   ', '"sub2api"']
+  ])('uses the site name %j consistently in the Codex import', (providerName, expectedTomlName) => {
+    const params = paramsFromDeeplink(buildCcSwitchImportDeeplink({
+      ...baseInput, providerName, platform: 'openai', clientType: 'claude'
+    }))
+    const config = codexConfigFromParams(params)
+
+    expect(params.get('name')).toBe(JSON.parse(expectedTomlName))
+    expect(config).toContain(`model_provider = ${expectedTomlName}\n`)
+    expect(config).toContain(`[model_providers.${expectedTomlName}]\n`)
+    expect(config).toContain(`name = ${expectedTomlName}\n`)
+  })
+
+  it.each(['openai', 'ollama', 'lmstudio'])(
+    'avoids the reserved provider ID %s while preserving its display name',
+    (providerName) => {
+      const params = paramsFromDeeplink(buildCcSwitchImportDeeplink({
+        ...baseInput, providerName, platform: 'openai', clientType: 'claude'
+      }))
+      const config = codexConfigFromParams(params)
+
+      expect(params.get('name')).toBe(providerName)
+      expect(config).toContain(`model_provider = "${providerName}-custom"\n`)
+      expect(config).toContain(`[model_providers."${providerName}-custom"]\n`)
+      expect(config).toContain(`name = "${providerName}"\n`)
+    }
+  )
 
   it.each([
     ['https://api.example.com', 'https://api.example.com'],

@@ -418,7 +418,15 @@
           </template>
 
           <template #cell-actions="{ row }">
-            <div class="flex items-center gap-1">
+            <div class="flex flex-wrap items-center gap-1 md:flex-nowrap">
+              <button
+                type="button"
+                @click="modelsKey = row"
+                class="flex min-h-11 shrink-0 flex-col items-center gap-0.5 rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-primary-50 hover:text-primary-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:hover:bg-primary-900/20 dark:hover:text-primary-400"
+              >
+                <Icon name="cpu" size="sm" aria-hidden="true" />
+                <span class="whitespace-nowrap text-xs">{{ t('keys.viewAvailableModels') }}</span>
+              </button>
               <!-- Use Key Button -->
               <button
                 @click="openUseKeyModal(row)"
@@ -1088,6 +1096,12 @@
       @cancel="showResetRateLimitDialog = false"
     />
 
+    <AvailableModelsModal
+      :show="modelsKey !== null"
+      :api-key="modelsKey"
+      @close="modelsKey = null"
+    />
+
     <!-- Use Key Modal -->
     <UseKeyModal
       :show="showUseKeyModal"
@@ -1226,6 +1240,7 @@ import { keysAPI, authAPI, usageAPI, userGroupsAPI } from '@/api'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import TablePageLayout from '@/components/layout/TablePageLayout.vue'
 import BulkEditKeysModal from '@/components/keys/BulkEditKeysModal.vue'
+import AvailableModelsModal from '@/components/keys/AvailableModelsModal.vue'
 	import DataTable from '@/components/common/DataTable.vue'
 	import Pagination from '@/components/common/Pagination.vue'
 	import BaseDialog from '@/components/common/BaseDialog.vue'
@@ -1411,6 +1426,7 @@ const showDeleteDialog = ref(false)
 const showResetQuotaDialog = ref(false)
 const showResetRateLimitDialog = ref(false)
 const showUseKeyModal = ref(false)
+const modelsKey = ref<ApiKey | null>(null)
 const showCcsClientSelect = ref(false)
 const showColumnDropdown = ref(false)
 const pendingCcsRow = ref<ApiKey | null>(null)

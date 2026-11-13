@@ -116,6 +116,17 @@ export default {
     copyToClipboard: 'Copy to clipboard',
     copied: 'Copied!',
     importToCcSwitch: 'Import to CCS',
+    viewAvailableModels: 'View available models',
+    availableModels: {
+      modelName: 'Model name',
+      hint: 'Only models authorized for the selected group are shown. Click a model name to copy it.',
+      empty: 'No models are available for this group',
+      noGroup: 'Assign this key to a group before viewing available models.',
+      failed: 'Unable to load models. Check the key status, group access, or network, then retry.',
+      retry: 'Retry',
+      copy: 'Copy model name {model}',
+      copied: 'Model name copied'
+    },
     enable: 'Enable',
     disable: 'Disable',
     nameLabel: 'Name',

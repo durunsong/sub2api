@@ -242,6 +242,7 @@ const mountView = async () => {
         SearchInput: SearchInputStub,
         Icon: IconStub,
         UseKeyModal: true,
+        AvailableModelsModal: true,
         BulkEditKeysModal: true,
         EndpointPopover: true,
         GroupBadge: true,
@@ -298,6 +299,24 @@ describe('user KeysView column settings', () => {
     getAvailableGroups.mockResolvedValue([])
     getUserGroupRates.mockResolvedValue({})
     isCurrentStep.mockReturnValue(false)
+  })
+
+  it('opens the available models dialog for the clicked key and clears it on close', async () => {
+    const first = createApiKey()
+    const second = { ...createApiKey(), id: 2, key: 'sk-second-key', group_id: 2 }
+    listKeys.mockResolvedValueOnce({ items: [first, second], total: 2, page: 1, page_size: 20, pages: 1 })
+    const wrapper = await mountView()
+    const buttons = wrapper.findAll('button').filter((button) => button.text().includes('keys.viewAvailableModels'))
+    expect(buttons).toHaveLength(2)
+    await buttons[1].trigger('click')
+    const dialog = wrapper.getComponent({ name: 'AvailableModelsModal' })
+    expect(dialog.props('show')).toBe(true)
+    expect(dialog.props('apiKey')).toEqual(second)
+    dialog.vm.$emit('close')
+    await nextTick()
+    expect(dialog.props('show')).toBe(false)
+    expect(dialog.props('apiKey')).toBeNull()
+    wrapper.unmount()
   })
 
   it.each([

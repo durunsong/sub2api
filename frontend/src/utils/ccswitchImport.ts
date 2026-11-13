@@ -95,10 +95,11 @@ export function resolveCcSwitchImportConfig(
 
 export function buildCcSwitchImportDeeplink(input: CcSwitchImportDeeplinkInput): string {
   const config = resolveCcSwitchImportConfig(input.platform, input.clientType, input.baseUrl)
+  const providerName = input.providerName.trim() || 'sub2api'
   const entries: [string, string][] = [
     ['resource', 'provider'],
     ['app', config.app],
-    ['name', input.providerName],
+    ['name', providerName],
     ['homepage', input.baseUrl],
     ['endpoint', config.endpoint],
     ['apiKey', input.apiKey],
@@ -113,14 +114,19 @@ export function buildCcSwitchImportDeeplink(input: CcSwitchImportDeeplinkInput):
   }
 
   if (config.app === 'codex') {
+    const nameToml = JSON.stringify(providerName).replace(/\u007f/g, '\\u007f')
+    // Codex reserves built-in IDs; keep the site's display name without overriding them.
+    const providerIdToml = ['openai', 'ollama', 'lmstudio'].includes(providerName)
+      ? JSON.stringify(`${providerName}-custom`)
+      : nameToml
     // CC Switch's embedded-config import preserves provider auth and headers.
     // It deliberately leaves global [features] settings to the user.
-    const codexConfig = `model_provider = "sub2api"
+    const codexConfig = `model_provider = ${providerIdToml}
 model = ${JSON.stringify(config.model)}
 web_search = "live"
 
-[model_providers.sub2api]
-name = "Sub2API"
+[model_providers.${providerIdToml}]
+name = ${nameToml}
 base_url = ${JSON.stringify(config.endpoint)}
 wire_api = "responses"
 ${buildCodexApiKeyAuthConfig(input.apiKey)}
