@@ -1,5 +1,8 @@
 import { flushPromises, mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { useAppStore } from '@/stores/app'
+import type { PublicSettings } from '@/types'
 import LoginView from '@/views/auth/LoginView.vue'
 
 const { getPublicSettingsMock, pushMock } = vi.hoisted(() => ({
@@ -48,17 +51,13 @@ vi.mock('vue-i18n', () => ({
   })
 }))
 
-vi.mock('@/stores', () => ({
+vi.mock('@/stores', async () => ({
   useAuthStore: () => ({
     login: vi.fn(),
     loginWithPasskey: vi.fn(),
     login2FA: vi.fn()
   }),
-  useAppStore: () => ({
-    showError: vi.fn(),
-    showSuccess: vi.fn(),
-    showWarning: vi.fn()
-  })
+  useAppStore: (await vi.importActual<typeof import('@/stores/app')>('@/stores/app')).useAppStore
 }))
 
 vi.mock('@/api/auth', () => ({
@@ -69,18 +68,20 @@ vi.mock('@/api/auth', () => ({
   startOAuthLogin: vi.fn()
 }))
 
+const mounted: ReturnType<typeof mount>[] = []
+
 function mountLogin() {
-  return mount(LoginView, {
+  const wrapper = mount(LoginView, {
     global: {
       stubs: {
-        AuthLayout: { template: '<div><slot /><slot name="footer" /></div>' },
+        LocaleSwitcher: true,
         DingTalkOAuthSection: true,
         EmailOAuthButtons: true,
         Icon: true,
         LinuxDoOAuthSection: true,
         LoginAgreementPrompt: true,
         OidcOAuthSection: true,
-        RouterLink: { template: '<a><slot /></a>' },
+        RouterLink: { props: ['to'], template: '<a :href="to"><slot /></a>' },
         TotpLoginModal: true,
         TurnstileWidget: true,
         WechatOAuthSection: true,
@@ -88,13 +89,23 @@ function mountLogin() {
       }
     }
   })
+  mounted.push(wrapper)
+  return wrapper
 }
 
 describe('LoginView registration entry', () => {
   beforeEach(() => {
+    setActivePinia(createPinia())
+    delete window.__APP_CONFIG__
     getPublicSettingsMock.mockReset()
     pushMock.mockReset()
     getPublicSettingsMock.mockResolvedValue(publicSettings)
+  })
+
+  afterEach(() => {
+    mounted.splice(0).forEach(wrapper => wrapper.unmount())
+    delete window.__APP_CONFIG__
+    vi.restoreAllMocks()
   })
 
   it('shows the registration entry when registration is enabled', async () => {
@@ -114,5 +125,67 @@ describe('LoginView registration entry', () => {
     await flushPromises()
 
     expect(wrapper.text()).not.toContain('auth.signUp')
+  })
+
+  it('keeps registration and password reset available from injected settings when the API is unavailable', async () => {
+    window.__APP_CONFIG__ = { ...publicSettings, password_reset_enabled: true } as PublicSettings
+    useAppStore().initFromInjectedConfig()
+    getPublicSettingsMock.mockRejectedValue(new Error('Network unavailable'))
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const wrapper = mountLogin()
+    await flushPromises()
+
+    expect(wrapper.get('.auth-footer a').attributes('href')).toBe('/register')
+    expect(wrapper.find('a[href="/forgot-password"]').exists()).toBe(true)
+    expect(getPublicSettingsMock).not.toHaveBeenCalled()
+  })
+
+  it('uses cached settings when navigating to login without another API request', async () => {
+    await useAppStore().fetchPublicSettings()
+    delete window.__APP_CONFIG__
+    getPublicSettingsMock.mockClear().mockRejectedValue(new Error('Network unavailable'))
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const wrapper = mountLogin()
+    await flushPromises()
+
+    expect(wrapper.get('.auth-footer a').attributes('href')).toBe('/register')
+    expect(getPublicSettingsMock).not.toHaveBeenCalled()
+  })
+
+  it('shares the pending settings request with the layout and waits before showing registration', async () => {
+    let resolveSettings!: (settings: typeof publicSettings) => void
+    getPublicSettingsMock.mockReturnValue(new Promise(resolve => { resolveSettings = resolve }))
+    const wrapper = mountLogin()
+
+    expect(wrapper.find('a[href="/register"]').exists()).toBe(false)
+    resolveSettings(publicSettings)
+    await flushPromises()
+
+    expect(wrapper.get('.auth-footer a').attributes('href')).toBe('/register')
+    expect(getPublicSettingsMock).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    { registration_enabled: false, backend_mode_enabled: false },
+    { registration_enabled: true, backend_mode_enabled: true }
+  ])('honors injected registration restrictions: %j', async (settings) => {
+    window.__APP_CONFIG__ = { ...publicSettings, ...settings } as PublicSettings
+    const wrapper = mountLogin()
+    await flushPromises()
+
+    expect(wrapper.find('a[href="/register"]').exists()).toBe(false)
+    expect(getPublicSettingsMock).not.toHaveBeenCalled()
+  })
+
+  it('does not enable registration when no settings are available', async () => {
+    getPublicSettingsMock.mockRejectedValue(new Error('Network unavailable'))
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const wrapper = mountLogin()
+    await flushPromises()
+
+    expect(wrapper.find('a[href="/register"]').exists()).toBe(false)
+    expect(getPublicSettingsMock).toHaveBeenCalledTimes(1)
   })
 })

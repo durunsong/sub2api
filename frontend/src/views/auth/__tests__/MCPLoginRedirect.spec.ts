@@ -19,7 +19,7 @@ vi.mock('vue-i18n', () => ({
 }))
 vi.mock('@/stores', () => ({
   useAuthStore: () => ({ login, loginWithPasskey: vi.fn(), login2FA: vi.fn(), setToken: vi.fn() }),
-  useAppStore: () => ({ showError: vi.fn(), showSuccess: vi.fn(), showWarning: vi.fn(), cachedPublicSettings: {}, publicSettingsLoaded: true })
+  useAppStore: () => ({ showError: vi.fn(), showSuccess: vi.fn(), showWarning: vi.fn(), cachedPublicSettings: {}, publicSettingsLoaded: true, fetchPublicSettings: async () => ({ registration_enabled: false }) })
 }))
 vi.mock('@/api/client', () => ({ apiClient: { post: vi.fn() } }))
 vi.mock('@/api/auth', async () => {

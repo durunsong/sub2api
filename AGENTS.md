@@ -61,6 +61,7 @@ Cursor 场景下还会加载 [`.cursor/rules/sub2api-fork.mdc`](.cursor/rules/su
 - **未活跃用户余额券群发**：`/admin/redeem` 向导按 `usage_logs` 最后 API 调用把普通用户分为 1–2 / 2–3 / 3+ 个月未用与从未使用四个互斥分段（多选取并集，默认不选从未使用，单批 ≤1000），另有互斥筛选 `zero_balance`（钱包余额恰好为 0，不限最后使用时间，不含负余额）。事务内为每人生成独立余额码，经 leader 锁 Worker 约 1 封/秒发送；邮件模板是可退订通知事件 `redeem.inactive_coupon`（`/admin/settings` 编辑，独立文件 `init` 注册），已退订收件人记为 `skipped`；迁移 `246` 新增两张表，`248` 放宽批次 `segments` 检查以容纳 `zero_balance`，原生 SQL 仓储、不改上游 Ent schema；`RedeemEmailWorkerRuntime` 须在 `provideCleanup` 中停止。详见 `docs/FORK_VS_UPSTREAM.md` §8.6。
 - **用户端批量兑换**：`/redeem` 文本框可一次粘贴多条兑换码（换行、空格或逗号分隔，去重，保留大小写，单次最多 50）。仍逐条调用既有 `POST /api/v1/redeem`；成功项从输入框移除，单条业务失败继续，遇到限流、网络或 5xx 则停止并把未成功的码留在输入框。无新接口、无迁移。详见 `docs/FORK_VS_UPSTREAM.md` §8.7。
 - **UI**：首页/登录靛蓝紫罗兰主题、`logo.svg`、Select/ConfirmDialog 替换原生控件
+- **登录页公开配置**：通过 `appStore.fetchPublicSettings()` 复用注入配置、缓存与在途请求；不得恢复独立重复请求导致弱网下注册/找回密码入口消失，注册开关与后台模式限制保持不变。
 - **顶栏客服**：`/admin/settings` 的客服微信号旁可上传二维码；上传后顶栏悬停展示二维码和微信号
 - **ProxyAdBanner**：已移除
 

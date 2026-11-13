@@ -341,6 +341,7 @@ backend/internal/service/
 | 项               | 说明                                   | 主要文件                                                                 |
 | ---------------- | -------------------------------------- | ------------------------------------------------------------------------ |
 | 首页与认证页配色 | 靛蓝紫罗兰主题 + 动效                  | `frontend/src/views/HomeView.vue`, `components/layout/AuthLayout.vue`    |
+| 登录页公开配置 | 复用 App Store 的服务端注入、缓存及在途请求，避免重复请求失败导致注册/找回密码入口消失；保留注册开关与后台模式限制 | `frontend/src/views/auth/LoginView.vue` |
 | Logo             | Fork 自定义 SVG                        | `frontend/public/logo.svg`（Flymux 风格）                                |
 | Select 组件      | 替换原生 `<select>`                    | 各 admin/account View；`components/common/Select.vue`                    |
 | ConfirmDialog    | 替换原生 confirm/alert                 | 多处 admin/account 组件                                                  |
