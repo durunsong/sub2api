@@ -220,6 +220,8 @@ export default {
 
   // Auth
   auth: {
+    loginSupportHint: 'Trouble signing in? Contact support on the right.',
+    registerSupportHint: 'Trouble signing up? Contact support on the right.',
     welcomeBack: 'Welcome Back',
     signInToAccount: 'Sign in to your account to continue',
     signIn: 'Sign In',

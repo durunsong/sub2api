@@ -1,5 +1,5 @@
 <template>
-  <AuthLayout immersive>
+  <AuthLayout immersive :support-hint="t('auth.loginSupportHint')">
     <div class="auth-view space-y-6">
       <!-- Title -->
       <div class="auth-view-heading">

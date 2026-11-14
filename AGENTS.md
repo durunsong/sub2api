@@ -64,7 +64,7 @@ Cursor 场景下还会加载 [`.cursor/rules/sub2api-fork.mdc`](.cursor/rules/su
 - **登录页公开配置**：通过 `appStore.fetchPublicSettings()` 复用注入配置、缓存与在途请求；不得恢复独立重复请求导致弱网下注册/找回密码入口消失，注册开关与后台模式限制保持不变。
 - **CC Switch 导入品牌**：`/keys` 的 Codex 内嵌配置以站点名生成 `model_provider`、对应配置节和显示名；TOML 键名安全引用，空名回退 `sub2api`，与 Codex 内置保留 ID 同名时仅内部 ID 加 `-custom`，不得恢复硬编码品牌。
 - **密钥可用模型**：`/keys` 行操作支持“查看可用模型”，所有平台使用所选密钥查询网关 `/v1/models`，按后端账号映射与分组授权展示并支持复制；Antigravity 不得改用会遗漏自定义别名的静态专用目录，不得用管理员候选名单或前端默认模型代替，不经面板 JWT 客户端，关闭/切换时取消旧请求，移动端操作项和模型标签可换行。
-- **顶栏客服**：`/admin/settings` 的客服微信号旁可上传二维码；上传后顶栏悬停展示二维码和微信号
+- **客服入口**：`/admin/settings` 的客服微信号旁可上传二维码；顶栏与 `/login`、`/register` 共用 `SupportContact.vue`，支持悬停预览、点击开关、Esc/外部点击关闭。认证页使用各自提示文案与公开配置，未配置客服时隐藏入口。
 - **ProxyAdBanner**：已移除
 
 ---

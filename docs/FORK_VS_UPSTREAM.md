@@ -349,7 +349,7 @@ backend/internal/service/
 | ConfirmDialog    | 替换原生 confirm/alert                 | 多处 admin/account 组件                                                  |
 | 代理广告横幅     | 已移除                                 | `ProxyAdBanner` 相关引用清理                                             |
 | 版本徽章         | 隐藏「立即更新」按钮                   | `frontend/src/components/common/VersionBadge.vue`                        |
-| 顶栏客服         | 悬停展示已配置微信号和上传的客服二维码 | `frontend/src/components/layout/AppHeader.vue`，设置项 `contact_qr_code` |
+| 客服入口         | 顶栏与登录/注册页共用微信弹窗；认证页表单上方分别提示“登录不上？右侧直接找客服”“注册遇到问题？右侧直接找客服”，右侧按钮支持点击开关、悬停、Esc/外部点击关闭；复用公开配置，未配置时隐藏，保留二维码 URL 校验 | `frontend/src/components/common/SupportContact.vue`、`components/layout/AppHeader.vue`、`components/layout/AuthLayout.vue`、`views/auth/LoginView.vue`、`views/auth/RegisterView.vue`；设置项 `contact_info` / `contact_qr_code` |
 | Kiro 截图 / 社群 | 文档与资源                             | `assets/screenshots/kiro-*.png`, `assets/community/wechat-group.jpg`     |
 
 ---

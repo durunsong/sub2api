@@ -220,6 +220,8 @@ export default {
 
   // Auth
   auth: {
+    loginSupportHint: '登录不上？右侧直接找客服',
+    registerSupportHint: '注册遇到问题？右侧直接找客服',
     welcomeBack: '欢迎回来',
     signInToAccount: '登录您的账户以继续',
     signIn: '登录',

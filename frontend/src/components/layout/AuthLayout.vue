@@ -103,6 +103,8 @@
           <p class="text-sm text-gray-500 dark:text-dark-400">{{ siteSubtitle }}</p>
         </div>
 
+        <SupportContact v-if="supportHint" :hint="supportHint" />
+
         <div ref="authCardRef" class="auth-card rounded-[2rem] p-8">
           <slot />
         </div>
@@ -124,11 +126,13 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores'
 import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
+import SupportContact from '@/components/common/SupportContact.vue'
 import Icon from '@/components/icons/Icon.vue'
 import { sanitizeUrl } from '@/utils/url'
 
 const props = withDefaults(defineProps<{
   immersive?: boolean
+  supportHint?: string
 }>(), {
   immersive: false
 })
