@@ -39,6 +39,9 @@ vi.mock('vue-i18n', async () => {
   }
 })
 
+const getResetHistory = vi.hoisted(() => vi.fn().mockResolvedValue({ items: [], total: 0 }))
+vi.mock('@/api/admin/subscriptions', () => ({ default: { getResetHistory } }))
+
 const SelectStub = {
   props: ['modelValue', 'options'],
   emits: ['update:modelValue', 'change'],
@@ -66,7 +69,7 @@ const mountSubscriptionsView = () => mount(SubscriptionsView, {
       DataTable: {
         name: 'DataTable',
         props: ['data', 'columns'],
-        template: '<div><div v-for="row in data" :key="row.id"><slot name="cell-reset_cards" :row="row" /></div></div>'
+        template: '<div><div v-for="row in data" :key="row.id"><slot name="cell-reset_cards" :row="row" /><slot name="cell-actions" :row="row" /></div></div>'
       },
       Pagination: true,
       BaseDialog: true,
@@ -95,6 +98,19 @@ describe('admin SubscriptionsView filters', () => {
       pages: 0
     })
     getAllGroups.mockResolvedValue([])
+  })
+
+  it('opens reset history for a revoked subscription', async () => {
+    listSubscriptions.mockResolvedValue({ items: [{ id: 42, status: 'revoked', group: { name: 'Plan' } }], total: 1, pages: 1 })
+    const wrapper = mountSubscriptionsView()
+    await flushPromises()
+    await wrapper.get('[data-test=reset-history]').trigger('click')
+    await flushPromises()
+    expect(getResetHistory).toHaveBeenLastCalledWith(42, 1, 20, expect.any(AbortSignal))
+    const dialog = wrapper.getComponent({ name: 'SubscriptionResetHistoryDialog' })
+    expect(dialog.props('admin')).toBe(true)
+    expect(dialog.props('subscriptionId')).toBe(42)
+    wrapper.unmount()
   })
 
   it('defaults to active subscriptions with quota remaining', async () => {

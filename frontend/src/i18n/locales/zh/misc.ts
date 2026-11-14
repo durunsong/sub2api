@@ -141,6 +141,21 @@ export default {
     quotaEnded: '额度已结束',
     oneTimeDailyHint: '24小时有效，日卡不自动重置；再买同套餐后需点击重置才起算新周期',
     usageOf: '已用 {used} / {limit}',
+    resetHistory: {
+      title: '重置记录',
+      time: '重置时间',
+      method: '重置方式',
+      scope: '重置范围',
+      term: '有效期变化',
+      reset_card: '使用重置卡',
+      admin: '管理员重置',
+      cardTerm: '重新起算 {days} 天',
+      unchangedTerm: '有效期不变',
+      coverageHint: '包含重置卡使用和管理员手动/批量重置，不含自动周期刷新。管理员记录从此功能上线后开始保存。',
+      empty: '暂无重置记录',
+      failedToLoad: '重置记录加载失败，请重试',
+      retry: '重新加载'
+    },
     resetCards: {
       label: '重置卡',
       notice: '你有 {count} 张永久重置卡',

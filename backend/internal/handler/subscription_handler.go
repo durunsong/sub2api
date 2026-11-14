@@ -50,6 +50,28 @@ func NewSubscriptionHandler(subscriptionService *service.SubscriptionService) *S
 	}
 }
 
+// GetResetHistory lists successful resets for a subscription owned by the user.
+// GET /api/v1/subscriptions/:id/reset-history
+func (h *SubscriptionHandler) GetResetHistory(c *gin.Context) {
+	subject, ok := middleware2.GetAuthSubjectFromContext(c)
+	if !ok {
+		response.Unauthorized(c, "User not found in context")
+		return
+	}
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id <= 0 {
+		response.BadRequest(c, "Invalid subscription ID")
+		return
+	}
+	page, pageSize := response.ParsePagination(c)
+	items, result, err := h.subscriptionService.ListResetHistory(c.Request.Context(), id, &subject.UserID, page, pageSize)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Paginated(c, items, result.Total, result.Page, result.PageSize)
+}
+
 // List handles listing current user's subscriptions
 // GET /api/v1/subscriptions
 func (h *SubscriptionHandler) List(c *gin.Context) {

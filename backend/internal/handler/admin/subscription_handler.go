@@ -39,6 +39,23 @@ func NewSubscriptionHandler(subscriptionService *service.SubscriptionService) *S
 	}
 }
 
+// GetResetHistory includes history for revoked subscriptions.
+// GET /api/v1/admin/subscriptions/:id/reset-history
+func (h *SubscriptionHandler) GetResetHistory(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id <= 0 {
+		response.BadRequest(c, "Invalid subscription ID")
+		return
+	}
+	page, pageSize := response.ParsePagination(c)
+	items, result, err := h.subscriptionService.ListResetHistory(c.Request.Context(), id, nil, page, pageSize)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Paginated(c, items, result.Total, result.Page, result.PageSize)
+}
+
 // AssignSubscriptionRequest represents assign subscription request
 type AssignSubscriptionRequest struct {
 	UserID       int64  `json:"user_id" binding:"required"`

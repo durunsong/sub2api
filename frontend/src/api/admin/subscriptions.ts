@@ -7,6 +7,7 @@ import { apiClient } from '../client'
 import type {
   UserSubscription,
   SubscriptionProgress,
+  SubscriptionResetHistory,
   AssignSubscriptionRequest,
   BulkAssignSubscriptionRequest,
   ExtendSubscriptionRequest,
@@ -14,6 +15,19 @@ import type {
 } from '@/types'
 
 export type SubscriptionBulkAction = 'extend' | 'reset_quota' | 'revoke' | 'restore'
+
+export async function getResetHistory(
+  subscriptionId: number,
+  page = 1,
+  pageSize = 20,
+  signal?: AbortSignal
+): Promise<PaginatedResponse<SubscriptionResetHistory>> {
+  const { data } = await apiClient.get<PaginatedResponse<SubscriptionResetHistory>>(
+    `/admin/subscriptions/${subscriptionId}/reset-history`,
+    { params: { page, page_size: pageSize }, signal }
+  )
+  return data
+}
 
 export interface SubscriptionBulkActionRequest {
   subscription_ids: number[]
@@ -230,6 +244,7 @@ export async function listByUser(
 }
 
 export const subscriptionsAPI = {
+  getResetHistory,
   list,
   getById,
   getProgress,

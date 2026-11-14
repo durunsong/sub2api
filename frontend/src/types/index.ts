@@ -2341,6 +2341,16 @@ export interface SubscriptionResetCards {
   groups: SubscriptionResetCardGroup[]
 }
 
+export interface SubscriptionResetHistory {
+  id: number
+  type: 'reset_card' | 'admin'
+  reset_at: string
+  daily: boolean
+  weekly: boolean
+  monthly: boolean
+  validity_days?: number
+}
+
 export interface UserSubscription {
   id: number
   user_id: number

@@ -4,7 +4,20 @@
  */
 
 import { apiClient } from './client'
-import type { UserSubscription, SubscriptionProgress } from '@/types'
+import type { UserSubscription, SubscriptionProgress, SubscriptionResetHistory, PaginatedResponse } from '@/types'
+
+export async function getResetHistory(
+  subscriptionId: number,
+  page = 1,
+  pageSize = 20,
+  signal?: AbortSignal
+): Promise<PaginatedResponse<SubscriptionResetHistory>> {
+  const { data } = await apiClient.get<PaginatedResponse<SubscriptionResetHistory>>(
+    `/subscriptions/${subscriptionId}/reset-history`,
+    { params: { page, page_size: pageSize }, signal }
+  )
+  return data
+}
 
 /**
  * Subscription summary for user dashboard
@@ -82,6 +95,7 @@ export async function getSubscriptionProgress(
 }
 
 export default {
+  getResetHistory,
   getMySubscriptions,
   getActiveSubscriptions,
   getSubscriptionsProgress,

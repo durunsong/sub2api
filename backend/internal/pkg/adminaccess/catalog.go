@@ -62,7 +62,7 @@ var definitions = []permissionDefinition{
 	{Permission{"payment.refund", "发起退款及确认退款结果", "财务", "global"}, []string{"POST /payment/orders/:id/refund", "POST /payment/orders/:id/refund/query"}},
 	{Permission{"payment.plans.read", "读取全部支付套餐", "财务", "global"}, []string{"GET /payment/plans"}},
 	{Permission{"payment.plans.write", "创建、修改和删除支付套餐", "财务", "global"}, []string{"POST /payment/plans", "PUT /payment/plans/:id", "DELETE /payment/plans/:id"}},
-	{Permission{"subscriptions.read", "读取全站订阅记录", "订阅", "global"}, []string{"GET /subscriptions", "GET /subscriptions/:id", "GET /subscriptions/:id/progress", "GET /groups/:id/subscriptions", "GET /users/:id/subscriptions"}},
+	{Permission{"subscriptions.read", "读取全站订阅记录", "订阅", "global"}, []string{"GET /subscriptions", "GET /subscriptions/:id", "GET /subscriptions/:id/progress", "GET /subscriptions/:id/reset-history", "GET /groups/:id/subscriptions", "GET /users/:id/subscriptions"}},
 	{Permission{"subscriptions.assign", "分配全站用户订阅", "订阅", "global"}, []string{"POST /subscriptions/assign", "POST /subscriptions/bulk-assign"}},
 	{Permission{"subscriptions.extend", "延长订阅有效期", "订阅", "global"}, []string{"POST /subscriptions/:id/extend"}},
 	{Permission{"subscriptions.revoke", "撤销订阅", "订阅", "global"}, []string{"POST /subscriptions/:id/revoke", "DELETE /subscriptions/:id"}},

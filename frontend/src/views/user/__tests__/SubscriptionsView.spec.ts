@@ -5,10 +5,11 @@ import type { UserSubscription } from '@/types'
 
 const getMySubscriptions = vi.hoisted(() => vi.fn())
 const consumeResetCard = vi.hoisted(() => vi.fn())
+const getResetHistory = vi.hoisted(() => vi.fn().mockResolvedValue({ items: [], total: 0 }))
 const showError = vi.hoisted(() => vi.fn())
 const showSuccess = vi.hoisted(() => vi.fn())
 
-vi.mock('@/api/subscriptions', () => ({ default: { getMySubscriptions, consumeResetCard } }))
+vi.mock('@/api/subscriptions', () => ({ default: { getMySubscriptions, consumeResetCard, getResetHistory } }))
 vi.mock('@/stores/app', () => ({ useAppStore: () => ({ showError, showSuccess }) }))
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }))
 vi.mock('vue-i18n', async () => {
@@ -143,5 +144,20 @@ describe('SubscriptionsView reset cards', () => {
     await flushPromises()
     expect(showError).toHaveBeenCalledTimes(1)
     expect(showError).toHaveBeenCalledWith('original consume error')
+  })
+})
+
+describe('SubscriptionsView reset history', () => {
+  it('opens history for subscriptions even when they have no cards', async () => {
+    const wrapper = await mountView([subscription({ reset_cards: { total: 0, groups: [] } })])
+    await wrapper.get('[data-test=reset-history]').trigger('click')
+    await flushPromises()
+    expect(getResetHistory).toHaveBeenLastCalledWith(1, 1, 20, expect.any(AbortSignal))
+    const dialog = wrapper.getComponent({ name: 'SubscriptionResetHistoryDialog' })
+    expect(dialog.props('subscriptionId')).toBe(1)
+    dialog.vm.$emit('close')
+    await flushPromises()
+    expect(dialog.props('subscriptionId')).toBeNull()
+    wrapper.unmount()
   })
 })

@@ -713,20 +713,43 @@ func (r *userSubscriptionRepository) ActivateWindows(ctx context.Context, id int
 	return r.translateConditionalWindowReset(ctx, client, id, n, err)
 }
 
+// ResetUsageWindows records exactly the same successful mutation, including
+// when called inside the bulk-action transaction. An insert failure rolls back
+// the reset; automatic window maintenance does not call this method.
 func (r *userSubscriptionRepository) ResetUsageWindows(ctx context.Context, id int64, resetDaily, resetWeekly, resetMonthly bool, dailyStart, periodicStart time.Time) error {
+	if !resetDaily && !resetWeekly && !resetMonthly {
+		return service.ErrInvalidInput
+	}
 	client := clientFromContext(ctx, r.client)
-	update := client.UserSubscription.UpdateOneID(id)
-	if resetDaily {
-		update.SetDailyUsageUsd(0).SetDailyUsageTokens(0).SetDailyWindowStart(dailyStart)
+	result, err := client.ExecContext(ctx, `
+		WITH updated AS (
+			UPDATE user_subscriptions SET
+				daily_usage_usd = CASE WHEN $2 THEN 0 ELSE daily_usage_usd END,
+				daily_usage_tokens = CASE WHEN $2 THEN 0 ELSE daily_usage_tokens END,
+				daily_window_start = CASE WHEN $2 THEN $5 ELSE daily_window_start END,
+				weekly_usage_usd = CASE WHEN $3 THEN 0 ELSE weekly_usage_usd END,
+				weekly_usage_tokens = CASE WHEN $3 THEN 0 ELSE weekly_usage_tokens END,
+				weekly_window_start = CASE WHEN $3 THEN $6 ELSE weekly_window_start END,
+				monthly_usage_usd = CASE WHEN $4 THEN 0 ELSE monthly_usage_usd END,
+				monthly_usage_tokens = CASE WHEN $4 THEN 0 ELSE monthly_usage_tokens END,
+				monthly_window_start = CASE WHEN $4 THEN $6 ELSE monthly_window_start END,
+				updated_at = NOW()
+			WHERE id = $1 AND deleted_at IS NULL
+			RETURNING id
+		)
+		INSERT INTO user_subscription_quota_resets (user_subscription_id, reset_at, daily, weekly, monthly)
+		SELECT id, $6, $2, $3, $4 FROM updated`, id, resetDaily, resetWeekly, resetMonthly, dailyStart, periodicStart)
+	if err != nil {
+		return err
 	}
-	if resetWeekly {
-		update.SetWeeklyUsageUsd(0).SetWeeklyUsageTokens(0).SetWeeklyWindowStart(periodicStart)
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
 	}
-	if resetMonthly {
-		update.SetMonthlyUsageUsd(0).SetMonthlyUsageTokens(0).SetMonthlyWindowStart(periodicStart)
+	if affected == 0 {
+		return service.ErrSubscriptionNotFound
 	}
-	_, err := update.Save(ctx)
-	return translatePersistenceError(err, service.ErrSubscriptionNotFound, nil)
+	return nil
 }
 
 func (r *userSubscriptionRepository) ResetDailyUsage(ctx context.Context, id int64, expectedWindowStart *time.Time, newWindowStart time.Time) error {

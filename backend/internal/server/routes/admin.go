@@ -733,6 +733,7 @@ func registerSubscriptionRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
 		subscriptions.GET("", h.Admin.Subscription.List)
 		subscriptions.GET("/:id", h.Admin.Subscription.GetByID)
 		subscriptions.GET("/:id/progress", h.Admin.Subscription.GetProgress)
+		subscriptions.GET("/:id/reset-history", h.Admin.Subscription.GetResetHistory)
 		subscriptions.POST("/assign", h.Admin.Subscription.Assign)
 		subscriptions.POST("/bulk-assign", h.Admin.Subscription.BulkAssign)
 		subscriptions.POST("/bulk-action", h.Admin.Subscription.BulkAction)

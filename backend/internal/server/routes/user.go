@@ -142,6 +142,7 @@ func RegisterUserRoutes(
 			subscriptions.GET("/active", h.Subscription.GetActive)
 			subscriptions.GET("/progress", h.Subscription.GetProgress)
 			subscriptions.GET("/summary", h.Subscription.GetSummary)
+			subscriptions.GET("/:id/reset-history", h.Subscription.GetResetHistory)
 			subscriptions.POST("/:id/reset-daily", h.Subscription.ResetDaily)
 			subscriptions.POST("/:id/reset-cards/consume", h.Subscription.ConsumeResetCard)
 		}

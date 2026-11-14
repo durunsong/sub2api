@@ -475,6 +475,14 @@ frontend/src/i18n/locales/zh/misc.ts
 frontend/src/i18n/locales/en/misc.ts
 ```
 
+#### 订阅重置记录（2026-11-14）
+
+- 管理端 `/admin/subscriptions` 与用户端 `/subscriptions` 增加“重置记录”入口，共享分页弹窗，显示重置时间、方式、日/周/月范围和卡期限；包含历史已消费卡及上线后的管理员单条/批量重置。自动周期刷新不计入；历史管理员操作不伪造回填，界面注明覆盖范围。
+- 新增 `GET /api/v1/subscriptions/:id/reset-history` 与 `GET /api/v1/admin/subscriptions/:id/reset-history`。用户查询先校验订阅归属，其他用户与不存在订阅统一返回 404；管理端可查看已撤销订阅，受限管理 Key 需要 `subscriptions.read`。结果不包含卡来源引用、幂等键或管理员身份。
+- 新迁移 `251_subscription_quota_reset_history.sql` 新建管理员记录表和查询索引。`ResetUsageWindows` 使用同一个 SQL CTE 清零指定窗口并写入记录，插入失败或批量外层事务失败时一同回滚；日窗口保持午夜锚点、周/月保持点击锚点，不改变金额/token/卡数量或期限规则。
+- 重置卡历史直接读取现有 `consumed_at`，已消费后退款仍保留历史；同一幂等键重放不会多出记录。查询按时间、类型、ID 稳定倒序，分页上限 100。
+- 只交付 SQL；真实数据库验证使用临时测试容器，未执行生产迁移或部署。上线前备份并先应用新增迁移；回退应用可保留表和既有记录，旧程序运行期间的管理员操作无法补记。设计与验证见 `openspec/changes/subscription-reset-history/`。
+
 ### 8.5 管理端订阅可用额度筛选（Fork 新增，2026-08-31）
 
 - `/admin/subscriptions` 状态下拉增加 `active_available`（中文“生效中+没用完”）并设为默认筛选。

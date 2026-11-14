@@ -466,7 +466,16 @@
           </template>
 
           <template #cell-actions="{ row }">
-            <div class="flex items-center gap-1">
+            <div class="flex flex-wrap items-center gap-1">
+              <button
+                type="button"
+                data-test="reset-history"
+                class="flex flex-col items-center gap-0.5 rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-primary-50 hover:text-primary-600 dark:hover:bg-primary-900/20 dark:hover:text-primary-400"
+                @click="historySubscription = row"
+              >
+                <Icon name="clock" size="sm" />
+                <span class="text-xs">{{ t('userSubscriptions.resetHistory.title') }}</span>
+              </button>
               <button
                 v-if="row.status === 'active' || row.status === 'expired'"
                 @click="handleExtend(row)"
@@ -906,6 +915,12 @@
         </div>
       </transition>
     </teleport>
+    <SubscriptionResetHistoryDialog
+      :subscription-id="historySubscription?.id ?? null"
+      :subscription-name="historySubscription?.group?.name ?? ''"
+      admin
+      @close="historySubscription = null"
+    />
   </AppLayout>
 </template>
 
@@ -933,6 +948,7 @@ import Select from '@/components/common/Select.vue'
 import GroupBadge from '@/components/common/GroupBadge.vue'
 import GroupOptionItem from '@/components/common/GroupOptionItem.vue'
 import Icon from '@/components/icons/Icon.vue'
+import SubscriptionResetHistoryDialog from '@/components/subscription/SubscriptionResetHistoryDialog.vue'
 import {
   getRemainingDurationParts,
   getRemainingExpiryDuration,
@@ -1082,6 +1098,7 @@ const statusOptions = computed(() => [
 ])
 
 const subscriptions = ref<UserSubscription[]>([])
+const historySubscription = ref<UserSubscription | null>(null)
 const groups = ref<Group[]>([])
 const loading = ref(false)
 let abortController: AbortController | null = null

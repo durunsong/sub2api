@@ -60,7 +60,16 @@
                 </p>
               </div>
             </div>
-            <div class="flex shrink-0 items-center gap-2">
+            <div class="flex shrink-0 flex-wrap items-center gap-2">
+              <button
+                type="button"
+                class="btn btn-secondary btn-sm"
+                data-test="reset-history"
+                @click="historySubscription = subscription"
+              >
+                <Icon name="clock" size="sm" />
+                {{ t('userSubscriptions.resetHistory.title') }}
+              </button>
               <span
                 :class="[
                   'whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium',
@@ -309,6 +318,11 @@
         </div>
       </div>
     </div>
+    <SubscriptionResetHistoryDialog
+      :subscription-id="historySubscription?.id ?? null"
+      :subscription-name="historySubscription?.group?.name ? userFacingPlatformText(historySubscription.group.name) : ''"
+      @close="historySubscription = null"
+    />
   </AppLayout>
 </template>
 
@@ -321,6 +335,7 @@ import subscriptionsAPI from '@/api/subscriptions'
 import type { UserSubscription } from '@/types'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Icon from '@/components/icons/Icon.vue'
+import SubscriptionResetHistoryDialog from '@/components/subscription/SubscriptionResetHistoryDialog.vue'
 import { formatDateTimeToMinute } from '@/utils/format'
 import { extractApiErrorMessage } from '@/utils/apiError'
 import {
@@ -355,6 +370,7 @@ const router = useRouter()
 const appStore = useAppStore()
 
 const subscriptions = ref<UserSubscription[]>([])
+const historySubscription = ref<UserSubscription | null>(null)
 const resetCardTotal = computed(() => subscriptions.value.reduce((total, subscription) => total + (subscription.reset_cards?.total ?? 0), 0))
 const loading = ref(true)
 const resettingId = ref<number | null>(null)

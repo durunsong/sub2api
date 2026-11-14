@@ -144,6 +144,21 @@ export default {
     quotaEnded: 'Quota ended',
     oneTimeDailyHint: 'Valid for 24 hours; daily cards do not auto-reset. After repurchase, click reset to start a new period',
     usageOf: '{used} of {limit}',
+    resetHistory: {
+      title: 'Reset history',
+      time: 'Reset time',
+      method: 'Method',
+      scope: 'Reset windows',
+      term: 'Subscription term',
+      reset_card: 'Reset card',
+      admin: 'Administrator reset',
+      cardTerm: 'Restarted for {days} days',
+      unchangedTerm: 'Term unchanged',
+      coverageHint: 'Includes reset cards and manual or bulk administrator resets, excluding automatic window renewals. Administrator history starts when this feature is enabled.',
+      empty: 'No reset history yet',
+      failedToLoad: 'Unable to load reset history. Please try again.',
+      retry: 'Retry'
+    },
     resetCards: {
       label: 'Reset cards',
       notice: 'You have {count} permanent reset cards',
