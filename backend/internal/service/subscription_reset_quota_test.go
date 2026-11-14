@@ -233,7 +233,7 @@ func TestAdminResetQuota_ResetMonthlyOnly(t *testing.T) {
 	require.True(t, stub.resetMonthlyCalled, "应调用 ResetMonthlyUsage")
 }
 
-func TestAdminResetQuota_BeforeStartsAtSameDayPreservesAutomaticBoundary(t *testing.T) {
+func TestAdminResetQuota_BeforeStartsAtSameDayPreservesTermEnd(t *testing.T) {
 	startsAt := time.Date(2026, 7, 1, 15, 0, 0, 0, time.UTC)
 	resetAt := time.Date(2026, 7, 1, 10, 37, 42, 123, time.UTC)
 	stub := &resetQuotaUserSubRepoStub{
@@ -252,9 +252,8 @@ func TestAdminResetQuota_BeforeStartsAtSameDayPreservesAutomaticBoundary(t *test
 
 	require.NoError(t, err)
 	require.Equal(t, resetAt, *result.MonthlyWindowStart)
-	boundary, ok := result.automaticWindowStartAt(result.MonthlyWindowStart, 30*24*time.Hour, resetAt.Add(30*24*time.Hour))
-	require.True(t, ok)
-	require.Equal(t, resetAt.Add(30*24*time.Hour), boundary)
+	require.Equal(t, startsAt.Add(45*24*time.Hour), *result.MonthlyResetTime())
+	require.False(t, result.NeedsMonthlyResetAt(resetAt.Add(30*24*time.Hour)))
 }
 
 func TestAdminResetQuota_ResetMonthlyUsageError(t *testing.T) {

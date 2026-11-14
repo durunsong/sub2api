@@ -1526,7 +1526,7 @@ func quotaWindowExpired(start *time.Time, currWindowStart time.Time) bool {
 }
 
 // monthlyQuotaWindowExpired 判断 30 天滚动月度窗口是否已过期。
-// 过期条件：now - start >= 30×24h（与订阅模式 NeedsMonthlyReset 语义一致）。
+// 过期条件：now - start >= 30×24h（平台钱包额度独立于订阅周期额度）。
 // start 为 nil 时视为已过期（未初始化窗口）。
 func monthlyQuotaWindowExpired(start *time.Time, now time.Time) bool {
 	if start == nil {

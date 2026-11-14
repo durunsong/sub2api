@@ -43,7 +43,7 @@ const messages: Record<string, string> = {
   'keyUsage.limitDaily': 'Daily Limit',
   'keyUsage.limit7d': '7-Day Limit',
   'keyUsage.limitWeekly': 'Weekly Limit',
-  'keyUsage.limitMonthly': 'Monthly Limit',
+  'keyUsage.limitMonthly': 'Term quota',
   'keyUsage.remainingQuota': 'Remaining Quota',
   'keyUsage.usedQuota': 'Used Quota',
   'keyUsage.subscriptionType': 'Subscription Type',
@@ -171,6 +171,37 @@ describe('KeyUsageView daily detail', () => {
   afterEach(() => {
     vi.useRealTimers()
     vi.unstubAllGlobals()
+  })
+
+  it('labels subscription quota as a term quota in both summary and details', async () => {
+    vi.useFakeTimers()
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        mode: 'subscription',
+        subscription: {
+          monthly_limit_usd: 10000,
+          monthly_usage_usd: 123,
+          expires_at: '2027-02-12T03:17:00Z'
+        }
+      })
+    } as Response)
+    const wrapper = mount(KeyUsageView, {
+      global: { stubs: { RouterLink: { template: '<a><slot /></a>' }, LocaleSwitcher: true, Icon: true } }
+    })
+    try {
+      await wrapper.find('input').setValue('sk-test-key')
+      await wrapper.find('input').trigger('keydown.enter')
+      await flushPromises()
+      expect(wrapper.text()).toContain('Term quota')
+      expect(wrapper.text()).toContain('Used Quota (Term)')
+      expect(wrapper.text()).not.toContain('Monthly Limit')
+      expect(wrapper.text()).not.toContain('Used Quota (M)')
+    } finally {
+      wrapper.unmount()
+      vi.clearAllTimers()
+      vi.useRealTimers()
+    }
   })
 
   it('renders daily usage detail rows after a successful query', async () => {

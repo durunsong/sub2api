@@ -55,6 +55,28 @@ describe('SubscriptionsView reset cards', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true)
   })
 
+  it('renders the full 90-day quota countdown after consuming a card', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-11-14T04:17:00+08:00'))
+    const updated = subscription({
+      starts_at: '2026-11-14T03:17:00+08:00', expires_at: '2027-02-12T03:17:00+08:00',
+      monthly_window_start: '2026-11-14T03:17:00+08:00',
+      monthly_usage_usd: 0, monthly_usage_tokens: 0, reset_cards: { total: 0, groups: [] },
+    })
+    consumeResetCard.mockResolvedValueOnce(updated)
+    const wrapper = await mountView([subscription({ reset_cards: { total: 1, groups: [{ validity_days: 90, count: 1 }] } })])
+    try {
+      await cardButtons(wrapper)[0].trigger('click')
+      await flushPromises()
+      expect(wrapper.text()).toContain('userSubscriptions.quotaEndsIn:userSubscriptions.durationDaysHours:89,23')
+      expect(wrapper.text()).not.toContain('userSubscriptions.durationDaysHours:29,23')
+      expect(wrapper.find('[data-test=reset-cards]').exists()).toBe(false)
+    } finally {
+      wrapper.unmount()
+      vi.useRealTimers()
+    }
+  })
+
   it('shows the benefit bar after the header and hides it when total is zero', async () => {
     const wrapper = await mountView([subscription()])
     expect(wrapper.text()).toContain('userSubscriptions.resetCards.title:3')

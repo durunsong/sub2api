@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { getExpirationDateRelation, getRemainingExpiryDuration, nextSubscriptionReset } from '../subscriptionQuota'
+import { getExpirationDateRelation, getRemainingDurationParts, getRemainingExpiryDuration, nextSubscriptionReset } from '../subscriptionQuota'
 
 describe('subscription expiry timing', () => {
   it('uses local calendar dates for today and tomorrow', () => {
@@ -66,7 +66,18 @@ describe('subscription expiry timing', () => {
 describe('subscription reset countdown', () => {
   const day = 24 * 60 * 60 * 1000
 
-  it('uses the purchase instant instead of midnight for a 90-day monthly window', () => {
+  it('shows 89 days 23 hours one hour after consuming a 90-day card', () => {
+    const now = new Date('2026-11-14T04:17:00+08:00')
+    const expires = new Date('2027-02-12T03:17:00+08:00')
+    const reset = nextSubscriptionReset(
+      { starts_at: '2026-11-14T03:17:00+08:00', expires_at: expires.toISOString() },
+      '2026-11-14T03:17:00+08:00', 'monthly', now
+    )
+    expect(reset).toEqual({ at: expires, endsWithSubscription: true })
+    expect(getRemainingDurationParts(reset!.at, now)).toEqual({ days: 89, hours: 23, minutes: 0 })
+  })
+
+  it('uses the full term even when the legacy window starts at midnight', () => {
     const startsAt = new Date(2026, 6, 1, 15, 5, 0)
     const windowStart = new Date(2026, 6, 1, 0, 0, 0)
     const now = new Date(startsAt.getTime() + 2 * 60 * 60 * 1000)
@@ -82,12 +93,12 @@ describe('subscription reset countdown', () => {
     )
 
     expect(reset).toEqual({
-      at: new Date(startsAt.getTime() + 30 * day),
-      endsWithSubscription: false,
+      at: new Date(startsAt.getTime() + 90 * day),
+      endsWithSubscription: true,
     })
   })
 
-  it('rolls a 90-day plan to the current 30-day window', () => {
+  it('preserves the 90-day expiry after the first 30 days', () => {
     const startsAt = new Date(2026, 6, 1, 15, 5, 0)
     const now = new Date(startsAt.getTime() + 40 * day)
 
@@ -101,8 +112,8 @@ describe('subscription reset countdown', () => {
       now
     )
 
-    expect(reset?.endsWithSubscription).toBe(false)
-    expect(reset?.at.getTime()).toBe(startsAt.getTime() + 60 * day)
+    expect(reset?.endsWithSubscription).toBe(true)
+    expect(reset?.at.getTime()).toBe(startsAt.getTime() + 90 * day)
   })
 
   it('ends the last slice of a 90-day plan with the subscription', () => {
@@ -118,6 +129,26 @@ describe('subscription reset countdown', () => {
     )
 
     expect(reset).toEqual({ at: expiresAt, endsWithSubscription: true })
+  })
+
+  it.each([7, 30, 90, 180])('ends a %i-day term at expiry without scheduling another quota', (days) => {
+    const start = new Date('2026-11-14T03:17:00Z')
+    const expiry = new Date(start.getTime() + days * day)
+    const subscription = { starts_at: start.toISOString(), expires_at: expiry.toISOString() }
+    expect(nextSubscriptionReset(subscription, start.toISOString(), 'monthly', start)).toEqual({
+      at: expiry, endsWithSubscription: true
+    })
+    expect(nextSubscriptionReset(subscription, start.toISOString(), 'monthly', expiry)).toBeNull()
+    expect(nextSubscriptionReset({ expires_at: 'invalid' }, start.toISOString(), 'monthly', start)).toBeNull()
+  })
+
+  it('keeps weekly quota on its seven-day cadence within a 90-day term', () => {
+    const start = new Date('2026-11-14T03:17:00Z')
+    const expiry = new Date(start.getTime() + 90 * day)
+    expect(nextSubscriptionReset({ starts_at: start.toISOString(), expires_at: expiry.toISOString() },
+      start.toISOString(), 'weekly', start)).toEqual({
+      at: new Date(start.getTime() + 7 * day), endsWithSubscription: false
+    })
   })
 
   it('resets a daily window at the next local midnight', () => {

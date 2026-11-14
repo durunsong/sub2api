@@ -74,7 +74,7 @@ func NeedsWeeklyReset(start *time.Time, now time.Time) bool {
 	return start.Before(timezone.StartOfWeek(now))
 }
 
-// NeedsMonthlyReset 30 天滚动窗口语义（与订阅模式 NeedsMonthlyReset 一致）。
+// NeedsMonthlyReset 30 天滚动窗口语义（独立于订阅周期额度）。
 func NeedsMonthlyReset(start *time.Time, now time.Time) bool {
 	if start == nil {
 		return false

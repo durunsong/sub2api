@@ -764,27 +764,9 @@
           </div>
           <p class="input-hint">{{ t('admin.subscriptions.adjustHint') }}</p>
         </div>
-        <label
-          v-if="
-            (extendingSubscription.group?.monthly_limit_usd ?? 0) > 0 &&
-            extendingSubscription.monthly_window_start
-          "
-          class="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 bg-white p-4 transition-colors hover:border-primary-300 hover:bg-primary-50/40 dark:border-dark-600 dark:bg-dark-800 dark:hover:border-primary-700 dark:hover:bg-primary-900/10"
-        >
-          <input
-            v-model="extendForm.align_monthly_reset"
-            type="checkbox"
-            class="mt-0.5 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-dark-500 dark:bg-dark-700"
-          />
-          <span>
-            <span class="block text-sm font-medium text-gray-900 dark:text-white">
-              {{ t('admin.subscriptions.followResetDate') }}
-            </span>
-            <span class="mt-1 block text-xs leading-5 text-gray-500 dark:text-gray-400">
-              {{ t('admin.subscriptions.followResetDateHint') }}
-            </span>
-          </span>
-        </label>
+        <p v-if="(extendingSubscription.group?.monthly_limit_usd ?? 0) > 0" class="input-hint">
+          {{ t('admin.subscriptions.termQuotaFollowsExpiry') }}
+        </p>
       </form>
       <template #footer>
         <div v-if="extendingSubscription" class="flex justify-end gap-3">
@@ -1191,8 +1173,7 @@ const assignForm = reactive({
 })
 
 const extendForm = reactive({
-  days: 30,
-  align_monthly_reset: false
+  days: 30
 })
 
 // Group options for filter (all groups)
@@ -1484,7 +1465,6 @@ const handleAssignSubscription = async () => {
 const handleExtend = (subscription: UserSubscription) => {
   extendingSubscription.value = subscription
   extendForm.days = 30
-  extendForm.align_monthly_reset = false
   showExtendModal.value = true
 }
 
@@ -1509,8 +1489,7 @@ const handleExtendSubscription = async () => {
   submitting.value = true
   try {
     await adminAPI.subscriptions.extend(extendingSubscription.value.id, {
-      days: extendForm.days,
-      align_monthly_reset: extendForm.align_monthly_reset
+      days: extendForm.days
     })
     appStore.showSuccess(t('admin.subscriptions.subscriptionAdjusted'))
     closeExtendModal()

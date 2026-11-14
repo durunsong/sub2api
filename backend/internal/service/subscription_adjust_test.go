@@ -10,30 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type adjustmentUserSubRepoStub struct {
-	*subscriptionUserSubRepoStub
-}
-
-func (s *adjustmentUserSubRepoStub) AdjustExpiryAndMonthlyWindow(
-	_ context.Context,
-	subscriptionID int64,
-	newExpiresAt time.Time,
-	newMonthlyWindowStart *time.Time,
-	reactivate bool,
-) error {
-	sub := s.byID[subscriptionID]
-	if sub == nil {
-		return ErrSubscriptionNotFound
-	}
-	sub.ExpiresAt = newExpiresAt
-	sub.MonthlyWindowStart = newMonthlyWindowStart
-	if reactivate {
-		sub.Status = SubscriptionStatusActive
-	}
-	return nil
-}
-
-func TestAdjustSubscription_AlignsMonthlyResetWithAdjustedExpiry(t *testing.T) {
+func TestAdjustSubscription_LegacyAlignPreservesQuotaAnchor(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Second)
 	dailyStart := now.Add(-6 * time.Hour)
 	weeklyStart := now.Add(-2 * 24 * time.Hour)
@@ -51,20 +28,21 @@ func TestAdjustSubscription_AlignsMonthlyResetWithAdjustedExpiry(t *testing.T) {
 		WeeklyWindowStart:  &weeklyStart,
 		MonthlyWindowStart: &monthlyStart,
 	})
-	repo := &adjustmentUserSubRepoStub{subscriptionUserSubRepoStub: baseRepo}
-	svc := NewSubscriptionService(groupRepoNoop{}, repo, nil, nil, nil)
+	svc := NewSubscriptionService(groupRepoNoop{}, baseRepo, nil, nil, nil)
+	t.Cleanup(svc.Stop)
 
 	got, err := svc.AdjustSubscription(context.Background(), 1, 60, true)
 
 	require.NoError(t, err)
 	require.Equal(t, originalExpiry.AddDate(0, 0, 60), got.ExpiresAt)
 	require.NotNil(t, got.MonthlyWindowStart)
-	require.Equal(t, got.ExpiresAt, got.MonthlyWindowStart.Add(30*24*time.Hour))
+	require.Equal(t, monthlyStart, *got.MonthlyWindowStart)
+	require.Equal(t, got.ExpiresAt, *got.MonthlyResetTime())
 	require.Equal(t, dailyStart, *got.DailyWindowStart)
 	require.Equal(t, weeklyStart, *got.WeeklyWindowStart)
 }
 
-func TestAdjustSubscription_DefaultKeepsMonthlyResetDate(t *testing.T) {
+func TestAdjustSubscription_DefaultMovesQuotaEndWithExpiry(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Second)
 	monthlyStart := now.Add(-3 * 24 * time.Hour)
 	originalExpiry := now.AddDate(0, 0, 30)
@@ -78,8 +56,8 @@ func TestAdjustSubscription_DefaultKeepsMonthlyResetDate(t *testing.T) {
 		ExpiresAt:          originalExpiry,
 		MonthlyWindowStart: &monthlyStart,
 	})
-	repo := &adjustmentUserSubRepoStub{subscriptionUserSubRepoStub: baseRepo}
-	svc := NewSubscriptionService(groupRepoNoop{}, repo, nil, nil, nil)
+	svc := NewSubscriptionService(groupRepoNoop{}, baseRepo, nil, nil, nil)
+	t.Cleanup(svc.Stop)
 
 	got, err := svc.AdjustSubscription(context.Background(), 2, 60, false)
 
@@ -87,9 +65,10 @@ func TestAdjustSubscription_DefaultKeepsMonthlyResetDate(t *testing.T) {
 	require.Equal(t, originalExpiry.AddDate(0, 0, 60), got.ExpiresAt)
 	require.NotNil(t, got.MonthlyWindowStart)
 	require.Equal(t, monthlyStart, *got.MonthlyWindowStart)
+	require.Equal(t, got.ExpiresAt, *got.MonthlyResetTime())
 }
 
-func TestAdjustSubscription_AlignsExistingSubscriptionWithoutChangingExpiry(t *testing.T) {
+func TestAdjustSubscription_LegacyAlignWithoutDaysPreservesAnchor(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Second)
 	monthlyStart := now.Add(-4 * 24 * time.Hour)
 	originalExpiry := now.AddDate(0, 0, 87)
@@ -103,13 +82,35 @@ func TestAdjustSubscription_AlignsExistingSubscriptionWithoutChangingExpiry(t *t
 		ExpiresAt:          originalExpiry,
 		MonthlyWindowStart: &monthlyStart,
 	})
-	repo := &adjustmentUserSubRepoStub{subscriptionUserSubRepoStub: baseRepo}
-	svc := NewSubscriptionService(groupRepoNoop{}, repo, nil, nil, nil)
+	svc := NewSubscriptionService(groupRepoNoop{}, baseRepo, nil, nil, nil)
+	t.Cleanup(svc.Stop)
 
 	got, err := svc.AdjustSubscription(context.Background(), 3, 0, true)
 
 	require.NoError(t, err)
 	require.Equal(t, originalExpiry, got.ExpiresAt)
 	require.NotNil(t, got.MonthlyWindowStart)
-	require.Equal(t, got.ExpiresAt, got.MonthlyWindowStart.Add(30*24*time.Hour))
+	require.Equal(t, monthlyStart, *got.MonthlyWindowStart)
+	require.Equal(t, got.ExpiresAt, *got.MonthlyResetTime())
+}
+
+func TestAdjustSubscription_ReactivatesWithoutRefillingTermQuota(t *testing.T) {
+	now := time.Date(2026, 11, 14, 3, 17, 0, 0, time.UTC)
+	anchor := now.Add(-91 * 24 * time.Hour)
+	for _, legacyAlign := range []bool{false, true} {
+		repo := newSubscriptionUserSubRepoStub()
+		repo.seed(&UserSubscription{ID: 4, UserID: 10, GroupID: 20, Status: SubscriptionStatusExpired,
+			ExpiresAt: now.Add(-24 * time.Hour), MonthlyWindowStart: &anchor, MonthlyUsageUSD: 9000, MonthlyUsageTokens: 1200})
+		svc := NewSubscriptionService(groupRepoNoop{}, repo, nil, nil, nil)
+		t.Cleanup(svc.Stop)
+		svc.now = func() time.Time { return now }
+		got, err := svc.AdjustSubscription(context.Background(), 4, 90, legacyAlign)
+		require.NoError(t, err)
+		require.Equal(t, SubscriptionStatusActive, got.Status)
+		require.Equal(t, now.AddDate(0, 0, 90), got.ExpiresAt)
+		require.Equal(t, got.ExpiresAt, *got.MonthlyResetTime())
+		require.Equal(t, anchor, *got.MonthlyWindowStart)
+		require.Equal(t, 9000.0, got.MonthlyUsageUSD)
+		require.EqualValues(t, 1200, got.MonthlyUsageTokens)
+	}
 }

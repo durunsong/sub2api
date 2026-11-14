@@ -477,6 +477,13 @@ frontend/src/i18n/locales/zh/misc.ts
 frontend/src/i18n/locales/en/misc.ts
 ```
 
+#### 订阅周期额度（2026-11-14）
+
+- 用户确认 90 天卡消费一小时后应剩余 89 天 23 小时，覆盖旧的 30 天月窗口定义。数据库/API 保留 `monthly_limit_usd`、`monthly_usage_*`、`monthly_window_start` 字段，业务语义改为当前订阅全期额度，结束时间统一为 `expires_at`；第 30/60 天不自动清零或补发。
+- 模型重置时间、服务限额校验、列表归一化、自动维护、进度 API、管理端可用额度 SQL 与前端共享倒计时使用同一口径。用户端、管理端、购买/套餐配置及密钥用量页统一显示“周期额度”，到期倒计时显示额度结束，不承诺自动续期。
+- 消费卡仍按购买时期限快照原子重开并清零，幂等重试不扣第二张卡、不清掉后续新增用量。管理员单条/批量重置不改到期时间；延期保持原用量和真实锚点，周期额度随新到期时间结束。旧 `align_monthly_reset` / `shift_monthly_reset` 参数继续接受（包含 0 天请求），不再写入未来锚点，界面移除该选项。
+- 日额度午夜刷新、周额度滚动和钱包平台月额度保持原规则。已有订阅直接按真实到期时间显示；旧版本已自动清掉的历史用量不回填、不补扣。不新增迁移或依赖，不执行生产部署；回退版本会恢复 30 天规则，部署时应保持实例版本一致。实现及验证见 `openspec/changes/subscription-term-quota/`。
+
 #### 订阅重置记录（2026-11-14）
 
 - 管理端 `/admin/subscriptions` 与用户端 `/subscriptions` 增加“重置记录”入口，共享分页弹窗，显示重置时间、方式、日/周/月范围和卡期限；包含历史已消费卡及上线后的管理员单条/批量重置。自动周期刷新不计入；历史管理员操作不伪造回填，界面注明覆盖范围。
@@ -488,8 +495,8 @@ frontend/src/i18n/locales/en/misc.ts
 ### 8.5 管理端订阅可用额度筛选（Fork 新增，2026-08-31）
 
 - `/admin/subscriptions` 状态下拉增加 `active_available`（中文“生效中+没用完”）并设为默认筛选。
-- 该组合筛选只返回 `status=active` 且未到期的订阅；日、周、月任一已配置额度达到上限即排除，无限额订阅保留。
-- 查询按现有订阅窗口规则识别已进入新窗口的额度，并在数据库查询阶段过滤，确保分页条目、总数与页数一致；无数据库迁移。
+- 该组合筛选只返回 `status=active` 且未到期的订阅；日、周、周期任一已配置额度达到上限即排除，无限额订阅保留。
+- 查询按日/周规则识别已进入新窗口的额度，周期额度不按 30 天恢复可用；在数据库查询阶段过滤，确保分页条目、总数与页数一致；无数据库迁移。
 - 关键文件：`backend/internal/repository/user_subscription_repo.go`、`backend/internal/service/domain_constants.go`、`frontend/src/views/admin/SubscriptionsView.vue`、`frontend/src/api/admin/subscriptions.ts` 与管理端中英文 i18n。
 
 ### 8.6 未活跃用户余额券群发（Fork 新增，2026-10-15）

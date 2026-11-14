@@ -402,7 +402,7 @@ func (s *SubscriptionService) withSubscriptionUpdateTx(ctx context.Context, fn f
 
 func renewedSubscriptionTerm(existingSub *UserSubscription, notes string, startsAt, expiresAt time.Time) *UserSubscription {
 	renewed := *existingSub
-	// 日窗口按日历日对齐（0 点刷新）；周/月窗口按订阅期限对齐（锚点为新周期起点）。
+	// 日窗口按日历日对齐（0 点刷新）；周窗口和周期额度记录新周期起点。
 	dailyWindowStart := timezone.StartOfDay(startsAt)
 	periodicWindowStart := startsAt
 	renewed.StartsAt = startsAt
@@ -845,21 +845,10 @@ func (s *SubscriptionService) ExtendSubscription(ctx context.Context, subscripti
 	return s.AdjustSubscription(ctx, subscriptionID, days, false)
 }
 
-type subscriptionAdjustmentRepository interface {
-	AdjustExpiryAndMonthlyWindow(
-		ctx context.Context,
-		subscriptionID int64,
-		newExpiresAt time.Time,
-		newMonthlyWindowStart *time.Time,
-		reactivate bool,
-	) error
-}
-
-// AdjustSubscription adjusts the subscription term. When alignMonthlyReset is
-// enabled, the active monthly quota window is rebased so its next reset occurs
-// at the adjusted subscription expiry.
-// Daily and weekly windows intentionally keep their normal cadence.
-func (s *SubscriptionService) AdjustSubscription(ctx context.Context, subscriptionID int64, days int, alignMonthlyReset bool) (*UserSubscription, error) {
+// AdjustSubscription adjusts expiry without rebasing quota anchors or clearing usage.
+// The legacy alignment flag is accepted for API compatibility; term quota always
+// ends at ExpiresAt. Daily and weekly windows retain their normal cadence.
+func (s *SubscriptionService) AdjustSubscription(ctx context.Context, subscriptionID int64, days int, _ bool) (*UserSubscription, error) {
 	err := s.withSubscriptionUpdateTx(ctx, func(txCtx context.Context) error {
 		sub, err := s.userSubRepo.GetByIDForUpdate(txCtx, subscriptionID)
 		if err != nil {
@@ -901,30 +890,12 @@ func (s *SubscriptionService) AdjustSubscription(ctx context.Context, subscripti
 			return ErrAdjustWouldExpire
 		}
 
-		reactivate := sub.Status == SubscriptionStatusExpired
-		if alignMonthlyReset && sub.MonthlyWindowStart != nil {
-			adjustmentRepo, ok := s.userSubRepo.(subscriptionAdjustmentRepository)
-			if !ok {
-				return fmt.Errorf("subscription repository does not support monthly reset date adjustment")
-			}
-			newMonthlyWindowStart := newExpiresAt.Add(-30 * 24 * time.Hour)
-			if err := adjustmentRepo.AdjustExpiryAndMonthlyWindow(
-				txCtx,
-				subscriptionID,
-				newExpiresAt,
-				&newMonthlyWindowStart,
-				reactivate,
-			); err != nil {
-				return err
-			}
-		} else {
-			if err := s.userSubRepo.ExtendExpiry(txCtx, subscriptionID, newExpiresAt); err != nil {
-				return err
-			}
+		if err := s.userSubRepo.ExtendExpiry(txCtx, subscriptionID, newExpiresAt); err != nil {
+			return err
 		}
 
-		// 如果订阅已过期，恢复为active状态
-		if reactivate && (!alignMonthlyReset || sub.MonthlyWindowStart == nil) {
+		// 如果订阅已过期，恢复为 active 状态；仍在同一行锁事务中。
+		if sub.Status == SubscriptionStatusExpired {
 			if err := s.userSubRepo.UpdateStatus(txCtx, subscriptionID, SubscriptionStatusActive); err != nil {
 				return err
 			}
@@ -1105,7 +1076,7 @@ func normalizeExpiredWindowsAt(subs []UserSubscription, now time.Time) {
 	for i := range subs {
 		sub := &subs[i]
 		// 过期窗口按当前周期起点展示，而不是清空起点。
-		// 90 天套餐有 3 个 30 天月窗口；清空后前端失去下一次重置时间。
+		// 周期额度保留真实用量，仅日/周额度按各自规则自动推进。
 		if windowStart, ok := sub.automaticDailyWindowStartAt(now); ok {
 			sub.DailyWindowStart = &windowStart
 			sub.DailyUsageUSD = 0
@@ -1115,11 +1086,6 @@ func normalizeExpiredWindowsAt(subs []UserSubscription, now time.Time) {
 			sub.WeeklyWindowStart = &windowStart
 			sub.WeeklyUsageUSD = 0
 			sub.WeeklyUsageTokens = 0
-		}
-		if windowStart, ok := sub.automaticWindowStartAt(sub.MonthlyWindowStart, 30*24*time.Hour, now); ok {
-			sub.MonthlyWindowStart = &windowStart
-			sub.MonthlyUsageUSD = 0
-			sub.MonthlyUsageTokens = 0
 		}
 	}
 }
@@ -1151,8 +1117,8 @@ func (s *SubscriptionService) checkAndActivateWindowAt(ctx context.Context, sub 
 		return nil
 	}
 
-	// 日窗口锚定当天 0 点（日历日语义）；周/月窗口锚定首次使用时刻（期限对齐语义，
-	// 锚点不得早于 StartsAt，否则最后一个不完整周期会重复发放额度，见 issue #5051）。
+	// 日窗口锚定当天 0 点；周窗口和周期额度记录首次使用时刻。
+	// 周锚点不得早于 StartsAt，避免最后一个不完整周重复发放；周期额度始终到 ExpiresAt 结束。
 	return s.userSubRepo.ActivateWindows(ctx, sub.ID, timezone.StartOfDay(now), now)
 }
 
@@ -1167,7 +1133,7 @@ func (s *SubscriptionService) AdminResetQuota(ctx context.Context, subscriptionI
 	}
 	now := s.now()
 	// 日窗口锚点取当天 0 点：手动重置只清空用量，不改变“每天 0 点刷新”的节奏。
-	// 周/月窗口保持锚定重置时刻（期限对齐滚动窗口语义）。
+	// 周窗口和周期额度记录重置时刻；周期额度结束时间仍为 ExpiresAt。
 	if err := s.userSubRepo.ResetUsageWindows(ctx, sub.ID, resetDaily, resetWeekly, resetMonthly, timezone.StartOfDay(now), now); err != nil {
 		return nil, err
 	}
@@ -1209,16 +1175,7 @@ func (s *SubscriptionService) CheckAndResetWindows(ctx context.Context, sub *Use
 		needsInvalidateCache = true
 	}
 
-	// 月窗口重置（30天）
-	if windowStart, ok := sub.automaticWindowStartAt(sub.MonthlyWindowStart, 30*24*time.Hour, now); ok {
-		expectedWindowStart := sub.MonthlyWindowStart
-		if err := s.userSubRepo.ResetMonthlyUsage(ctx, sub.ID, expectedWindowStart, windowStart); err != nil {
-			return err
-		}
-		sub.MonthlyWindowStart = &windowStart
-		sub.MonthlyUsageUSD = 0
-		needsInvalidateCache = true
-	}
+	// 周期额度仅由重开订阅、消费重置卡或管理员显式重置清零。
 
 	// 如果有窗口被重置，失效缓存以保持一致性
 	if needsInvalidateCache {
@@ -1296,10 +1253,6 @@ func (s *SubscriptionService) ValidateAndCheckLimits(sub *UserSubscription, grou
 	}
 	if sub.canAutomaticallyResetWeeklyAt(now) {
 		sub.WeeklyUsageUSD = 0
-		needsMaintenance = true
-	}
-	if sub.canAutomaticallyResetMonthlyAt(now) {
-		sub.MonthlyUsageUSD = 0
 		needsMaintenance = true
 	}
 	if !sub.IsWindowActivated() {
@@ -1473,10 +1426,7 @@ func (s *SubscriptionService) calculateProgress(sub *UserSubscription, group *Gr
 	// 月进度
 	if group.HasMonthlyLimit() && sub.MonthlyWindowStart != nil {
 		limit := *group.MonthlyLimitUSD
-		resetsAt := sub.MonthlyWindowStart.Add(30 * 24 * time.Hour)
-		if monthlyResetTime := sub.MonthlyResetTime(); monthlyResetTime != nil {
-			resetsAt = *monthlyResetTime
-		}
+		resetsAt := sub.ExpiresAt
 		progress.Monthly = &UsageWindowProgress{
 			LimitUSD:        limit,
 			UsedUSD:         sub.MonthlyUsageUSD,

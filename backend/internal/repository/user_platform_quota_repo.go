@@ -305,7 +305,7 @@ func maybeReset(prevUsage float64, prevStart *time.Time, currStart time.Time, co
 }
 
 // monthlyMaybeReset 判断 30 天滚动月度窗口是否需要重置。
-// 过期条件：prevStart 为 nil 或 now - prevStart >= 30×24h（与订阅模式 NeedsMonthlyReset 语义一致）。
+// 过期条件：prevStart 为 nil 或 now - prevStart >= 30×24h（平台钱包额度独立于订阅周期额度）。
 // 过期时重置为 cost，否则累加。返回 (newUsage, newWindowStart)。
 func monthlyMaybeReset(prevUsage float64, prevStart *time.Time, cost float64, now time.Time) (float64, time.Time) {
 	if prevStart == nil || now.Sub(*prevStart) >= 30*24*time.Hour {

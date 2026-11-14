@@ -74,8 +74,8 @@ type BulkAssignSubscriptionRequest struct {
 
 // AdjustSubscriptionRequest represents adjust subscription request (extend or shorten)
 type AdjustSubscriptionRequest struct {
-	Days              int  `json:"days" binding:"min=-36500,max=36500"` // negative to shorten, positive to extend, zero to align only
-	AlignMonthlyReset bool `json:"align_monthly_reset"`                 // align the next monthly quota reset with the adjusted expiry
+	Days              int  `json:"days" binding:"min=-36500,max=36500"` // negative to shorten, positive to extend, zero accepted with a legacy alignment flag
+	AlignMonthlyReset bool `json:"align_monthly_reset"`                 // deprecated: term quota always ends at expiry
 	ShiftMonthlyReset bool `json:"shift_monthly_reset"`                 // backward compatibility for the original option name
 }
 
@@ -239,7 +239,7 @@ func (h *SubscriptionHandler) Extend(c *gin.Context) {
 	}
 	alignMonthlyReset := req.AlignMonthlyReset || req.ShiftMonthlyReset
 	if req.Days == 0 && !alignMonthlyReset {
-		response.BadRequest(c, "Adjustment days must be non-zero unless aligning the monthly reset date")
+		response.BadRequest(c, "Adjustment days must be non-zero unless using a legacy alignment option")
 		return
 	}
 

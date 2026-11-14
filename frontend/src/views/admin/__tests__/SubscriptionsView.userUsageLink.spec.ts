@@ -34,8 +34,9 @@ vi.mock('vue-i18n', async () => {
   return {
     ...actual,
     useI18n: () => ({
-      t: (key: string, params?: { id?: number }) =>
-        key === 'admin.redeem.userPrefix' ? `User #${params?.id}` : key
+      t: (key: string, params?: { id?: number; days?: number; hours?: number }) =>
+        key === 'admin.redeem.userPrefix' ? `User #${params?.id}` :
+          key === 'admin.subscriptions.quotaEndsInDaysHours' ? `${key}:${params?.days},${params?.hours}` : key
     })
   }
 })
@@ -46,6 +47,7 @@ const DataTableStub = {
     <div>
       <div v-for="row in data" :key="row.id">
         <slot name="cell-user" :row="row" />
+        <slot name="cell-usage" :row="row" />
       </div>
     </div>
   `
@@ -114,6 +116,31 @@ describe('admin subscription users', () => {
         Icon: true,
         Teleport: true
       }
+    }
+  })
+
+  it('shows 89 days 23 hours for the quota of a newly reset 90-day subscription', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-11-14T04:17:00+08:00'))
+    listSubscriptions.mockResolvedValue({
+      items: [{
+        id: 9, user_id: 42, group_id: 3, status: 'active',
+        starts_at: '2026-11-14T03:17:00+08:00',
+        expires_at: '2027-02-12T03:17:00+08:00',
+        monthly_window_start: '2026-11-14T03:17:00+08:00',
+        monthly_usage_usd: 0, monthly_usage_tokens: 0,
+        group: { id: 3, name: '90-day plan', monthly_limit_usd: 10000 },
+        user: { email: 'reader@example.com', username: 'Reader' }
+      }], total: 1, pages: 1
+    })
+    const wrapper = mountView()
+    try {
+      await flushPromises()
+      expect(wrapper.text()).toContain('admin.subscriptions.quotaEndsInDaysHours:89,23')
+      expect(wrapper.text()).not.toContain('admin.subscriptions.quotaEndsInDaysHours:29,23')
+    } finally {
+      wrapper.unmount()
+      vi.useRealTimers()
     }
   })
 

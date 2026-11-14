@@ -154,7 +154,7 @@ export default {
     limitDaily: 'Daily Limit',
     limit7d: '7-Day Limit',
     limitWeekly: 'Weekly Limit',
-    limitMonthly: 'Monthly Limit',
+    limitMonthly: 'Term quota',
     // Detail rows
     remainingQuota: 'Remaining Quota',
     expiresAt: 'Expires At',

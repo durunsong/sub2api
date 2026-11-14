@@ -1004,7 +1004,7 @@ export default {
       updating: 'Updating...',
       limitDay: 'd',
       limitWeek: 'w',
-      limitMonth: 'mo',
+      limitMonth: 'term',
       groupCreated: 'Group created successfully',
       groupUpdated: 'Group updated successfully',
       groupDeleted: 'Group deleted successfully',
@@ -1069,7 +1069,7 @@ export default {
         subscription: 'Subscription (Quota)',
         dailyLimit: 'Daily Limit (USD)',
         weeklyLimit: 'Weekly Limit (USD)',
-        monthlyLimit: 'Monthly Limit (USD)',
+        monthlyLimit: 'Subscription term quota (USD)',
         defaultValidityDays: 'Default Validity (Days)',
         validityHint: 'Number of days the subscription is valid when assigned to a user',
         noLimit: 'No limit'

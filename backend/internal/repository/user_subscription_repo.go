@@ -368,7 +368,7 @@ func activeSubscriptionWithQuotaRemaining(now time.Time) predicate.UserSubscript
 				quotaDimensionAvailable(
 					groups.C(group.FieldMonthlyLimitUsd),
 					subscription.C(usersubscription.FieldMonthlyUsageUsd),
-					periodicSubscriptionWindowReset(subscription, usersubscription.FieldMonthlyWindowStart, 30*24*time.Hour, now, timezoneName),
+					nil, // 周期额度在到期前不会自动重新发放。
 				),
 			))
 		subscription.Where(entsql.Exists(matchingGroup))
@@ -376,12 +376,15 @@ func activeSubscriptionWithQuotaRemaining(now time.Time) predicate.UserSubscript
 }
 
 func quotaDimensionAvailable(limitColumn, usageColumn string, windowReset *entsql.Predicate) *entsql.Predicate {
-	return entsql.Or(
+	predicates := []*entsql.Predicate{
 		entsql.IsNull(limitColumn),
 		entsql.LTE(limitColumn, 0),
 		entsql.ColumnsLT(usageColumn, limitColumn),
-		windowReset,
-	)
+	}
+	if windowReset != nil {
+		predicates = append(predicates, windowReset)
+	}
+	return entsql.Or(predicates...)
 }
 
 func dailySubscriptionWindowReset(subscription *entsql.Selector, today time.Time, timezoneName string) *entsql.Predicate {
@@ -455,24 +458,6 @@ func (r *userSubscriptionRepository) ExtendExpiry(ctx context.Context, subscript
 	_, err := client.UserSubscription.UpdateOneID(subscriptionID).
 		SetExpiresAt(newExpiresAt).
 		Save(ctx)
-	return translatePersistenceError(err, service.ErrSubscriptionNotFound, nil)
-}
-
-func (r *userSubscriptionRepository) AdjustExpiryAndMonthlyWindow(
-	ctx context.Context,
-	subscriptionID int64,
-	newExpiresAt time.Time,
-	newMonthlyWindowStart *time.Time,
-	reactivate bool,
-) error {
-	client := clientFromContext(ctx, r.client)
-	update := client.UserSubscription.UpdateOneID(subscriptionID).
-		SetExpiresAt(newExpiresAt).
-		SetNillableMonthlyWindowStart(newMonthlyWindowStart)
-	if reactivate {
-		update.SetStatus(service.SubscriptionStatusActive)
-	}
-	_, err := update.Save(ctx)
 	return translatePersistenceError(err, service.ErrSubscriptionNotFound, nil)
 }
 

@@ -53,10 +53,9 @@ func TestDelayedFirstUseAnchorsMonthlyWindowAtActivation(t *testing.T) {
 	require.Equal(t, activatedAt, repo.periodicStart)
 	require.Equal(t, timezone.StartOfDay(activatedAt), repo.dailyStart)
 	monthlyWindowStart := repo.periodicStart
-	resetAt, ok := sub.automaticWindowStartAt(&monthlyWindowStart, 30*24*time.Hour, activatedAt.Add(30*24*time.Hour))
-	require.True(t, ok)
-	require.Equal(t, activatedAt.Add(30*24*time.Hour), resetAt)
-	require.NotEqual(t, startsAt.Add(30*24*time.Hour), resetAt)
+	sub.MonthlyWindowStart = &monthlyWindowStart
+	require.Equal(t, sub.ExpiresAt, *sub.MonthlyResetTime())
+	require.False(t, sub.NeedsMonthlyResetAt(activatedAt.Add(30*24*time.Hour)))
 }
 
 func TestThirtyDaySubscriptionDoesNotResetMonthlyQuotaBeforeExpiry(t *testing.T) {
@@ -67,7 +66,6 @@ func TestThirtyDaySubscriptionDoesNotResetMonthlyQuotaBeforeExpiry(t *testing.T)
 	require.Equal(t, startsAt, *renewed.MonthlyWindowStart)
 	require.False(t, renewed.NeedsMonthlyResetAt(expiresAt.Add(-time.Second)))
 	require.True(t, renewed.NeedsMonthlyResetAt(expiresAt))
-	require.False(t, renewed.canAutomaticallyResetMonthlyAt(expiresAt))
 	require.Equal(t, expiresAt, *renewed.MonthlyResetTime())
 }
 
@@ -92,7 +90,7 @@ func TestCheckAndResetWindowsDoesNotResetExactThirtyDayLegacyMonthlyWindow(t *te
 	require.Equal(t, windowStart, *sub.MonthlyWindowStart)
 }
 
-func TestCheckAndResetWindowsResetsPartialFinalMonthlySubscriptions(t *testing.T) {
+func TestCheckAndResetWindowsPreservesFullTermQuota(t *testing.T) {
 	for _, durationDays := range []int{31, 45} {
 		t.Run(strconv.Itoa(durationDays)+"_days", func(t *testing.T) {
 			legacyWindowStart := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
@@ -110,9 +108,9 @@ func TestCheckAndResetWindowsResetsPartialFinalMonthlySubscriptions(t *testing.T
 			}
 
 			require.NoError(t, svc.CheckAndResetWindows(context.Background(), sub))
-			require.True(t, repo.resetCalled)
-			require.Equal(t, startsAt.Add(30*24*time.Hour), repo.resetAt)
-			require.Zero(t, sub.MonthlyUsageUSD)
+			require.False(t, repo.resetCalled)
+			require.Equal(t, legacyWindowStart, *sub.MonthlyWindowStart)
+			require.Equal(t, 12.0, sub.MonthlyUsageUSD)
 		})
 	}
 }
@@ -134,7 +132,7 @@ func TestNormalizeExpiredWindowsKeepsLegacyMonthlyUsageBeforeExpiry(t *testing.T
 	require.Equal(t, windowStart, *subs[0].MonthlyWindowStart)
 }
 
-func TestNormalizeExpiredWindowsResetsMonthlyUsageWithPartialFinalPeriod(t *testing.T) {
+func TestNormalizeExpiredWindowsPreservesTermUsageAfterThirtyDays(t *testing.T) {
 	startsAt := time.Date(2026, 7, 1, 23, 30, 0, 0, time.UTC)
 	windowStart := startsAt.Add(-23*time.Hour - 30*time.Minute)
 	now := startsAt.Add(30 * 24 * time.Hour)
@@ -147,9 +145,9 @@ func TestNormalizeExpiredWindowsResetsMonthlyUsageWithPartialFinalPeriod(t *test
 
 	normalizeExpiredWindowsAt(subs, now)
 
-	require.Zero(t, subs[0].MonthlyUsageUSD)
+	require.Equal(t, 12.0, subs[0].MonthlyUsageUSD)
 	require.NotNil(t, subs[0].MonthlyWindowStart)
-	require.Equal(t, startsAt.Add(30*24*time.Hour), *subs[0].MonthlyWindowStart)
+	require.Equal(t, windowStart, *subs[0].MonthlyWindowStart)
 }
 
 func TestValidateAndCheckLimitsKeepsLegacyMonthlyUsageBeforeExpiry(t *testing.T) {
@@ -174,7 +172,7 @@ func TestValidateAndCheckLimitsKeepsLegacyMonthlyUsageBeforeExpiry(t *testing.T)
 	require.Equal(t, 12.0, sub.MonthlyUsageUSD)
 }
 
-func TestValidateAndCheckLimitsResetsMonthlyUsageWithPartialFinalPeriod(t *testing.T) {
+func TestValidateAndCheckLimitsRejectsExhaustedTermAfterThirtyDays(t *testing.T) {
 	startsAt := time.Date(2026, 7, 1, 23, 30, 0, 0, time.UTC)
 	windowStart := startsAt.Add(-23*time.Hour - 30*time.Minute)
 	now := startsAt.Add(30 * 24 * time.Hour)
@@ -191,9 +189,9 @@ func TestValidateAndCheckLimitsResetsMonthlyUsageWithPartialFinalPeriod(t *testi
 
 	needsMaintenance, err := svc.ValidateAndCheckLimits(sub, &Group{MonthlyLimitUSD: &limit})
 
-	require.NoError(t, err)
-	require.True(t, needsMaintenance)
-	require.Zero(t, sub.MonthlyUsageUSD)
+	require.ErrorIs(t, err, ErrMonthlyLimitExceeded)
+	require.False(t, needsMaintenance)
+	require.Equal(t, 12.0, sub.MonthlyUsageUSD)
 }
 
 func TestValidateAndCheckLimitsRejectsExactExpiry(t *testing.T) {

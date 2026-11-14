@@ -145,7 +145,7 @@ func (s *UserSubscription) NeedsMonthlyResetAt(now time.Time) bool {
 	if s.MonthlyWindowStart == nil {
 		return false
 	}
-	return !now.Before(s.MonthlyWindowStart.Add(30 * 24 * time.Hour))
+	return !s.ExpiresAt.IsZero() && !now.Before(s.ExpiresAt)
 }
 
 func (s *UserSubscription) canAutomaticallyResetDailyAt(now time.Time) bool {
@@ -154,7 +154,7 @@ func (s *UserSubscription) canAutomaticallyResetDailyAt(now time.Time) bool {
 }
 
 // automaticDailyWindowStartAt 计算日窗口按“配置时区日历日”对齐后的当前窗口起点。
-// 日额度固定在每天 0 点刷新（与周/月的期限对齐滚动窗口语义不同），因此只要持久化
+// 日额度固定在每天 0 点刷新（不同于周滚动窗口和整期额度），因此只要持久化
 // 的窗口起点落在更早的日历日，就允许推进到今天 0 点。手动重置、激活等写入的任何
 // 非 0 点锚点都会在下一个 0 点被拉回日历日边界，不会永久漂移刷新时刻。
 func (s *UserSubscription) automaticDailyWindowStartAt(now time.Time) (time.Time, bool) {
@@ -176,16 +176,11 @@ func (s *UserSubscription) canAutomaticallyResetWeeklyAt(now time.Time) bool {
 	return ok
 }
 
-func (s *UserSubscription) canAutomaticallyResetMonthlyAt(now time.Time) bool {
-	_, ok := s.automaticWindowStartAt(s.MonthlyWindowStart, 30*24*time.Hour, now)
-	return ok
-}
-
-// windowResetAnchor 返回周/月窗口实际推进所依据的锚点。
+// windowResetAnchor 返回周窗口实际推进所依据的锚点。
 // 早期订阅把首个窗口初始化在开通日零点；只有这个初始值是无歧义的，之后出现的
 // 零点锚点可能来自手动重置，必须保持权威。
-// 自动推进（automaticWindowStartAt）与对外展示的重置时间（WeeklyResetTime/
-// MonthlyResetTime）必须共用这一修正，否则仪表盘显示的重置时间会早于窗口实际
+// 自动推进（automaticWindowStartAt）与对外展示的重置时间（WeeklyResetTime）
+// 必须共用这一修正，否则仪表盘显示的重置时间会早于窗口实际
 // 滚动的时间。
 // 日窗口按日历日对齐（automaticDailyWindowStartAt），不走这里。
 func (s *UserSubscription) windowResetAnchor(previous time.Time) time.Time {
@@ -196,7 +191,7 @@ func (s *UserSubscription) windowResetAnchor(previous time.Time) time.Time {
 	return previous
 }
 
-// automaticWindowStartAt 计算周/月窗口（期限对齐滚动窗口）的当前窗口起点。
+// automaticWindowStartAt 计算周窗口（期限对齐滚动窗口）的当前窗口起点。
 // 窗口从锚点按整数个 period 步进，且不越过订阅到期时间，避免最后一个不完整
 // 周期重复发放额度（issue #5051）。日窗口不走此函数，见 automaticDailyWindowStartAt。
 func (s *UserSubscription) automaticWindowStartAt(previous *time.Time, period time.Duration, now time.Time) (time.Time, bool) {
@@ -240,10 +235,11 @@ func (s *UserSubscription) WeeklyResetTime() *time.Time {
 }
 
 func (s *UserSubscription) MonthlyResetTime() *time.Time {
-	if s.MonthlyWindowStart == nil {
+	if s.MonthlyWindowStart == nil || s.ExpiresAt.IsZero() {
 		return nil
 	}
-	t := s.windowResetAnchor(*s.MonthlyWindowStart).Add(30 * 24 * time.Hour)
+	// monthly_* 保留 API/存储兼容；订阅额度覆盖本次完整期限，不能每 30 天重发。
+	t := s.ExpiresAt
 	return &t
 }
 

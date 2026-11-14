@@ -66,9 +66,8 @@ func TestWeeklyResetTime_MatchesAutomaticWindowStart(t *testing.T) {
 	assert.True(t, resetAt.Equal(newStart), "推进后的新窗口起点应等于展示的重置时间")
 }
 
-// 月窗口与周窗口同属期限对齐滚动窗口，应用同一 legacy 锚点修正。
-// 日窗口按日历日对齐（见 automaticDailyWindowStartAt），不走此修正，故不在此覆盖。
-func TestMonthlyResetTime_LegacyMidnightAnchor_UsesStartsAt(t *testing.T) {
+// 周期额度以订阅到期时间为准，历史午夜锚点不缩短完整期限。
+func TestMonthlyResetTime_LegacyMidnightAnchor_UsesExpiry(t *testing.T) {
 	startsAt := time.Date(2026, 7, 31, 13, 37, 6, 0, time.FixedZone("UTC+8", 8*3600))
 	windowStart := startOfDay(startsAt)
 
@@ -80,8 +79,8 @@ func TestMonthlyResetTime_LegacyMidnightAnchor_UsesStartsAt(t *testing.T) {
 
 	monthly := sub.MonthlyResetTime()
 	require.NotNil(t, monthly)
-	assert.True(t, startsAt.Add(30*24*time.Hour).Equal(*monthly),
-		"legacy 午夜锚点应按 StartsAt+30d 计算重置时间，而不是窗口起点+30d")
+	assert.True(t, sub.ExpiresAt.Equal(*monthly),
+		"legacy 午夜锚点也应持续到订阅到期，不能提前到第 30 天")
 }
 
 // 日窗口不受本修正影响：DailyResetTime 保持 #5380 的日历日对齐语义。

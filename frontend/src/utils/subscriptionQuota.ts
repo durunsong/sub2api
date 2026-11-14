@@ -69,7 +69,6 @@ export function getExpirationDateRelation(
 
 const WINDOW_PERIOD_MS = {
   weekly: 7 * ONE_DAY_MS,
-  monthly: 30 * ONE_DAY_MS,
 } as const
 
 export type SubscriptionResetWindow = 'daily' | 'weekly' | 'monthly'
@@ -101,8 +100,7 @@ function nextLocalMidnight(day: Date): Date {
   return next
 }
 
-// 早期订阅把首个周/月窗口记在开通日零点。真正滚动锚点是 StartsAt，
-// 与后端 windowResetAnchor 相同；否则 90 天套餐会把重置时间提前若干小时。
+// 早期订阅把首个周窗口记在开通日零点；与后端 windowResetAnchor 保持一致。
 function windowResetAnchor(startsAt: Date | null, windowStart: Date): Date {
   if (!startsAt) return windowStart
   const legacy = startOfLocalDay(startsAt)
@@ -124,6 +122,12 @@ export function nextSubscriptionReset(
 
   const expires = parseInstant(subscription.expires_at)
   const expiresTime = expires?.getTime()
+  // monthly_* 是兼容字段名；套餐额度持续到本次订阅到期，不按 30 天滚动。
+  if (window === 'monthly') {
+    return expires && expires.getTime() > nowTime
+      ? { at: expires, endsWithSubscription: true }
+      : null
+  }
   let reset = 0
 
   if (window === 'daily') {
