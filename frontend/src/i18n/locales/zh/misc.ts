@@ -60,15 +60,15 @@ export default {
 
   // Recharge / Subscription Page
   purchase: {
-    title: '充值/订阅',
-    description: '通过内嵌页面完成充值/订阅',
+    title: '购买算力/订阅',
+    description: '通过内嵌页面完成购买算力/订阅',
     rechargeDescription: '通过内嵌页面完成充值',
     subscriptionDescription: '通过内嵌页面完成订阅',
     openInNewTab: '新窗口打开',
     notEnabledTitle: '该功能未开启',
-    notEnabledDesc: '管理员暂未开启充值/订阅入口，请联系管理员。',
-    notConfiguredTitle: '充值/订阅链接未配置',
-    notConfiguredDesc: '管理员已开启入口，但尚未配置充值/订阅链接，请联系管理员。'
+    notEnabledDesc: '管理员暂未开启购买算力/订阅入口，请联系管理员。',
+    notConfiguredTitle: '购买算力/订阅链接未配置',
+    notConfiguredDesc: '管理员已开启入口，但尚未配置购买算力/订阅链接，请联系管理员。'
   },
 
   // Custom Page (iframe embed)
@@ -344,7 +344,7 @@ export default {
 
   // Payment System
   payment: {
-    title: '充值/订阅',
+    title: '购买算力/订阅',
     amountLabel: '充值金额',
     paymentAmount: '支付金额',
     creditedBalance: '到账余额',

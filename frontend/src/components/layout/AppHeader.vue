@@ -268,6 +268,7 @@ import { sanitizeUrl } from '@/utils/url'
 import { FeatureFlags, isFeatureFlagEnabled } from '@/utils/featureFlags'
 import { resolveRouteMetaKeys } from '@/router/title'
 import { resolveSiteBillingMode } from '@/utils/siteBillingMode'
+import { resolveCustomMenuLabel } from '@/utils/customMenu'
 
 const router = useRouter()
 const route = useRoute()
@@ -331,7 +332,7 @@ const pageTitle = computed(() => {
     const publicItems = appStore.cachedPublicSettings?.custom_menu_items ?? []
     const menuItem = publicItems.find((item) => item.id === id)
       ?? (authStore.isAdmin ? adminSettingsStore.customMenuItems.find((item) => item.id === id) : undefined)
-    if (menuItem?.label) return menuItem.label
+    if (menuItem?.label) return resolveCustomMenuLabel(menuItem, t('nav.docs'))
   }
   const titleKey = routeMetaKeys.value.titleKey
   if (titleKey) {

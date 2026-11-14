@@ -4,7 +4,26 @@
       <!-- Filters -->
       <div class="card p-4">
         <div class="flex flex-wrap items-center gap-3">
-          <Select v-model="currentFilter" :options="statusFilters" class="w-36" @change="handlePageChange(1)" />
+          <div
+            role="group"
+            :aria-label="t('payment.orders.status')"
+            class="flex max-w-full items-center gap-1 overflow-x-auto rounded-2xl bg-gray-100 p-1 dark:bg-dark-900"
+          >
+            <button
+              v-for="filter in statusFilters"
+              :key="filter.value"
+              type="button"
+              :aria-pressed="currentFilter === filter.value"
+              :disabled="loading"
+              class="min-h-[44px] shrink-0 whitespace-nowrap rounded-xl px-2.5 py-2.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500 disabled:cursor-wait sm:px-5"
+              :class="currentFilter === filter.value
+                ? 'bg-white font-semibold text-gray-900 shadow-sm dark:bg-dark-700 dark:text-white'
+                : 'font-medium text-gray-600 enabled:hover:bg-white/60 enabled:hover:text-gray-900 dark:text-gray-400 dark:enabled:hover:bg-dark-800 dark:enabled:hover:text-gray-100'"
+              @click="handleFilterChange(filter.value)"
+            >
+              {{ filter.label }}
+            </button>
+          </div>
           <div class="flex flex-1 items-center justify-end gap-2">
             <button @click="fetchOrders" :disabled="loading" class="btn btn-secondary" :title="t('common.refresh')">
               <Icon name="refresh" size="md" :class="loading ? 'animate-spin' : ''" />
@@ -91,7 +110,6 @@ import type { PaymentOrder } from '@/types/payment'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Pagination from '@/components/common/Pagination.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
-import Select from '@/components/common/Select.vue'
 import Icon from '@/components/icons/Icon.vue'
 import OrderTable from '@/components/payment/OrderTable.vue'
 
@@ -132,6 +150,12 @@ async function fetchOrders() {
   } finally {
     loading.value = false
   }
+}
+
+function handleFilterChange(status: string) {
+  if (loading.value || currentFilter.value === status) return
+  currentFilter.value = status
+  handlePageChange(1)
 }
 
 function handlePageChange(page: number) { pagination.page = page; fetchOrders() }

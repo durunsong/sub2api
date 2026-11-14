@@ -6,7 +6,8 @@ vi.mock('@/i18n', () => {
   const messages: Record<string, string> = {
     'nav.recharge': '充值',
     'nav.subscribe': '订阅',
-    'nav.buySubscription': '充值/订阅',
+    'nav.buySubscription': '购买算力/订阅',
+    'nav.docs': '使用教程',
   }
   return { i18n: { global: { t: (key: string) => messages[key] ?? key } } }
 })
@@ -35,6 +36,18 @@ describe('resolveDocumentTitle', () => {
 })
 
 describe('resolveRouteDocumentTitle', () => {
+  it.each([
+    ['user', '文档', '使用教程'],
+    ['user', ' 文档 ', '使用教程'],
+    ['user', '接口文档', '接口文档'],
+    ['admin', '文档', '文档'],
+  ] as const)('resolves the %s custom menu title %s as %s', (visibility, label, expected) => {
+    const route = { name: 'CustomPage', params: { id: 'docs' }, meta: { title: 'Custom Page' } }
+    expect(resolveRouteDocumentTitle(route, 'EzouAPI', [{
+      id: 'docs', label, visibility, icon_svg: '', url: '/guide', sort_order: 0,
+    }])).toBe(`${expected} - EzouAPI`)
+  })
+
   it('自定义页面菜单加载后，使用菜单名称作为标题', () => {
     const route = {
       name: 'CustomPage',
@@ -117,6 +130,6 @@ describe('resolveRouteDocumentTitle 站点类型', () => {
 
   it('充值 & 订阅时保留原标题', () => {
     const title = resolveRouteDocumentTitle(purchaseRoute, 'EzouAPI', [], { billingMode: 'recharge_and_subscription' })
-    expect(title).toBe('充值/订阅 - EzouAPI')
+    expect(title).toBe('购买算力/订阅 - EzouAPI')
   })
 })

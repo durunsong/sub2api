@@ -2,6 +2,7 @@ import { i18n } from '@/i18n'
 import type { RouteLocationNormalizedLoaded } from 'vue-router'
 import type { CustomMenuItem } from '@/types'
 import type { SiteBillingMode } from '@/utils/siteBillingMode'
+import { resolveCustomMenuLabel } from '@/utils/customMenu'
 
 /**
  * 统一生成页面标题，避免多处写入 document.title 产生覆盖冲突。
@@ -27,7 +28,7 @@ export function resolveDocumentTitle(routeTitle: unknown, siteName?: string, tit
 export interface RouteTitleOptions {
   /**
    * 站点计费模式（见 utils/billingMode.ts）。/purchase 的标题与描述随之切换：
-   * 仅充值 → 「充值」，仅订阅 → 「订阅」，缺省/两者都有 → 「充值/订阅」。
+   * 仅充值 → 「充值」，仅订阅 → 「订阅」，缺省/两者都有 → 「购买算力/订阅」。
    */
   billingMode?: SiteBillingMode
 }
@@ -72,7 +73,7 @@ export function resolveRouteDocumentTitle(
   const menuItem = route.name === 'CustomPage' && id
     ? customMenuItems.find((item) => item.id === id)
     : undefined
-  const menuTitle = menuItem?.label.trim()
+  const menuTitle = menuItem ? resolveCustomMenuLabel(menuItem, i18n.global.t('nav.docs')).trim() : ''
   const { titleKey } = resolveRouteMetaKeys(route, options)
 
   return resolveDocumentTitle(menuTitle || route.meta.title, siteName, menuTitle ? undefined : titleKey)

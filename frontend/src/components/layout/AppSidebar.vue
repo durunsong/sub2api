@@ -198,6 +198,7 @@ import { sanitizeSvg } from '@/utils/sanitize'
 import { sanitizeUrl } from '@/utils/url'
 import { FeatureFlags, makeSidebarFlag } from '@/utils/featureFlags'
 import { resolveSiteBillingMode } from '@/utils/siteBillingMode'
+import { resolveCustomMenuLabel } from '@/utils/customMenu'
 import { useBatchImageAccess } from '@/composables/useBatchImageAccess'
 
 interface NavItem {
@@ -698,7 +699,7 @@ const flagPayment = makeSidebarFlag(FeatureFlags.payment)
 const flagAvailableChannels = makeSidebarFlag(FeatureFlags.availableChannels)
 const flagSubscription = makeSidebarFlag(FeatureFlags.subscription)
 
-// 购买入口文案随站点计费模式切换：仅充值 → 「充值」，仅订阅 → 「订阅」，否则「充值/订阅」。
+// 购买入口文案随站点计费模式切换：仅充值 → 「充值」，仅订阅 → 「订阅」，否则「购买算力/订阅」。
 const purchaseNavLabel = computed(() => {
   switch (resolveSiteBillingMode(appStore.cachedPublicSettings)) {
     case 'recharge_only':
@@ -742,7 +743,7 @@ function buildSelfNavItems(withDashboard: boolean): NavItem[] {
     { path: '/settings/mcp', label: t('mcp.title'), icon: MCPIcon, featureFlag: flagMCP },
     ...customMenuItemsForUser.value.map((item): NavItem => ({
       path: `/custom/${item.id}`,
-      label: item.label,
+      label: resolveCustomMenuLabel(item, t('nav.docs')),
       icon: null,
       iconSvg: item.icon_svg,
     })),

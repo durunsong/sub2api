@@ -346,6 +346,8 @@ backend/internal/service/
 | 密钥可用模型弹窗 | `/keys` 在“使用密钥”前增加“查看可用模型”；所有平台使用当前密钥读取网关 `/v1/models`，保留账号映射（含 Antigravity 自定义别名）与分组授权，显示真实分组名及模型、支持点击复制、加载/无分组/空列表/失败重试；取消过期请求防止串组，移动端换行，保留 Kiro→Claude 用户端别名；不改后端权限或模型路由 | `frontend/src/components/keys/AvailableModelsModal.vue`、`frontend/src/api/keyModels.ts`、`frontend/src/views/user/KeysView.vue` |
 | Logo             | Fork 自定义 SVG                        | `frontend/public/logo.svg`（Flymux 风格）                                |
 | Select 组件      | 替换原生 `<select>`                    | 各 admin/account View；`components/common/Select.vue`                    |
+| 导航与购买文案 | 用户自定义菜单名恰为“文档”时，侧栏、页头与浏览器标题统一显示“使用教程”；不改持久化配置、其他菜单或管理专用菜单；中文“充值/订阅”入口及关联页面标题、设置说明统一为“购买算力/订阅”，既有站点计费模式与链接保持不变 | `frontend/src/i18n/locales/zh/{common,misc}.ts`、`frontend/src/i18n/locales/zh/admin/settings.ts`、`frontend/src/utils/customMenu.ts`、`components/layout/{AppSidebar,AppHeader}.vue`、`router/title.ts` |
+| 用户订单状态筛选 | `/orders` 以灰色圆角底、白色选中项展示“全部 / 待支付 / 已完成 / 失败 / 已退款”五个横向按钮；保留原状态值与服务端分页，切换回第 1 页，重复点击当前状态不重载，刷新保留页码，加载期间禁用切换；支持键盘焦点、深色模式及窄屏横向滚动，不改支付/退款流程 | `frontend/src/views/user/UserOrdersView.vue`、`frontend/src/views/user/__tests__/UserOrdersView.filters.spec.ts` |
 | ConfirmDialog    | 替换原生 confirm/alert                 | 多处 admin/account 组件                                                  |
 | 代理广告横幅     | 已移除                                 | `ProxyAdBanner` 相关引用清理                                             |
 | 版本徽章         | 隐藏「立即更新」按钮                   | `frontend/src/components/common/VersionBadge.vue`                        |
