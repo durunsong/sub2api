@@ -231,6 +231,13 @@
             <div v-if="showAccountBilling && row.account_rate_multiplier != null" class="mt-0.5 text-[11px] text-orange-500 dark:text-orange-400">
               A ${{ accountBilled(row).toFixed(6) }}
             </div>
+            <div
+              data-testid="cache-hit-rate"
+              class="mt-1 inline-flex items-center gap-2 whitespace-nowrap rounded border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-xs dark:border-dark-600 dark:bg-dark-800"
+            >
+              <span class="text-gray-500 dark:text-gray-400">{{ t('usage.cacheHitRate') }}</span>
+              <span class="font-medium tabular-nums text-emerald-700 dark:text-emerald-400">{{ formatCacheHitRate(row) }}</span>
+            </div>
           </div>
         </template>
 
@@ -600,6 +607,13 @@ import Icon from '@/components/icons/Icon.vue'
 import { fetchBatch, getEntry } from '@/utils/ipGeoLookup'
 import type { AdminUsageLog } from '@/types'
 import type { Column } from '@/components/common/types'
+
+function formatCacheHitRate(row: Pick<AdminUsageLog, 'input_tokens' | 'cache_creation_tokens' | 'cache_read_tokens'>): string {
+  // Usage logs store uncached input, cache writes and cache reads as separate buckets.
+  const cacheRead = row.cache_read_tokens ?? 0
+  const totalInput = (row.input_tokens ?? 0) + (row.cache_creation_tokens ?? 0) + cacheRead
+  return totalInput > 0 ? `${(cacheRead / totalInput * 100).toFixed(2)}%` : '—'
+}
 
 interface Props {
   data: AdminUsageLog[]

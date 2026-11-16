@@ -338,6 +338,10 @@ backend/internal/service/
 
 ## 6. UI / 品牌 / 交互
 
+用量费用栏（2026-11-16）：`/admin/usage` 和 `/usage` 复用 `frontend/src/components/admin/usage/UsageTable.vue`，在费用下方增加灰色描边、绿色百分比的“缓存命中率”标签，支持中英文及深色模式。计算使用日志的互斥 Token 桶：`cache_read_tokens / (input_tokens + cache_creation_tokens + cache_read_tokens)`，不包含输出或重复累加缓存写入 TTL 明细。保留两位小数；有输入但无命中为 `0.00%`，无输入数据为 `—`。不改计费、接口或用户费用详情权限；验证覆盖管理员/用户显示模式、缓存写入与历史缺失字段。
+
+数据来源为接口返回的 `usage_logs` 已保存记录，前端不生成模拟数值。该指标反映现有计量口径：Kiro 若启用了既有模拟缓存，缓存桶来自服务端模拟计量，不能一概解释为上游实测缓存命中率；本次不改变其记录或计费行为。
+
 | 项               | 说明                                   | 主要文件                                                                 |
 | ---------------- | -------------------------------------- | ------------------------------------------------------------------------ |
 | 首页与认证页配色 | 靛蓝紫罗兰主题 + 动效                  | `frontend/src/views/HomeView.vue`, `components/layout/AuthLayout.vue`    |
