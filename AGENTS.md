@@ -14,8 +14,8 @@ Cursor 场景下还会加载 [`.cursor/rules/sub2api-fork.mdc`](.cursor/rules/su
 | 项           | 值                                                                                                                 |
 | ------------ | ------------------------------------------------------------------------------------------------------------------ |
 | 上游官方     | https://github.com/Wei-Shaw/sub2api                                                                                |
-| 已同步基线   | tag **v0.2.21**（官方无 v0.1.174 tag）                                                                             |
-| 当前 VERSION | `backend/cmd/server/VERSION` = **0.2.21**                                                                          |
+| 已同步基线   | tag **v0.2.22**（官方无 v0.1.174 tag）                                                                             |
+| 当前 VERSION | `backend/cmd/server/VERSION` = **0.2.22**                                                                          |
 | 完整差异文档 | **`docs/FORK_VS_UPSTREAM.md`**（相对历史基线；含 Fork 扩展见文档 §8.2 / §12；快捷清单见 `FORK_CUSTOMIZATIONS.md`） |
 | 快捷索引     | `FORK_CUSTOMIZATIONS.md`                                                                                           |
 
@@ -157,6 +157,8 @@ v0.2.21 新增 249_add_usage_logs_api_key_cost_index_notx.sql（与 MCP 249 同�
 
 v0.2.21 缓存 TTL 完整性补丁：HTTP、WS v2 与 ResponsesUsage 类型转换共用严格解析；WS 逐轮/累计、Messages/Chat 转换均须保留 30m/12h。聚合 token 与 TTL 桶作为同一快照替换，缺失/非法明细回退通用价，不沿用旧桶；不得丢失 Kiro credits 或改变其计费口径。
 
+v0.2.22 新增 `251_group_force_openai_ultrafast.sql`、`251_group_usage_rollup_nonblocking_build.sql`，与 Fork `251_subscription_quota_reset_history.sql` 按完整文件名并存。合并扣费必须同时累计 USD 与 token（含零金额请求），复用全期额度 SQL，不恢复 30 天重置。新增通道须在 Wire 清理时停止；历史 SQL 不改、不执行迁移。
+
 Access Ban 迁移顺序：`159` 建表 → `160` 扩展 rule_type / ua_pattern，**不可删除或回退**。
 
 订阅重置卡迁移顺序：`224` 建永久明细表 → `225` 按分组默认期限回填历史 `manual_reset_credits`；同步时不得恢复有效固定期限购买/分配顺延，也不得删除旧 `reset-daily` → 1 天卡和兼容镜像。
@@ -169,6 +171,7 @@ Access Ban 迁移顺序：`159` 建表 → `160` 扩展 rule_type / ua_pattern�
 
 以下来自官方 v0.1.142+，勿误当 Fork 独有而重复实现或删除：
 
+- v0.2.22：Ultra Fast 分组策略、Vertex us/eu 多区域与 Gemini Carbon、透传模型白名单、按用户合并扣费、调度快照与 JSON 热路径优化，以及协议、配额、退款和统计修复。官方目标 `b0fa9f3e6eeab1968a53e1289b69daa4bb40ca2b`，187 commits / 340 路径 / +20,708/-1,652；官方 VERSION 为 0.2.21，Fork 设为 0.2.22。保留全部定制，新增两份 251 SQL 与订阅重置历史 251 并存；历史 SQL 不改，不执行迁移。验证见 `openspec/changes/sync-upstream-v0-2-22/`。
 - v0.2.21：Claude Fable/Mythos 5.2、OpenAI 30m/12h 缓存写入计费、自适应请求体内存预算、账号/API Key 页面性能、EasyPay 退款成功码及认证/协议/调度修复。官方目标 10ba8f9b4dc2e6023d4a9879ab77b21841babd10，82 commits / 200 files / +6,699 / -541；官方 VERSION 仍为 0.2.20，Fork 设为 0.2.21。同步 199 个非部署配置路径（含版本），保留全部定制和初始 3 个未提交兑换文件；新增两个 SQL 仅交付、不执行，315 份历史 SQL 不变。验证见 openspec/changes/sync-upstream-v0-2-21/。
 - v0.2.20：管理 MCP/OAuth、管理员密钥权限扩展、精确邮箱黑名单、图片尺寸分流与 GPT Image 2.6、资源预算/JSON 热路径优化及协议兼容修复。官方目标 `dab829a4e9b7d1cc307189aea8b0319eb29e29d0`，112 commits / 459 files / +29,482 / -1,457；官方 VERSION 仍为 0.2.19，Fork 设为 0.2.20。保留全部 Fork 定制及同期批量兑换码功能；新增 `249_mcp_oauth.sql` 仅交付、不执行，历史 SQL 与部署配置不变。验证见 `openspec/changes/sync-upstream-v0-2-20/`。
 - v0.2.19：管理员 API Key、按张图片计费、GPT-6.1 Terra、Grok 模型诊断及 Gemini/计费修复；新增 247/248 SQL 与 Fork 同号迁移共存。
@@ -238,7 +241,7 @@ Access Ban 迁移顺序：`159` 建表 → `160` 扩展 rule_type / ua_pattern�
 
 见 `docs/FORK_VS_UPSTREAM.md` §14。原则：**Kiro + XorPay + Access Ban + 提示词审计 + 套餐续期 + Ops + UI 品牌等全部定制保留**。
 
-`upstream/main` 可能领先于 v0.2.21；同步时以 release tag 为基线，不带入 tag 后的 `main` 内容，并逐文件保留 Fork 模块。
+`upstream/main` 可能领先于 v0.2.22；同步时以 release tag 为基线，不带入 tag 后的 `main` 内容，并逐文件保留 Fork 模块。
 
 ---
 

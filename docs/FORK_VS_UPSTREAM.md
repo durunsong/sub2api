@@ -2,13 +2,13 @@
 
 > **上游官方仓库**：[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api)
 > **本 Fork 远程**：`origin` → `durunsong/sub2api`（中转/部署用）
-> **对比基准**：官方 tag **`v0.2.21`**（同步于 2026-11-11；官方无 v0.1.174 tag）
-> **本 Fork 当前版本**：`backend/cmd/server/VERSION` = **0.2.21**
-> **最新同步统计**：Claude Fable/Mythos 5.2、OpenAI 30m/12h 缓存写入计费、自适应请求体内存预算、账号/API Key 页面性能、EasyPay 退款成功码及认证/协议/调度修复。官方目标 10ba8f9b4dc2e6023d4a9879ab77b21841babd10，82 commits / 200 files / +6,699 / -541；官方 VERSION 仍为 0.2.20，Fork 设为 0.2.21。同步 199 个非部署配置路径（含版本），保留全部定制和初始 3 个未提交兑换文件；新增两个 SQL 仅交付、不执行，315 份历史 SQL 不变。验证见 openspec/changes/sync-upstream-v0-2-21/。
-> **当前工作区**：已合入官方 v0.2.21，并保留 Kiro / XorPay / Access Ban / 提示词审计 / 订阅重置卡 / Ops / UI 品牌等全部定制，含登录失败自动封禁及重置卡提示
+> **对比基准**：官方 tag **`v0.2.22`**（同步于 2026-11-17；官方无 v0.1.174 tag）
+> **本 Fork 当前版本**：`backend/cmd/server/VERSION` = **0.2.22**
+> **最新同步统计**：Ultra Fast 分组策略、Vertex us/eu 多区域与 Gemini Carbon、透传模型白名单、按用户合并扣费、调度快照与 JSON 热路径优化，以及协议、配额、退款和统计修复。官方目标 `b0fa9f3e6eeab1968a53e1289b69daa4bb40ca2b`，187 commits / 340 路径 / +20,708/-1,652；官方 VERSION 为 0.2.21，Fork 设为 0.2.22。保留全部定制，新增两份 251 SQL 与订阅重置历史 251 并存；历史 SQL 不改，不执行迁移。验证见 `openspec/changes/sync-upstream-v0-2-22/`。
+> **当前工作区**：已合入官方 v0.2.22，并保留 Kiro / XorPay / Access Ban / 提示词审计 / 订阅重置卡 / Ops / UI 品牌等全部定制，含登录失败自动封禁及重置卡提示
 > **维护**：新增 Fork 定制后，请同步更新本文与根目录 `AGENTS.md` 摘要。
 
-本次另补齐目标版本的缓存 TTL 传递缺口：WS v2 逐轮/累计结果与 Messages/Chat typed usage 共同保留 30m/12h 分档，沿用上游严格校验和无明细通用价回退，不新增计价规则；Kiro credits 独立保留。实际 handler/WS adapter 到扣费、账号统计均有回归，详见 [v0.2.21 验证记录](../openspec/changes/sync-upstream-v0-2-21/verification.md)。
+v0.2.21 整合时另补齐目标版本的缓存 TTL 传递缺口：WS v2 逐轮/累计结果与 Messages/Chat typed usage 共同保留 30m/12h 分档，沿用上游严格校验和无明细通用价回退，不新增计价规则；Kiro credits 独立保留。实际 handler/WS adapter 到扣费、账号统计均有回归，详见 [v0.2.21 验证记录](../openspec/changes/sync-upstream-v0-2-21/verification.md)。
 
 ---
 
@@ -22,7 +22,7 @@
 | **`AGENTS.md`**（项目根）              | AI 协作**强制摘要**与禁区，改代码前必读                       |
 | **`FORK_CUSTOMIZATIONS.md`**（项目根） | 历史清单，已收敛到本文；保留作快捷索引                        |
 
-**注意**：本 Fork 已同步官方至 **v0.2.21**，但 **`upstream/main` 仍可能领先**。与官方同步时以目标 release **tag** 为准，不带入 tag 后的 `main` 内容；merge `main` 前务必先读本文 Fork 定制章节，禁止 blindly 采用上游覆盖 Kiro / XorPay / Access Ban 等模块。
+**注意**：本 Fork 已同步官方至 **v0.2.22**，但 **`upstream/main` 仍可能领先**。与官方同步时以目标 release **tag** 为准，不带入 tag 后的 `main` 内容；merge `main` 前务必先读本文 Fork 定制章节，禁止 blindly 采用上游覆盖 Kiro / XorPay / Access Ban 等模块。
 
 ---
 
@@ -49,7 +49,8 @@
 
 **以下能力已在官方 v0.1.142+ 中，本 Fork 通过同步拥有，不算 Fork 独有开发**（合并时保留了 Kiro/XorPay 定制）：
 
-- **本次同步**：v0.2.21：Claude Fable/Mythos 5.2、OpenAI 30m/12h 缓存写入计费、自适应请求体内存预算、账号/API Key 页面性能、EasyPay 退款成功码及认证/协议/调度修复。官方目标 10ba8f9b4dc2e6023d4a9879ab77b21841babd10，82 commits / 200 files / +6,699 / -541；官方 VERSION 仍为 0.2.20，Fork 设为 0.2.21。同步 199 个非部署配置路径（含版本），保留全部定制和初始 3 个未提交兑换文件；新增两个 SQL 仅交付、不执行，315 份历史 SQL 不变。验证见 openspec/changes/sync-upstream-v0-2-21/。
+- **本次同步**：v0.2.22：Ultra Fast 分组策略、Vertex us/eu 多区域与 Gemini Carbon、透传模型白名单、按用户合并扣费、调度快照与 JSON 热路径优化，以及协议、配额、退款和统计修复。官方目标 `b0fa9f3e6eeab1968a53e1289b69daa4bb40ca2b`，187 commits / 340 路径 / +20,708/-1,652；官方 VERSION 为 0.2.21，Fork 设为 0.2.22。保留全部定制，新增两份 251 SQL 与订阅重置历史 251 并存；历史 SQL 不改，不执行迁移。验证见 `openspec/changes/sync-upstream-v0-2-22/`。
+- **v0.2.21**：Claude Fable/Mythos 5.2、OpenAI 30m/12h 缓存写入计费、自适应请求体内存预算、账号/API Key 页面性能、EasyPay 退款成功码及认证/协议/调度修复。官方目标 10ba8f9b4dc2e6023d4a9879ab77b21841babd10，82 commits / 200 files / +6,699 / -541；官方 VERSION 仍为 0.2.20，Fork 设为 0.2.21。同步 199 个非部署配置路径（含版本），保留全部定制和初始 3 个未提交兑换文件；新增两个 SQL 仅交付、不执行，315 份历史 SQL 不变。验证见 openspec/changes/sync-upstream-v0-2-21/。
 - **v0.2.20**：管理 MCP/OAuth、管理员密钥权限扩展、精确邮箱黑名单、图片尺寸分流与 GPT Image 2.6、资源预算/JSON 热路径优化及协议兼容修复。官方目标 `dab829a4e9b7d1cc307189aea8b0319eb29e29d0`，112 commits / 459 files / +29,482 / -1,457；官方 VERSION 仍为 0.2.19，Fork 设为 0.2.20。保留全部 Fork 定制及同期批量兑换码功能；新增 `249_mcp_oauth.sql` 仅交付、不执行，历史 SQL 与部署配置不变。验证见 `openspec/changes/sync-upstream-v0-2-20/`。
 - **v0.2.19**：管理员 API Key、按张图片计费、GPT-6.1 Terra、Grok 模型诊断及 Gemini/计费修复；新增 247/248 SQL，与 Fork 同号迁移共存。
 - **v0.2.18**：Vertex service_account 配额、Gemini/Antigravity 生图门禁、流式断连计费与错误收尾、Codex 过载恢复和身份收敛、调度快照/模型映射优化、Grok Fast 定价及图片/工具兼容修复。目标 `ac1b8f1271be0d674fa6f074403c1410f30a3a81`，45 commits / 114 files / +7,482 / -566。官方 VERSION 仍为 0.2.17，Fork 设为 0.2.18；Go 1.27.3、DOMPurify 3.4.17、follow-redirects 1.16.1 随上游升级。新增 `246_enable_gemini_image_generation_groups.sql` 与 Fork 246 邮件迁移并存，历史 SQL 不改、不执行迁移。保留全部 Fork 定制，含 nianzs Kiro 增量、零余额群发和 PR #8139；Kiro Responses credits 继续在新流式收尾中累计。验证见 `openspec/changes/sync-upstream-v0-2-18/`。
@@ -115,6 +116,15 @@
 v0.1.160 同步时额外补齐 `securityaudit.ProviderSet` 中 `*PromptService` 到 `PromptAdminService` 的 Wire 接口绑定，确保当前 Fork 可重新生成 `wire_gen.go`；其余提示词审计实现保持官方版本。
 
 ---
+
+## v0.2.22 同步边界（2026-11-17）
+
+- 以官方 v0.2.21 为三方基线整合发布标签 v0.2.22；初始 Fork HEAD `e9c30cb40`，无已有未提交改动。339 个发布路径同步，`deploy/config.example.yaml` 不覆盖；不引入标签后的 main。
+- 新合并扣费保留订阅 USD/token（含零金额请求）累计、请求幂等和全期额度，不恢复 30 天自动清零；金额继续按 USD NUMERIC(20,8) 口径量化，复用既有事务更新与锁顺序。Kiro credits、冻结 pricingAt/context、30m/12h 缓存与账号统计定价并存。
+- Vertex 多区域 1.1 倍仅作用于真实多区域默认模型价，自定义分组/渠道价不叠加；Kiro 直连不受影响。Kiro 直连分支、代理失败拒绝直连及粘性 TTL 与上游 OAuth 轮换和断连后限时绑定共存。
+- 端点费用图表新增管理员账号成本，同时保留用户端标准成本/账号成本隐藏；近期客服、密钥模型、CC Switch 品牌、订单筛选及缓存命中率保持。
+- 新 `251_group_force_openai_ultrafast.sql` 和 `251_group_usage_rollup_nonblocking_build.sql` 与 Fork 订阅历史迁移按完整文件名并存。上线前备份并验证新列、汇总状态/触发器与重建期间写入；不执行迁移，回退不得自动删列或索引，须验证汇总兼容性。
+- Go 声明同步 1.27.4；jsonschema-go 0.4.2 从间接依赖改直接引用，无新依赖版本。保留镜像源、安装策略与部署配置；新增扣费通道和 Fork 邮件 Worker 均保留停机清理。验证结果见 [本次记录](../openspec/changes/sync-upstream-v0-2-22/verification.md)。
 
 ## v0.2.21 同步边界（2026-11-11）
 
@@ -996,4 +1006,4 @@ deploy/docker-compose.yml
 
 ---
 
-_最后更新：2026-11-11 · 基准：官方 v0.2.21 · 增量清单见 `FORK_CUSTOMIZATIONS.md` · 工作区：`git status --short`_
+_最后更新：2026-11-17 · 基准：官方 v0.2.22 · 增量清单见 `FORK_CUSTOMIZATIONS.md` · 工作区：`git status --short`_

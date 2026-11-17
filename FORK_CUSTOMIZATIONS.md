@@ -1,8 +1,15 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.2.21**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.21**，并保留本 Fork
+当前整合版本为 **v0.2.22**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.22**，并保留本 Fork
 的全部定制能力。
+
+## v0.2.22 同步（2026-11-17）
+
+Ultra Fast 分组策略、Vertex us/eu 多区域与 Gemini Carbon、透传模型白名单、按用户合并扣费、调度快照与 JSON 热路径优化，以及协议、配额、退款和统计修复。官方目标 `b0fa9f3e6eeab1968a53e1289b69daa4bb40ca2b`，187 commits / 340 路径 / +20,708/-1,652；官方 VERSION 为 0.2.21，Fork 设为 0.2.22。保留全部定制，新增两份 251 SQL 与订阅重置历史 251 并存；历史 SQL 不改，不执行迁移。验证见 `openspec/changes/sync-upstream-v0-2-22/`。
+
+- Kiro credits/代理/粘性、缓存 TTL、XorPay/封禁、全期额度/重置历史、永久卡、邮件券及近期 UI 定制保持。
+- Go 构建声明同步到 1.27.4；部署配置不覆盖，不提交或推送。
 
 ## v0.2.21 同步（2026-11-11）
 

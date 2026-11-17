@@ -64,6 +64,7 @@
             :enable-breakdown="false"
             :show-standard-cost="false"
             cost-column-label-key="usage.cost"
+            :show-account-cost="false"
             :title="t('usage.endpointDistribution')"
             :start-date="startDate"
             :end-date="endDate"

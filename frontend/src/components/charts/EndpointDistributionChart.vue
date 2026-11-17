@@ -83,6 +83,7 @@
               <th class="pb-2 text-right">{{ t('admin.dashboard.requests') }}</th>
               <th class="pb-2 text-right">{{ t('admin.dashboard.tokens') }}</th>
               <th class="pb-2 text-right">{{ costColumnLabel }}</th>
+              <th v-if="showAccountCost" class="pb-2 text-right">{{ t('admin.dashboard.accountCost') }}</th>
               <th v-if="showStandardCost" class="pb-2 text-right">{{ t('admin.dashboard.standard') }}</th>
             </tr>
           </thead>
@@ -109,6 +110,9 @@
                 <td class="py-1.5 text-right text-green-600 dark:text-green-400">
                   ${{ formatCost(item.actual_cost) }}
                 </td>
+                <td v-if="showAccountCost" class="py-1.5 text-right text-orange-500 dark:text-orange-400">
+                  ${{ formatCost(item.account_cost ?? 0) }}
+                </td>
                 <td v-if="showStandardCost" class="py-1.5 text-right text-gray-400 dark:text-gray-500">
                   ${{ formatCost(item.cost) }}
                 </td>
@@ -119,6 +123,7 @@
                     :items="breakdownItems"
                     :loading="breakdownLoading"
                     :show-standard-cost="showStandardCost"
+                    :show-account-cost="showAccountCost"
                   />
                 </td>
               </tr>
@@ -164,6 +169,7 @@ const props = withDefaults(
     enableBreakdown?: boolean
     showStandardCost?: boolean
     costColumnLabelKey?: string
+    showAccountCost?: boolean
     startDate?: string
     endDate?: string
     filters?: Record<string, any>
@@ -180,6 +186,7 @@ const props = withDefaults(
     enableBreakdown: true,
     showStandardCost: true,
     costColumnLabelKey: 'admin.dashboard.actual',
+    showAccountCost: true,
   }
 )
 
@@ -193,7 +200,7 @@ const breakdownItems = ref<UserBreakdownItem[]>([])
 const breakdownLoading = ref(false)
 const showStandardCost = computed(() => props.showStandardCost)
 const costColumnLabel = computed(() => t(props.costColumnLabelKey))
-const distributionColspan = computed(() => (showStandardCost.value ? 5 : 4))
+const distributionColspan = computed(() => (4 + Number(showStandardCost.value) + Number(props.showAccountCost)))
 
 const toggleBreakdown = async (endpoint: string) => {
   if (expandedKey.value === endpoint) {
