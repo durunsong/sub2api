@@ -1,3 +1,16 @@
+export interface ImageEdit {
+  modelID: string
+  references: Blob[]
+  mask?: Blob
+}
+
+export interface MaskEditResult {
+  original: Blob
+  mask?: Blob
+  guide?: Blob
+  prompt: string
+}
+
 export interface ImageSnapshot {
   groupID: number
   model: string
@@ -12,7 +25,14 @@ export interface ImageSnapshot {
   mask?: Blob
 }
 
+export interface ImageBatch {
+  id: string
+  index: number
+  total: number
+}
+
 export interface ImageHistory {
+  batch?: ImageBatch
   id: string
   createdAt: number
   status: 'success'
@@ -60,6 +80,7 @@ export interface ImagePrompt {
 export type ImageTaskStatus = 'queued' | 'running' | 'failed' | 'cancelled' | 'interrupted' | 'success'
 
 export interface ImageTask {
+  batch?: ImageBatch
   id: string
   ownerID?: string
   createdAt: number

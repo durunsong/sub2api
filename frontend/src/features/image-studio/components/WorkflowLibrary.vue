@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { vTooltip } from '@/components/common/tooltip'
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import BaseDialog from '@/components/common/BaseDialog.vue'
@@ -79,7 +80,7 @@ function run(items: string[]) {
 </script>
 
 <template>
-  <BaseDialog :show="show" :title="t('imageStudio.workflowTitle')" width="extra-wide" @close="emit('close')">
+  <BaseDialog close-tooltip :show="show" :title="t('imageStudio.workflowTitle')" width="extra-wide" @close="emit('close')">
     <div v-if="show && creating" class="mx-auto max-w-2xl space-y-5">
       <div class="flex items-center justify-between gap-3"><h3 class="text-lg font-semibold">{{ t('imageStudio.aiCreate') }}</h3><button class="btn btn-secondary" @click="creating = false">{{ t('imageStudio.back') }}</button></div>
       <WorkflowAssistant mode="workflow" :initial-prompt="initialPrompt" :references="references" @workflow="applyWorkflow" />
@@ -101,10 +102,10 @@ function run(items: string[]) {
         </div>
       </div>
     </div>
-    <div v-else-if="running" class="space-y-5">
-      <div class="flex items-center justify-between gap-3"><h3 class="text-lg font-semibold">{{ running.title }}</h3><button class="btn btn-secondary" @click="running = null">{{ t('imageStudio.back') }}</button></div>
-      <div class="grid gap-5 md:grid-cols-[260px_minmax(0,1fr)]">
-        <div class="space-y-4">
+    <div v-else-if="running" class="space-y-5 md:flex md:h-[calc(90dvh-10rem)] md:min-h-0 md:flex-col">
+      <div class="flex shrink-0 items-center justify-between gap-3"><h3 class="min-w-0 break-words text-lg font-semibold">{{ running.title }}</h3><button class="btn btn-secondary" @click="running = null">{{ t('imageStudio.back') }}</button></div>
+      <div class="grid gap-5 md:min-h-0 md:flex-1 md:grid-cols-[260px_minmax(0,1fr)]">
+        <div class="min-w-0 space-y-4 md:min-h-0 md:overflow-y-auto md:overscroll-contain md:pr-2">
           <label v-for="key in variables" :key="key" class="block text-sm font-medium">{{ key }}<input v-model="values[key]" class="input mt-2" maxlength="2000" /></label>
           <p v-if="!variables.length" class="text-sm text-gray-500 dark:text-dark-300">{{ t('imageStudio.noVariables') }}</p>
           <button class="btn btn-secondary w-full" :disabled="missingVariables" @click="emit('use', preview); emit('close')">{{ t('imageStudio.usePrompt') }}</button>
@@ -112,18 +113,18 @@ function run(items: string[]) {
           <button class="btn btn-secondary w-full" :disabled="missingVariables" @click="aiSeries = !aiSeries"><Icon name="sparkles" size="sm" />{{ t('imageStudio.aiSeries') }}</button>
           <p class="text-xs leading-5 text-gray-500 dark:text-dark-300">{{ t('imageStudio.workflowUsesSettings') }}</p>
         </div>
-        <div class="space-y-4">
+        <div class="min-w-0 space-y-4 md:min-h-0 md:overflow-y-auto md:overscroll-contain md:pr-2">
           <WorkflowAssistant v-if="show && aiSeries && !missingVariables" mode="series" :initial-prompt="preview" :references="references" @series="drafts = $event; aiSeries = false" />
-          <p class="whitespace-pre-wrap rounded-xl bg-gray-50 p-4 text-sm leading-6 dark:bg-dark-900">{{ preview }}</p>
+          <p class="whitespace-pre-wrap break-words rounded-xl bg-gray-50 p-4 text-sm leading-6 dark:bg-dark-900">{{ preview }}</p>
           <template v-if="drafts.length">
             <div class="flex flex-wrap gap-2"><input v-model="appendText" class="input min-w-0 flex-1" :aria-label="t('imageStudio.appendInstructions')" :placeholder="t('imageStudio.appendInstructions')" /><button class="btn btn-secondary" :disabled="!appendText.trim()" @click="drafts = drafts.map(item => item + '\n' + appendText.trim()); appendText = ''">{{ t('imageStudio.appendAll') }}</button></div>
-            <div class="max-h-96 space-y-4 overflow-y-auto">
+            <div class="space-y-4">
               <div v-for="(_, index) in drafts" :key="index" class="space-y-2 border-b border-gray-200 pb-4 dark:border-dark-700">
                 <label class="text-sm font-medium">{{ t('imageStudio.seriesItem', { number: index + 1 }) }}<textarea v-model="drafts[index]" rows="4" maxlength="10000" class="input mt-2" /></label>
                 <div class="flex flex-wrap justify-end gap-2">
-                  <button class="btn btn-secondary btn-sm" :disabled="index === 0" :aria-label="t('imageStudio.moveUp')" @click="move(index, -1)"><Icon name="arrowUp" size="sm" /></button>
-                  <button class="btn btn-secondary btn-sm" :disabled="index === drafts.length - 1" :aria-label="t('imageStudio.moveDown')" @click="move(index, 1)"><Icon name="arrowDown" size="sm" /></button>
-                  <button class="btn btn-secondary btn-sm" :aria-label="t('imageStudio.delete')" @click="drafts.splice(index, 1)"><Icon name="trash" size="sm" /></button>
+                  <button v-tooltip class="btn btn-secondary btn-sm" :disabled="index === 0" :aria-label="t('imageStudio.moveUp')" @click="move(index, -1)"><Icon name="arrowUp" size="sm" /></button>
+                  <button v-tooltip class="btn btn-secondary btn-sm" :disabled="index === drafts.length - 1" :aria-label="t('imageStudio.moveDown')" @click="move(index, 1)"><Icon name="arrowDown" size="sm" /></button>
+                  <button v-tooltip class="btn btn-secondary btn-sm" :aria-label="t('imageStudio.delete')" @click="drafts.splice(index, 1)"><Icon name="trash" size="sm" /></button>
                   <button class="btn btn-secondary btn-sm" :disabled="!canRun || !drafts[index].trim()" @click="run([drafts[index]])">{{ t('imageStudio.generateOne') }}</button>
                 </div>
               </div>
@@ -149,9 +150,9 @@ function run(items: string[]) {
           <p class="my-3 line-clamp-4 whitespace-pre-wrap text-sm leading-6 text-gray-600 dark:text-dark-300">{{ item.prompt }}</p>
           <div class="mt-auto flex flex-wrap gap-2">
             <button class="btn btn-primary btn-sm" @click="openRunner(item)">{{ t('imageStudio.useTemplate') }}</button>
-            <button class="btn btn-secondary btn-sm" :aria-label="t('imageStudio.editTemplate')" @click="edit(item)"><Icon name="edit" size="sm" /></button>
-            <button class="btn btn-secondary btn-sm" :aria-label="t('imageStudio.duplicateTemplate')" @click="duplicate(item)"><Icon name="copy" size="sm" /></button>
-            <button class="btn btn-secondary btn-sm" :aria-label="t('imageStudio.deleteTemplate')" @click="deleteTarget = item"><Icon name="trash" size="sm" /></button>
+            <button v-tooltip class="btn btn-secondary btn-sm" :aria-label="t('imageStudio.editTemplate')" @click="edit(item)"><Icon name="edit" size="sm" /></button>
+            <button v-tooltip class="btn btn-secondary btn-sm" :aria-label="t('imageStudio.duplicateTemplate')" @click="duplicate(item)"><Icon name="copy" size="sm" /></button>
+            <button v-tooltip class="btn btn-secondary btn-sm" :aria-label="t('imageStudio.deleteTemplate')" @click="deleteTarget = item"><Icon name="trash" size="sm" /></button>
           </div>
         </article>
       </div>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { vTooltip } from '@/components/common/tooltip'
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores/app'
@@ -9,13 +10,16 @@ import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import Select from '@/components/common/Select.vue'
 import Icon from '@/components/icons/Icon.vue'
 import ImagePreview from '@/features/image-studio/components/ImagePreview.vue'
+import ResultBatch from '@/features/image-studio/components/ResultBatch.vue'
+import { prepareImageDownload } from '@/features/image-studio/download'
+import { groupResults } from '@/features/image-studio/batches'
 import GenerationPending from '@/features/image-studio/components/GenerationPending.vue'
 import BlobImage from '@/features/image-studio/components/BlobImage.vue'
 import MaskEditor from '@/features/image-studio/components/MaskEditor.vue'
 import WorkflowLibrary from '@/features/image-studio/components/WorkflowLibrary.vue'
 import { downloadImage, useImageStudio, type StudioTask } from '@/features/image-studio/useImageStudio'
 import { normalizeDimensions, isValidCustomSize } from '@/features/image-studio/components/customSize'
-import type { ImageCategory, ImageHistory } from '@/features/image-studio/types'
+import type { ImageCategory, ImageEdit, ImageHistory, MaskEditResult } from '@/features/image-studio/types'
 
 const { t, te, locale } = useI18n()
 const studio = reactive(useImageStudio())
@@ -26,6 +30,7 @@ const importInput = ref<HTMLInputElement>()
 const assetUploadInput = ref<HTMLInputElement>()
 const libraryOpen = ref(false)
 const assetsOpen = ref(false)
+const batchDownloadOpen = ref(false)
 const assetSearch = ref('')
 const search = ref('')
 const favoritesOnly = ref(false)
@@ -39,8 +44,23 @@ const assignmentIDs = ref<string[]>([])
 const assignmentCategories = ref<string[]>([])
 const preview = ref<{ images: Blob[]; index: number; captions: string[] } | null>(null)
 const maskImage = ref<Blob | null>(null)
+const maskModelID = ref('')
+const maskNative = ref(false)
 const detail = ref('')
 const notice = ref('')
+let noticeTimer: ReturnType<typeof setTimeout> | undefined
+function showNotice(message: string) {
+  clearTimeout(noticeTimer)
+  notice.value = message
+  noticeTimer = setTimeout(() => { notice.value = '' }, 5000)
+}
+onBeforeUnmount(() => clearTimeout(noticeTimer))
+watch(() => studio.completedBatch, result => {
+  if (!result) return
+  showNotice(t('imageStudio.batchCompleted', { count: result.success }) +
+    (result.failed || result.cancelled ? ' · ' + t('imageStudio.batchIncomplete', { failed: result.failed, cancelled: result.cancelled }) : '') +
+    (result.unsaved ? ' · ' + t('imageStudio.batchUnsaved', { count: result.unsaved }) : ''))
+})
 const expanded = ref<string[]>([])
 const confirmation = ref<{ title: string; message: string; danger: boolean; action: () => void | Promise<void> } | null>(null)
 const customWidth = ref(1024)
@@ -55,7 +75,7 @@ const resultsElement = ref<HTMLElement>()
 const submitVisible = ref(true)
 const keyboardClipsSubmit = ref(false)
 const keyboardInset = ref(0)
-const modalOpen = computed(() => Boolean(libraryOpen.value || assetsOpen.value || assignmentOpen.value || categoryDialog.value || preview.value || maskImage.value || confirmation.value || detail.value))
+const modalOpen = computed(() => Boolean(batchDownloadOpen.value || libraryOpen.value || assetsOpen.value || assignmentOpen.value || categoryDialog.value || preview.value || maskImage.value || confirmation.value || detail.value))
 const showGenerationDock = computed(() => (!submitVisible.value || keyboardClipsSubmit.value) && !modalOpen.value && !app.mobileOpen)
 const generateLabel = computed(() => studio.activeCount ? t('imageStudio.continueGenerate', { count: studio.activeCount }) : t('imageStudio.generate'))
 let submitObserver: IntersectionObserver | undefined
@@ -137,6 +157,7 @@ watch(() => studio.history.map(item => item.id), ids => {
 const runningCount = computed(() => studio.tasks.filter(task => task.status === 'running').length)
 const queuedCount = computed(() => studio.tasks.filter(task => task.status === 'queued').length)
 const visibleTasks = computed(() => studio.tasks.filter(task => task.status !== 'success' || !task.saved))
+const resultGroups = computed(() => groupResults(filteredHistory.value, visibleTasks.value))
 const filteredAssets = computed(() => studio.assets.filter(item => item.name.toLowerCase().includes(assetSearch.value.trim().toLowerCase())))
 const allSelected = computed(() => filteredHistory.value.length > 0 && filteredHistory.value.every(item => selected.value.includes(item.id)))
 const activeCategory = computed(() => studio.categories.find(item => item.id === studio.categoryID))
@@ -157,12 +178,14 @@ watch(() => auth.user?.id, () => {
   maskImage.value = null
   libraryOpen.value = false
   assetsOpen.value = false
+  batchDownloadOpen.value = false
   assignmentOpen.value = false
   categoryDialog.value = false
   confirmation.value = null
   selected.value = []
   detail.value = ''
   notice.value = ''
+  clearTimeout(noticeTimer)
 })
 watch(() => studio.modelID, () => { customSelected.value = false })
 watch(() => studio.size, (size) => {
@@ -175,7 +198,19 @@ function commitDimensions() {
   customWidth.value = width
   customHeight.value = height
 }
-function generate(prompts?: string[]) { if (!customSizeError.value) void studio.submit(prompts) }
+let submitting = false
+function generate(prompts?: string[], edit?: ImageEdit) {
+  if (customSizeError.value || submitting || confirmation.value) return
+  const userID = auth.user?.id
+  const texts = prompts ? [...prompts] : undefined
+  const submit = async () => {
+    if (submitting || customSizeError.value || auth.user?.id !== userID) return
+    submitting = true
+    try { if (edit) await studio.submit(texts, edit); else await studio.submit(texts) } finally { submitting = false }
+  }
+  if (studio.activeCount) confirm('imageStudio.confirmContinue', t('imageStudio.confirmContinueMessage', { active: studio.activeCount, count: texts?.length || studio.count }), submit)
+  else void submit()
+}
 
 function confirm(title: string, message: string, action: () => void | Promise<void>, danger = false) {
   confirmation.value = { title: t(title), message, action, danger }
@@ -186,13 +221,13 @@ async function acceptConfirmation() {
   await action?.()
 }
 async function copyPrompt(value: string) {
-  try { await navigator.clipboard.writeText(value); notice.value = t('imageStudio.copied') }
-  catch { notice.value = t('imageStudio.clipboardFailed') }
+  try { await navigator.clipboard.writeText(value); showNotice(t('imageStudio.copied')) }
+  catch { showNotice(t('imageStudio.clipboardFailed')) }
 }
 async function pastePrompt() {
   const userID = auth.user?.id
   try { const value = await navigator.clipboard.readText(); if (auth.user?.id === userID) studio.prompt = value }
-  catch { notice.value = t('imageStudio.clipboardFailed') }
+  catch { showNotice(t('imageStudio.clipboardFailed')) }
 }
 async function pasteImages() {
   const userID = auth.user?.id
@@ -200,9 +235,9 @@ async function pasteImages() {
     const items = await navigator.clipboard.read()
     const blobs = await Promise.all(items.flatMap(item => item.types.filter(type => type.startsWith('image/')).map(type => item.getType(type))))
     if (auth.user?.id !== userID) return
-    if (!blobs.length) { notice.value = t('imageStudio.noClipboardImage'); return }
+    if (!blobs.length) { showNotice(t('imageStudio.noClipboardImage')); return }
     await studio.addReferences(blobs)
-  } catch { notice.value = t('imageStudio.clipboardFailed') }
+  } catch { showNotice(t('imageStudio.clipboardFailed')) }
 }
 function transferImages(data: DataTransfer | null): File[] {
   if (!data) return []
@@ -263,8 +298,17 @@ async function saveCategory() {
   await studio.saveCategory(categoryName.value.trim(), editingCategory.value?.id)
   categoryDialog.value = false
 }
-function downloadSelected() {
-  studio.history.filter(item => selected.value.includes(item.id)).forEach(item => item.images.forEach(blob => downloadImage(blob)))
+let bulkDownloading = false
+async function downloadSelected() {
+  if (bulkDownloading) return
+  const images = studio.history.filter(item => selected.value.includes(item.id)).flatMap(item => item.images)
+  const userID = auth.user?.id
+  bulkDownloading = true
+  try {
+    const result = await prepareImageDownload(images)
+    if (auth.user?.id === userID) downloadImage(result.blob, result.name)
+  } catch { if (auth.user?.id === userID) showNotice(t('imageStudio.downloadFailed')) }
+  finally { bulkDownloading = false }
 }
 async function importBackup(event: Event) {
   const input = event.target as HTMLInputElement
@@ -273,14 +317,19 @@ async function importBackup(event: Event) {
   if (!file) return
   confirm('imageStudio.importBackup', t('imageStudio.importConfirm'), () => studio.importBackup(file))
 }
-async function submitEdit(payload: { blob: Blob; prompt: string }) {
-  const userID = auth.user?.id
-  studio.references = []
-  await studio.addReferences([payload.blob])
-  if (auth.user?.id !== userID) return
-  studio.prompt = t('imageStudio.maskPromptPrefix') + payload.prompt
+function openMask(blob: Blob) {
+  const model = studio.selectedModel
+  if (!model || model.max_references < (model.supports_mask ? 1 : 2)) { studio.error = 'imageStudio.maskUnsupported'; return }
+  maskModelID.value = model.id
+  maskNative.value = model.supports_mask
+  maskImage.value = blob
+}
+function submitEdit(payload: MaskEditResult) {
+  if (!maskImage.value || studio.selectedModel?.id !== maskModelID.value || Boolean(payload.mask) !== maskNative.value) { studio.error = 'imageStudio.maskUnsupported'; return }
+  const text = t(payload.mask ? 'imageStudio.nativeMaskPromptPrefix' : 'imageStudio.maskPromptPrefix') + payload.prompt
+  const edit = { modelID: maskModelID.value, references: [payload.original, ...(payload.guide ? [payload.guide] : [])], ...(payload.mask ? { mask: payload.mask } : {}) }
   maskImage.value = null
-  if (studio.references.length) generate([studio.prompt])
+  generate([text], edit)
 }
 function enterPrompt(event: KeyboardEvent) {
   if (studio.layout === 'bottom' && event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
@@ -320,7 +369,7 @@ function previewHistory(item: ImageHistory) {
         <button class="shrink-0 underline" @click="studio.refresh()">{{ t('imageStudio.refresh') }}</button>
       </div>
       <p v-if="studio.externalTasksCount" role="status" class="mb-4 text-sm text-gray-600 dark:text-dark-300">{{ t('imageStudio.externalTasksHint', { count: studio.externalTasksCount }) }}</p>
-      <div v-if="notice" role="status" class="mb-3 flex items-center justify-between gap-3 text-sm text-primary-700 dark:text-primary-300"><p>{{ notice }}</p><button :aria-label="t('imageStudio.dismiss')" @click="notice = ''"><Icon name="x" size="sm" /></button></div>
+      <div v-if="notice" data-studio-notice role="status" aria-live="polite" class="studio-notice"><p>{{ notice }}</p><button v-tooltip :aria-label="t('imageStudio.dismiss')" @click="notice = ''"><Icon name="x" size="sm" /></button></div>
       <div class="studio-layout" :class="`layout-${studio.layout}`">
         <form class="studio-composer" @submit.prevent="generate()">
           <div class="composer-main space-y-4">
@@ -341,8 +390,8 @@ function previewHistory(item: ImageHistory) {
                 @dragenter="dragReferences($event, true)" @dragover="dragReferences($event)" @dragleave="referenceDragDepth = Math.max(0, referenceDragDepth - 1)" @drop.stop="dropped">
                 <div v-if="referenceDragDepth" class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-primary-50/95 p-2 text-center text-xs font-medium text-primary-700 dark:bg-primary-950/95 dark:text-primary-300">{{ t(studio.selectedModel?.max_references ? 'imageStudio.dropReferences' : 'imageStudio.noReferencesSupported') }}</div>
                 <div v-for="(blob, index) in studio.references" :key="index" class="group relative h-16 w-16 shrink-0">
-                  <button type="button" class="h-full w-full cursor-zoom-in" :aria-label="t('imageStudio.previewReference', { number: index + 1 })" @click="setPreview(studio.references, '', index)"><BlobImage :blob="blob" :alt="t('imageStudio.referenceNumber', { number: index + 1 })" class="h-full w-full rounded-md object-cover" /></button>
-                  <button type="button" class="absolute -right-1 -top-1 rounded-full bg-gray-900 p-1 text-white" :aria-label="t('imageStudio.removeReference', { number: index + 1 })" @click="studio.removeReference(index)"><Icon name="x" size="xs" /></button>
+                  <button v-tooltip type="button" class="h-full w-full cursor-zoom-in" :aria-label="t('imageStudio.previewReference', { number: index + 1 })" @click="setPreview(studio.references, '', index)"><BlobImage :blob="blob" :alt="t('imageStudio.referenceNumber', { number: index + 1 })" class="h-full w-full rounded-md object-cover" /></button>
+                  <button v-tooltip type="button" class="absolute -right-1 -top-1 rounded-full bg-gray-900 p-1 text-white" :aria-label="t('imageStudio.removeReference', { number: index + 1 })" @click="studio.removeReference(index)"><Icon name="x" size="xs" /></button>
                 </div>
                 <button v-if="!studio.references.length" type="button" class="w-full py-3 text-xs leading-5 text-gray-500 dark:text-dark-300" :disabled="!studio.selectedModel?.max_references" @click="uploadInput?.click()">{{ studio.selectedModel?.max_references ? t('imageStudio.referenceHint') : t('imageStudio.noReferencesSupported') }}</button>
               </div>
@@ -396,23 +445,29 @@ function previewHistory(item: ImageHistory) {
           </div>
           <p v-if="studio.activeCount" role="status" class="flex items-center gap-2 border-b border-gray-100 px-4 py-3 text-xs text-primary-700 dark:border-dark-800 dark:text-primary-300"><span class="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />{{ t('imageStudio.queueSummary', { running: runningCount, queued: queuedCount }) }}</p>
           <div class="result-grid">
-            <article v-for="task in visibleTasks" :key="task.id" class="result-card" :class="{ 'border-red-300 dark:border-red-900': task.status === 'failed' }">
-              <div v-if="task.images?.length" class="relative"><button class="preview-trigger" :aria-label="t('imageStudio.previewImage')" @click="setPreview(task.images!, task.snapshot.prompt)"><BlobImage :blob="task.images[0]" :alt="task.snapshot.prompt" class="result-image" /><span class="preview-cue"><Icon name="eye" size="xs" />{{ t('imageStudio.previewImage') }}</span></button><span class="image-badge !bottom-auto top-2 bg-amber-50 text-amber-800">{{ t('imageStudio.notSaved') }}</span></div>
+            <template v-if="view === 'category' && !studio.categoryID && !search && !favoritesOnly">
+              <article v-for="category in studio.categories" :key="category.id" class="result-card group">
+                <button v-tooltip class="relative grid aspect-[4/3] w-full grid-cols-2 gap-0.5 overflow-hidden bg-gray-100 dark:bg-dark-900" :aria-label="t('imageStudio.openCategory', { name: category.name })" @click="studio.categoryID = category.id"><BlobImage v-for="(blob, index) in categoryImages(category.id)" :key="index" :blob="blob" alt="" class="h-full min-h-0 w-full object-cover" /><span v-if="!categoryImages(category.id).length" class="absolute inset-0 grid place-items-center text-gray-400"><Icon name="grid" size="xl" /></span></button>
+                <div class="flex items-center justify-between gap-2 p-3"><button class="min-w-0 text-left" @click="studio.categoryID = category.id"><h3 class="truncate text-sm font-semibold">{{ category.name }}</h3><p class="mt-1 text-xs text-gray-500">{{ t('imageStudio.recordCount', { count: categoryCount(category.id) }) }}</p></button><div class="flex gap-1"><button v-tooltip class="icon-button" :aria-label="t('imageStudio.renameCategory')" @click="openCategory(category)"><Icon name="edit" size="sm" /></button><button v-tooltip class="icon-button" :aria-label="t('imageStudio.deleteCategory')" @click="confirm('imageStudio.deleteCategory', t('imageStudio.deleteCategoryConfirm'), () => studio.deleteCategory(category.id), true)"><Icon name="trash" size="sm" /></button></div></div>
+              </article>
+            </template>
+            <ResultBatch v-for="group in resultGroups" :key="group.id" :group="group" :elapsed="`${Math.max(0, Math.round((now - group.createdAt) / 1000))}s`" @preview="(images, captions, index) => setPreview(images, captions, index)" @notice="showNotice" @dialog="batchDownloadOpen = $event">
+              <template #default="{ entries }">
+                <template v-for="entry in entries" :key="entry.id">
+            <article v-for="task in entry.task ? [entry.task] : []" :key="task.id" class="result-card" :class="{ 'border-red-300 dark:border-red-900': task.status === 'failed' }">
+              <div v-if="task.images?.length" class="relative"><button v-tooltip class="preview-trigger" :aria-label="t('imageStudio.previewImage')" @click="setPreview(task.images!, task.snapshot.prompt)"><BlobImage :blob="task.images[0]" :alt="task.snapshot.prompt" class="result-image" /><span class="preview-cue"><Icon name="eye" size="xs" />{{ t('imageStudio.previewImage') }}</span></button><span class="image-badge !bottom-auto top-2 bg-amber-50 text-amber-800">{{ t('imageStudio.notSaved') }}</span></div>
               <GenerationPending v-else-if="task.status === 'running' || task.status === 'queued'" :status="task.status" :elapsed="duration(task)" :title="t(`imageStudio.status.${task.status}`)" :subtitle="t(task.status === 'queued' ? 'imageStudio.pendingQueued' : 'imageStudio.pendingRunning')" :count-label="t('imageStudio.elapsedTime')" />
               <div v-else class="pending-image"><Icon name="exclamationCircle" size="lg" /><p class="mt-3 text-sm font-medium">{{ t(`imageStudio.status.${task.status}`) }}</p><p class="mt-1 text-xs tabular-nums">{{ duration(task) }}</p></div>
               <div class="space-y-3 p-3"><p class="line-clamp-3 text-sm leading-6">{{ task.snapshot.prompt }}</p><div class="text-xs text-gray-500 dark:text-dark-300">{{ task.snapshot.modelLabel || task.snapshot.model }} · {{ task.snapshot.size }} · {{ task.snapshot.quality }}</div><p v-if="task.error" class="line-clamp-2 text-xs text-red-600 dark:text-red-400">{{ formatError(task.error) }}</p><div class="flex flex-wrap gap-2"><button v-if="task.status === 'queued' || task.status === 'running'" class="btn btn-secondary btn-sm" @click="studio.cancel(task.id)">{{ t('imageStudio.cancel') }}</button><button v-else-if="task.status !== 'success'" class="btn btn-secondary btn-sm" @click="retry(task)">{{ t('imageStudio.retry') }}</button><button v-if="['failed', 'cancelled', 'interrupted'].includes(task.status)" class="text-button !text-red-600 dark:!text-red-400" @click="confirm('imageStudio.deleteTask', t('imageStudio.deleteTaskConfirm'), () => studio.dismissTask(task.id), true)">{{ t('imageStudio.delete') }}</button><button v-if="task.error" class="text-button" @click="detail = formatError(task.error)">{{ t('imageStudio.details') }}</button><template v-if="task.images?.length"><button class="btn btn-secondary btn-sm" @click="task.images!.forEach(blob => downloadImage(blob))">{{ t('imageStudio.download') }}</button><button class="btn btn-primary btn-sm" @click="studio.saveUnsaved(task)">{{ t('imageStudio.saveAgain') }}</button></template></div></div>
             </article>
-            <template v-if="view === 'category' && !studio.categoryID && !search && !favoritesOnly">
-              <article v-for="category in studio.categories" :key="category.id" class="result-card group">
-                <button class="relative grid aspect-[4/3] w-full grid-cols-2 gap-0.5 overflow-hidden bg-gray-100 dark:bg-dark-900" :aria-label="t('imageStudio.openCategory', { name: category.name })" @click="studio.categoryID = category.id"><BlobImage v-for="(blob, index) in categoryImages(category.id)" :key="index" :blob="blob" alt="" class="h-full min-h-0 w-full object-cover" /><span v-if="!categoryImages(category.id).length" class="absolute inset-0 grid place-items-center text-gray-400"><Icon name="grid" size="xl" /></span></button>
-                <div class="flex items-center justify-between gap-2 p-3"><button class="min-w-0 text-left" @click="studio.categoryID = category.id"><h3 class="truncate text-sm font-semibold">{{ category.name }}</h3><p class="mt-1 text-xs text-gray-500">{{ t('imageStudio.recordCount', { count: categoryCount(category.id) }) }}</p></button><div class="flex gap-1"><button class="icon-button" :aria-label="t('imageStudio.renameCategory')" @click="openCategory(category)"><Icon name="edit" size="sm" /></button><button class="icon-button" :aria-label="t('imageStudio.deleteCategory')" @click="confirm('imageStudio.deleteCategory', t('imageStudio.deleteCategoryConfirm'), () => studio.deleteCategory(category.id), true)"><Icon name="trash" size="sm" /></button></div></div>
-              </article>
-            </template>
-            <article v-for="item in filteredHistory" :key="item.id" class="result-card" :data-new-result="newResultIDs.has(item.id)" :class="{ 'ring-2 ring-primary-500': selected.includes(item.id) }" @animationend.self="newResultIDs.delete(item.id)">
-              <div class="relative"><button class="preview-trigger" :aria-label="t('imageStudio.previewImage')" @click="previewHistory(item)"><BlobImage :blob="item.images[0]" :alt="item.snapshot.prompt" class="result-image" /><span class="preview-cue"><Icon name="eye" size="xs" />{{ t('imageStudio.previewImage') }}</span></button><label class="absolute left-2 top-2 rounded bg-white/90 p-1.5 dark:bg-dark-900/90"><input type="checkbox" :checked="selected.includes(item.id)" :aria-label="t('imageStudio.selectImage')" class="block accent-primary-600" @change="toggle(item.id)" /></label><button class="absolute right-2 top-2 rounded bg-white/90 p-1.5 text-xs dark:bg-dark-900/90" :aria-label="item.favorite ? t('imageStudio.unfavorite') : t('imageStudio.favorite')" :aria-pressed="item.favorite" @click="studio.favorite(item)"><Icon name="badge" size="sm" :class="item.favorite ? 'fill-primary-500 text-primary-500' : 'text-gray-600 dark:text-gray-300'" /></button><div v-if="item.references.length" class="absolute bottom-2 right-2 flex gap-1"><button v-for="(blob, index) in item.references.slice(0, 3)" :key="index" type="button" data-preview-reference class="h-11 w-11 cursor-zoom-in overflow-hidden rounded border border-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-500" :aria-label="t('imageStudio.previewReference', { number: index + 1 })" @click="setPreview(item.references, '', index)"><BlobImage :blob="blob" alt="" class="h-full w-full object-cover" /></button></div></div>
+            <article v-for="item in entry.history ? [entry.history] : []" :key="item.id" class="result-card" :data-new-result="newResultIDs.has(item.id)" :class="{ 'ring-2 ring-primary-500': selected.includes(item.id) }" @animationend.self="newResultIDs.delete(item.id)">
+              <div class="relative"><button v-tooltip class="preview-trigger" :aria-label="t('imageStudio.previewImage')" @click="previewHistory(item)"><BlobImage :blob="item.images[0]" :alt="item.snapshot.prompt" class="result-image" /><span class="preview-cue"><Icon name="eye" size="xs" />{{ t('imageStudio.previewImage') }}</span></button><label class="absolute left-2 top-2 rounded bg-white/90 p-1.5 dark:bg-dark-900/90"><input type="checkbox" :checked="selected.includes(item.id)" :aria-label="t('imageStudio.selectImage')" class="block accent-primary-600" @change="toggle(item.id)" /></label><button v-tooltip class="favorite-button" :class="{ 'is-favorite': item.favorite }" :aria-label="item.favorite ? t('imageStudio.unfavorite') : t('imageStudio.favorite')" :aria-pressed="item.favorite" @click="studio.favorite(item)"><Icon :name="item.favorite ? 'check' : 'badge'" size="sm" :stroke-width="2.5" /><span v-if="item.favorite">{{ t('imageStudio.favorited') }}</span></button><div v-if="item.references.length" class="absolute bottom-2 right-2 flex gap-1"><button v-tooltip v-for="(blob, index) in item.references.slice(0, 3)" :key="index" type="button" data-preview-reference class="h-11 w-11 cursor-zoom-in overflow-hidden rounded border border-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-500" :aria-label="t('imageStudio.previewReference', { number: index + 1 })" @click="setPreview(item.references, '', index)"><BlobImage :blob="blob" alt="" class="h-full w-full object-cover" /></button></div></div>
               <div class="space-y-2 p-3"><p class="whitespace-pre-wrap break-words text-sm leading-6" :class="{ 'line-clamp-2': !expanded.includes(item.id) }">{{ item.snapshot.prompt }}</p><div class="flex justify-end gap-3"><button class="text-button" @click="copyPrompt(item.snapshot.prompt)">{{ t('imageStudio.copy') }}</button><button class="text-button" @click="expanded = expanded.includes(item.id) ? expanded.filter(id => id !== item.id) : [...expanded, item.id]">{{ expanded.includes(item.id) ? t('imageStudio.collapse') : t('imageStudio.expand') }}</button></div><p class="text-[11px] leading-5 text-gray-500 dark:text-dark-300">{{ formatDate(item.createdAt) }} · {{ item.snapshot.modelLabel || item.snapshot.model }}<br />{{ item.snapshot.size }} · {{ item.snapshot.quality }} · {{ bytes(item.images[0]) }}</p><div class="flex flex-wrap gap-1"><span v-for="category in studio.categories.filter(category => (item.categoryIDs || [item.categoryID]).includes(category.id))" :key="category.id" class="rounded bg-primary-50 px-1.5 py-0.5 text-[10px] text-primary-700 dark:bg-primary-950 dark:text-primary-300">{{ category.name }}</span></div></div>
-              <div class="flex flex-wrap gap-1 border-t border-gray-100 px-2 py-2 dark:border-dark-800"><button class="text-button" @click="studio.loadHistory(item)">{{ t('imageStudio.load') }}</button><button class="text-button" @click="retry(item)">{{ t('imageStudio.retry') }}</button><button class="text-button" :disabled="!studio.selectedModel?.max_references" @click="maskImage = item.images[0]">{{ t('imageStudio.maskEdit') }}</button><button class="text-button" @click="assign([item.id])">{{ t('imageStudio.categorize') }}</button><div class="ml-auto flex gap-1"><button class="icon-button" :aria-label="t('imageStudio.saveAsset')" @click="studio.saveAsset(item.images[0], t('imageStudio.generatedAsset', { date: formatDate(item.createdAt) }))"><Icon name="plus" size="sm" /></button><button class="icon-button" :disabled="!studio.selectedModel?.max_references" :aria-label="t('imageStudio.useReference')" @click="studio.addReferences([item.images[0]])"><Icon name="edit" size="sm" /></button><button class="icon-button" :aria-label="t('imageStudio.download')" @click="item.images.forEach(blob => downloadImage(blob))"><Icon name="download" size="sm" /></button><button class="icon-button" :aria-label="t('imageStudio.delete')" @click="removeHistory([item.id])"><Icon name="trash" size="sm" /></button></div></div>
+              <div class="flex flex-wrap gap-1 border-t border-gray-100 px-2 py-2 dark:border-dark-800"><button class="text-button" @click="studio.loadHistory(item)">{{ t('imageStudio.load') }}</button><button class="text-button" @click="retry(item)">{{ t('imageStudio.retry') }}</button><button class="text-button" :disabled="!studio.selectedModel?.max_references" @click="openMask(item.images[0])">{{ t('imageStudio.maskEdit') }}</button><button class="text-button" @click="assign([item.id])">{{ t('imageStudio.categorize') }}</button><div class="ml-auto flex gap-1"><button v-tooltip class="icon-button" :aria-label="t('imageStudio.saveAsset')" @click="studio.saveAsset(item.images[0], t('imageStudio.generatedAsset', { date: formatDate(item.createdAt) }))"><Icon name="plus" size="sm" /></button><button v-tooltip class="icon-button" :disabled="!studio.selectedModel?.max_references" :aria-label="t('imageStudio.useReference')" @click="studio.addReferences([item.images[0]])"><Icon name="edit" size="sm" /></button><button v-tooltip class="icon-button" :aria-label="t('imageStudio.download')" @click="item.images.forEach(blob => downloadImage(blob))"><Icon name="download" size="sm" /></button><button v-tooltip class="icon-button" :aria-label="t('imageStudio.delete')" @click="removeHistory([item.id])"><Icon name="trash" size="sm" /></button></div></div>
             </article>
+                </template>
+              </template>
+            </ResultBatch>
           </div>
           <div v-if="!filteredHistory.length && !visibleTasks.length && !(view === 'category' && !studio.categoryID && studio.categories.length)" class="flex min-h-80 flex-col items-center justify-center px-6 text-center"><Icon name="sparkles" size="xl" class="text-gray-400 dark:text-dark-500" /><h3 class="mt-5 text-base font-medium">{{ search || favoritesOnly ? t('imageStudio.noMatches') : t('imageStudio.emptyTitle') }}</h3><p class="mt-2 max-w-sm text-sm leading-6 text-gray-500 dark:text-dark-300">{{ search || favoritesOnly ? t('imageStudio.changeFilters') : t('imageStudio.emptyHint') }}</p></div>
         </section>
@@ -420,7 +475,7 @@ function previewHistory(item: ImageHistory) {
     </div>
     <div v-if="showGenerationDock" ref="generationDock" data-generation-dock class="generation-dock" :class="{ 'sidebar-collapsed': app.sidebarCollapsed }" :style="{ bottom: `${keyboardInset}px` }" role="region" :aria-label="t('imageStudio.generateActions')">
       <div class="generation-dock-inner">
-        <button type="button" class="dock-parameters" :aria-label="t('imageStudio.editParameters')" @click="editParameters">
+        <button v-tooltip type="button" class="dock-parameters" :aria-label="t('imageStudio.editParameters')" @click="editParameters">
           <span class="truncate text-sm font-semibold">{{ studio.selectedModel?.label || studio.selectedModel?.model || t('imageStudio.selectModel') }}</span>
           <span class="truncate text-xs text-gray-500 dark:text-dark-300">{{ t('imageStudio.batchCount', { count: studio.count }) }} · {{ t('imageStudio.editParameters') }}</span>
         </button>
@@ -431,14 +486,14 @@ function previewHistory(item: ImageHistory) {
     <input ref="importInput" type="file" accept="application/json,.json" class="hidden" @change="importBackup" />
     <input ref="assetUploadInput" type="file" accept="image/png,image/jpeg,image/webp" multiple class="hidden" @change="upload($event, true)" />
     <WorkflowLibrary :key="auth.user?.id" :show="libraryOpen" :prompts="studio.prompts" :initial-prompt="studio.prompt" :references="studio.references" :can-run="studio.enabled && Boolean(studio.selectedModel) && !customSizeError" @close="libraryOpen = false" @save="studio.savePrompt" @delete="studio.deletePrompt" @use="studio.prompt = $event" @run="generate" />
-    <MaskEditor v-if="maskImage" :show="Boolean(maskImage)" :blob="maskImage" @close="maskImage = null" @confirm="submitEdit" />
-    <BaseDialog :show="assetsOpen" :title="t('imageStudio.assets')" width="wide" @close="assetsOpen = false">
+    <MaskEditor v-if="maskImage" :show="Boolean(maskImage)" :blob="maskImage" :native-mask="maskNative" @close="maskImage = null" @confirm="submitEdit" />
+    <BaseDialog close-tooltip :show="assetsOpen" :title="t('imageStudio.assets')" width="wide" @close="assetsOpen = false">
       <div class="mb-4 flex flex-wrap gap-3"><input v-model="assetSearch" class="input min-w-0 flex-1" :aria-label="t('imageStudio.searchAssets')" :placeholder="t('imageStudio.searchAssets')" /><button class="btn btn-primary" @click="assetUploadInput?.click()">{{ t('imageStudio.uploadAsset') }}</button></div>
-      <div v-if="filteredAssets.length" class="grid grid-cols-2 gap-4 sm:grid-cols-3"><article v-for="asset in filteredAssets" :key="asset.id" class="overflow-hidden rounded-lg border border-gray-200 dark:border-dark-700"><button type="button" data-preview-asset class="preview-trigger" :aria-label="t('imageStudio.previewAsset', { name: asset.name })" @click="setPreview(filteredAssets.map(item => item.image), filteredAssets.map(item => item.name), filteredAssets.findIndex(item => item.id === asset.id))"><BlobImage :blob="asset.image" :alt="asset.name" class="aspect-square w-full object-cover" /><span class="preview-cue"><Icon name="eye" size="xs" />{{ t('imageStudio.previewImage') }}</span></button><div class="flex items-center justify-between gap-2 p-2"><div class="min-w-0"><p class="truncate text-xs">{{ asset.name }}</p><button type="button" class="text-button mt-1 min-h-11" :disabled="!studio.selectedModel?.max_references" @click="studio.addReferences([asset.image]); assetsOpen = false">{{ t('imageStudio.useReference') }}</button></div><button class="icon-button shrink-0" :aria-label="t('imageStudio.deleteAsset')" @click="confirm('imageStudio.deleteAsset', t('imageStudio.deleteAssetConfirm'), () => studio.deleteAsset(asset.id), true)"><Icon name="trash" size="sm" /></button></div></article></div><p v-else class="py-16 text-center text-sm text-gray-500 dark:text-dark-300">{{ assetSearch ? t('imageStudio.noMatches') : t('imageStudio.noAssets') }}</p>
+      <div v-if="filteredAssets.length" class="grid grid-cols-2 gap-4 sm:grid-cols-3"><article v-for="asset in filteredAssets" :key="asset.id" class="overflow-hidden rounded-lg border border-gray-200 dark:border-dark-700"><button v-tooltip type="button" data-preview-asset class="preview-trigger" :aria-label="t('imageStudio.previewAsset', { name: asset.name })" @click="setPreview(filteredAssets.map(item => item.image), filteredAssets.map(item => item.name), filteredAssets.findIndex(item => item.id === asset.id))"><BlobImage :blob="asset.image" :alt="asset.name" class="aspect-square w-full object-cover" /><span class="preview-cue"><Icon name="eye" size="xs" />{{ t('imageStudio.previewImage') }}</span></button><div class="flex items-center justify-between gap-2 p-2"><div class="min-w-0"><p class="truncate text-xs">{{ asset.name }}</p><button type="button" class="text-button mt-1 min-h-11" :disabled="!studio.selectedModel?.max_references" @click="studio.addReferences([asset.image]); assetsOpen = false">{{ t('imageStudio.useReference') }}</button></div><button v-tooltip class="icon-button shrink-0" :aria-label="t('imageStudio.deleteAsset')" @click="confirm('imageStudio.deleteAsset', t('imageStudio.deleteAssetConfirm'), () => studio.deleteAsset(asset.id), true)"><Icon name="trash" size="sm" /></button></div></article></div><p v-else class="py-16 text-center text-sm text-gray-500 dark:text-dark-300">{{ assetSearch ? t('imageStudio.noMatches') : t('imageStudio.noAssets') }}</p>
     </BaseDialog>
     <ImagePreview :show="Boolean(preview)" :images="preview?.images || []" :captions="preview?.captions || []" :initial-index="preview?.index || 0" @close="preview = null" @download="downloadImage" />
-    <BaseDialog :show="categoryDialog" :title="editingCategory ? t('imageStudio.renameCategory') : t('imageStudio.newCategory')" width="narrow" @close="categoryDialog = false"><label class="block text-sm">{{ t('imageStudio.categoryName') }}<input v-model="categoryName" maxlength="120" class="input mt-2" @keydown.enter.prevent="saveCategory" /></label><template #footer><button class="btn btn-primary" :disabled="!categoryName.trim()" @click="saveCategory">{{ t('imageStudio.save') }}</button></template></BaseDialog>
-    <BaseDialog :show="assignmentOpen" :title="t('imageStudio.categorize')" width="narrow" @close="assignmentOpen = false">
+    <BaseDialog close-tooltip :show="categoryDialog" :title="editingCategory ? t('imageStudio.renameCategory') : t('imageStudio.newCategory')" width="narrow" @close="categoryDialog = false"><label class="block text-sm">{{ t('imageStudio.categoryName') }}<input v-model="categoryName" maxlength="120" class="input mt-2" @keydown.enter.prevent="saveCategory" /></label><template #footer><button class="btn btn-primary" :disabled="!categoryName.trim()" @click="saveCategory">{{ t('imageStudio.save') }}</button></template></BaseDialog>
+    <BaseDialog close-tooltip :show="assignmentOpen" :title="t('imageStudio.categorize')" width="narrow" @close="assignmentOpen = false">
       <div class="space-y-3">
         <label v-for="category in studio.categories" :key="category.id" class="flex items-center gap-3 text-sm"><input v-model="assignmentCategories" data-category-choice type="checkbox" :value="category.id" class="rounded accent-primary-600" />{{ category.name }}</label>
         <p v-if="!studio.categories.length" class="text-sm text-gray-500 dark:text-dark-300">{{ t('imageStudio.noCategories') }}</p>
@@ -447,12 +502,17 @@ function previewHistory(item: ImageHistory) {
       </div>
       <template #footer><button class="btn btn-primary" @click="studio.categorize(assignmentIDs, assignmentCategories); assignmentOpen = false">{{ t('imageStudio.save') }}</button></template>
     </BaseDialog>
-    <BaseDialog :show="Boolean(detail)" :title="t('imageStudio.details')" width="wide" @close="detail = ''"><p class="whitespace-pre-wrap break-words text-sm leading-6">{{ detail }}</p></BaseDialog>
+    <BaseDialog close-tooltip :show="Boolean(detail)" :title="t('imageStudio.details')" width="wide" @close="detail = ''"><p class="whitespace-pre-wrap break-words text-sm leading-6">{{ detail }}</p></BaseDialog>
     <ConfirmDialog :show="Boolean(confirmation)" :title="confirmation?.title || ''" :message="confirmation?.message || ''" :danger="confirmation?.danger" @cancel="confirmation = null" @confirm="acceptConfirmation" />
   </AppLayout>
 </template>
 
 <style scoped>
+.favorite-button { @apply absolute right-2 top-2 flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-lg bg-white px-2 text-xs font-semibold text-gray-700 shadow-sm dark:bg-dark-800 dark:text-gray-100; }
+.favorite-button.is-favorite { @apply bg-primary-700 text-white dark:bg-primary-700 dark:text-white; }
+.favorite-button:focus-visible { @apply outline outline-2 outline-offset-2 outline-primary-500; }
+.studio-notice { @apply fixed left-1/2 top-20 z-[70] flex w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center gap-4 rounded-xl border border-primary-200 bg-white px-4 py-3 text-sm font-medium text-primary-800 shadow-lg dark:border-primary-800 dark:bg-dark-900 dark:text-primary-200; }
+
 .generation-dock { position: fixed; z-index: 30; left: 0; right: 0; padding: 10px 16px max(10px, env(safe-area-inset-bottom)); pointer-events: none; }
 .generation-dock-inner { @apply mx-auto flex max-w-3xl items-center gap-3 rounded-xl border border-gray-200 bg-white p-3 shadow-xl dark:border-dark-600 dark:bg-dark-900; pointer-events: auto; animation: dock-arrive 180ms ease-out; }
 .dock-parameters { @apply flex min-w-0 flex-1 flex-col gap-1 rounded-md text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-500; min-height: 44px; justify-content: center; }

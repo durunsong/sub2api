@@ -59,6 +59,10 @@ const model = { id: '7:gpt-image-2', group_id: 7, group_name: '图像创作', mo
       }
       throw new Error('Timed out waiting for local history')
     }
+    const expandBatches = async () => {
+      const collapsed = page.locator('[data-result-batch] .batch-fan[aria-expanded="false"]')
+      while (await collapsed.count()) await collapsed.first().click()
+    }
     const errors = []
     page.on('pageerror', error => errors.push(error.message))
     await page.goto(`${base}/image-studio`)
@@ -107,6 +111,8 @@ const model = { id: '7:gpt-image-2', group_id: 7, group_name: '图像创作', mo
     await page.locator('#studio-prompt').fill('山间晨雾，柔和自然光，宁静的横向构图')
     await page.locator('#studio-count').fill('3')
     await page.getByRole('button',{name:'开始生成',exact:true}).click()
+    await page.locator('[data-result-batch]').waitFor()
+    await expandBatches()
     await page.waitForFunction(() => document.querySelectorAll('.result-card').length >= 3)
     await page.getByText('Test upstream rejected the image',{exact:true}).first().waitFor()
     await page.waitForFunction(async () => { const db=await new Promise(resolve=>{const r=indexedDB.open('sub2api-image-studio-900003');r.onsuccess=()=>resolve(r.result)}); const count=await new Promise(resolve=>{const r=db.transaction('history').objectStore('history').count();r.onsuccess=()=>resolve(r.result)});db.close();return count===2 })
@@ -118,7 +124,7 @@ const model = { id: '7:gpt-image-2', group_id: 7, group_name: '图像创作', mo
     await page.getByRole('dialog').getByRole('button',{name:'用作参考图',exact:true}).first().waitFor()
     await page.getByRole('dialog').getByRole('button',{name:'用作参考图',exact:true}).first().click()
     await page.getByRole('button',{name:'移除参考图 1',exact:true}).waitFor()
-    // A mask edit needs both instructions and paint, and sends a marked local PNG.
+    // A mask edit needs instructions and paint, then sends a separate mask and clean original.
     await page.getByRole('button',{name:'局部重绘',exact:true}).first().click()
     await page.getByRole('dialog').getByRole('button',{name:'AI 修改',exact:true}).click()
     await page.getByText('请涂抹需要修改的区域，并填写修改要求。',{exact:true}).waitFor()
@@ -133,8 +139,9 @@ const model = { id: '7:gpt-image-2', group_id: 7, group_name: '图像创作', mo
     await page.getByRole('dialog').getByRole('button',{name:'AI 修改',exact:true}).click()
     await waitForLocal(records => records.length === 3)
     assert.equal(generationBodies[3].references.length,1)
-    assert.ok(generationBodies[3].prompt.includes('蓝色高亮'))
+    assert.ok(generationBodies[3].prompt.includes('透明遮罩'))
     assert.ok(generationBodies[3].references[0].startsWith('data:image/png;base64,'))
+    assert.ok(generationBodies[3].mask.startsWith('data:image/png;base64,'))
     // Create and review a local variable template, then generate its two-image series.
     await page.getByRole('button',{name:'创作工作流',exact:true}).click()
     await page.getByRole('dialog').getByRole('button',{name:'新建模板',exact:true}).click()
@@ -183,6 +190,8 @@ const model = { id: '7:gpt-image-2', group_id: 7, group_name: '图像创作', mo
     await page.reload()
     await page.getByRole('main').getByRole('heading',{name:'生图工作台',exact:true}).waitFor()
     await page.locator('.layout-bottom').waitFor()
+    await page.locator('[data-result-batch]').first().waitFor()
+    await expandBatches()
     assert.equal(await page.locator('.result-card').count(),7)
     assert.equal(await page.getByLabel('宽度 W',{exact:true}).inputValue(),'1056')
     assert.equal(generation,7,'reload must not replay generation')

@@ -53,6 +53,14 @@ function categories(value: unknown) {
   for (const id of value) string(id)
 }
 
+function batch(value: unknown) {
+  if (value === undefined) return
+  const row = object(value, ['id', 'index', 'total'])
+  string(row.id, 128)
+  if (!Number.isInteger(row.total) || Number(row.total) < 1 || Number(row.total) > 30 ||
+    !Number.isInteger(row.index) || Number(row.index) < 0 || Number(row.index) >= Number(row.total)) invalid()
+}
+
 function readBlob(blob: Blob, mode: 'text' | 'dataURL' | 'arrayBuffer'): Promise<string | ArrayBuffer> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -117,9 +125,10 @@ async function snapshot(value: unknown): Promise<void> {
 }
 
 export async function validateHistoryRecord(value: unknown): Promise<ImageHistory> {
-  const row = object(value, ['id', 'createdAt', 'status', 'snapshot', 'images', 'references', 'favorite', 'categoryID', 'categoryIDs'])
+  const row = object(value, ['id', 'createdAt', 'status', 'snapshot', 'images', 'references', 'favorite', 'categoryID', 'categoryIDs', 'batch'])
   string(row.id)
   timestamp(row.createdAt)
+  batch(row.batch)
   if (row.status !== 'success' || typeof row.favorite !== 'boolean') invalid()
   category(row.categoryID)
   categories(row.categoryIDs)
@@ -135,7 +144,7 @@ async function validate(store: Store, value: unknown): Promise<Row> {
     assets: ['id', 'name', 'createdAt', 'image', 'categoryID', 'categoryIDs'],
     categories: ['id', 'name'], drafts: ['id', 'snapshot', 'references', 'updatedAt', 'layout'],
     prompts: ['id', 'title', 'prompt', 'createdAt', 'updatedAt', 'category', 'tags', 'seriesPrompts'],
-    tasks: ['id', 'ownerID', 'createdAt', 'status', 'snapshot', 'references', 'error']
+    tasks: ['id', 'ownerID', 'createdAt', 'status', 'snapshot', 'references', 'error', 'batch']
   }
   const row = object(value, fields[store])
   string(row.id)
@@ -166,6 +175,7 @@ async function validate(store: Store, value: unknown): Promise<Row> {
     }
   }
   if (store === 'tasks') {
+    batch(row.batch)
     if (!['queued', 'running', 'failed', 'cancelled', 'interrupted', 'success'].includes(row.status as string)) invalid()
     if (row.error !== undefined) string(row.error, 10000, true)
     if (row.ownerID !== undefined) string(row.ownerID, 128)
@@ -193,7 +203,7 @@ export async function parseBackup(file: Blob): Promise<ImageStudioBackup> {
       if (!Array.isArray(rows) || (entries += rows.length) > 10000 || (store === 'drafts' && rows.length > 1)) invalid()
       const ids = new Set<string>()
       for (const value of rows) {
-        const row = object(value, ['id', 'name', 'title', 'prompt', 'createdAt', 'updatedAt', 'status', 'snapshot', 'images', 'image', 'references', 'favorite', 'categoryID', 'categoryIDs', 'error', 'category', 'tags', 'seriesPrompts', 'layout', 'ownerID'])
+        const row = object(value, ['id', 'name', 'title', 'prompt', 'createdAt', 'updatedAt', 'status', 'snapshot', 'images', 'image', 'references', 'favorite', 'categoryID', 'categoryIDs', 'error', 'category', 'tags', 'seriesPrompts', 'layout', 'ownerID', 'batch'])
         if (Array.isArray(row.images)) row.images = row.images.map(decodeImage)
         if (Array.isArray(row.references)) row.references = row.references.map(decodeImage)
         if (row.image !== undefined) row.image = decodeImage(row.image)

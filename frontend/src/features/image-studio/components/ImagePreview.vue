@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { vTooltip } from '@/components/common/tooltip'
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import BaseDialog from '@/components/common/BaseDialog.vue'
@@ -179,22 +180,22 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <BaseDialog :show="show" :title="t('imageStudio.previewImage')" width="full" :z-index="70" :show-close-button="false" close-on-click-outside @close="emit('close')">
+  <BaseDialog close-tooltip :show="show" :title="t('imageStudio.previewImage')" width="full" :z-index="70" :show-close-button="false" close-on-click-outside @close="emit('close')">
     <div v-if="show" ref="root" data-image-preview class="image-preview">
       <div class="preview-toolbar">
-        <button type="button" class="preview-control order-last" :aria-label="t('imageStudio.closePreview')" @click="emit('close')"><Icon name="x" size="md" /></button>
+        <button v-tooltip type="button" class="preview-control order-last" :aria-label="t('imageStudio.closePreview')" @click="emit('close')"><Icon name="x" size="md" /></button>
         <div class="flex items-center gap-1">
-          <button type="button" class="preview-control" :disabled="index === 0" :aria-label="t('imageStudio.previousImage')" @click="select(index - 1)"><Icon name="chevronLeft" size="md" /></button>
+          <button v-tooltip type="button" class="preview-control" :disabled="index === 0" :aria-label="t('imageStudio.previousImage')" @click="select(index - 1)"><Icon name="chevronLeft" size="md" /></button>
           <span class="min-w-12 text-center text-xs tabular-nums" role="status" aria-live="polite">{{ images.length ? index + 1 : 0 }} / {{ images.length }}</span>
-          <button type="button" class="preview-control" :disabled="index >= images.length - 1" :aria-label="t('imageStudio.nextImage')" @click="select(index + 1)"><Icon name="chevronRight" size="md" /></button>
+          <button v-tooltip type="button" class="preview-control" :disabled="index >= images.length - 1" :aria-label="t('imageStudio.nextImage')" @click="select(index + 1)"><Icon name="chevronRight" size="md" /></button>
         </div>
         <button type="button" class="preview-control ml-auto gap-2 px-3" :disabled="!current" @click="current && emit('download', current)"><Icon name="download" size="sm" /><span>{{ t('imageStudio.download') }}</span></button>
       </div>
       <div class="preview-zoom">
-        <button type="button" class="preview-control" :disabled="!ready || zoom <= Math.min(0.1, fitScale)" :aria-label="t('imageStudio.zoomOut')" @click="zoomTo(zoom / 1.25)"><span aria-hidden="true" class="text-lg">−</span></button>
+        <button v-tooltip type="button" class="preview-control" :disabled="!ready || zoom <= Math.min(0.1, fitScale)" :aria-label="t('imageStudio.zoomOut')" @click="zoomTo(zoom / 1.25)"><span aria-hidden="true" class="text-lg">−</span></button>
         <input class="hidden min-w-16 flex-1 accent-primary-600 sm:block" type="range" :aria-label="t('imageStudio.zoom')" :min="Math.min(0.1, fitScale)" max="8" step="0.01" :value="zoom" :disabled="!ready" @input="zoomTo(Number(($event.target as HTMLInputElement).value))" />
         <output class="w-12 text-center text-xs tabular-nums">{{ Math.round(zoom * 100) }}%</output>
-        <button type="button" class="preview-control" :disabled="!ready || zoom >= 8" :aria-label="t('imageStudio.zoomIn')" @click="zoomTo(zoom * 1.25)"><Icon name="plus" size="sm" /></button>
+        <button v-tooltip type="button" class="preview-control" :disabled="!ready || zoom >= 8" :aria-label="t('imageStudio.zoomIn')" @click="zoomTo(zoom * 1.25)"><Icon name="plus" size="sm" /></button>
         <button type="button" class="preview-control ml-auto px-3" :disabled="!ready" @click="fit">{{ t('imageStudio.fitImage') }}</button>
         <button type="button" class="preview-control px-3" :disabled="!ready" @click="zoomTo(1)">{{ t('imageStudio.actualSize') }}</button>
       </div>
@@ -206,7 +207,7 @@ onBeforeUnmount(() => {
       </div>
       <div class="preview-info"><span class="tabular-nums">{{ ready ? `${natural.width} × ${natural.height} · ` : '' }}{{ format }} · {{ fileSize }}</span><span class="hidden md:inline">{{ t('imageStudio.previewKeyboardHint') }}</span><span class="md:hidden">{{ t('imageStudio.previewTouchHint') }}</span></div>
       <div v-if="images.length > 1" class="preview-thumbnails" :aria-label="t('imageStudio.previewGallery')">
-        <button v-for="(blob, itemIndex) in images" :key="itemIndex" type="button" :aria-label="t('imageStudio.previewNumber', { number: itemIndex + 1 })" :aria-pressed="index === itemIndex" class="preview-thumbnail" :class="{ active: index === itemIndex }" @click="select(itemIndex)"><BlobImage :blob="blob" :alt="''" class="h-full w-full object-contain" /></button>
+        <button v-tooltip v-for="(blob, itemIndex) in images" :key="itemIndex" type="button" :aria-label="t('imageStudio.previewNumber', { number: itemIndex + 1 })" :aria-pressed="index === itemIndex" class="preview-thumbnail" :class="{ active: index === itemIndex }" @click="select(itemIndex)"><BlobImage :blob="blob" :alt="''" class="h-full w-full object-contain" /></button>
       </div>
       <details v-if="caption" class="preview-caption"><summary>{{ t('imageStudio.imageDescription') }}</summary><p>{{ caption }}</p></details>
     </div>

@@ -25,6 +25,11 @@
         <Select v-model="groupFilter" class="w-full sm:w-60" :options="[{value:0,label:t('studioAdmin.allGroups')},...groupOptions]" :aria-label="t('studioAdmin.group')" />
         <button class="btn btn-secondary" :disabled="loading || saving" @click="showAdd = true"><Icon name="plus" size="sm" />{{ t('studioAdmin.add') }}</button>
       </div>
+      <div class="flex flex-wrap items-center gap-3">
+        <button class="btn btn-secondary btn-sm" :disabled="loading || saving || !editableFiltered.length" @click="setFilteredVisibility(true)">{{ t('studioAdmin.showFiltered') }}</button>
+        <button class="btn btn-secondary btn-sm" :disabled="loading || saving || !editableFiltered.length" @click="setFilteredVisibility(false)">{{ t('studioAdmin.hideFiltered') }}</button>
+        <p class="text-sm text-gray-600 dark:text-gray-400">{{ t('studioAdmin.bulkScope', { count: editableFiltered.length }) }}</p>
+      </div>
       <div v-if="loading" role="status" class="py-16 text-center text-gray-500">{{ t('common.loading') }}</div>
       <div v-else class="overflow-x-auto rounded-xl border border-gray-200 dark:border-dark-700">
         <table class="w-full min-w-[680px] text-left text-sm">
@@ -60,7 +65,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Select from '@/components/common/Select.vue'
@@ -77,10 +82,21 @@ const textModels = ref<WorkflowModel[]>([])
 const groups = ref<{id:number;name:string}[]>([])
 const loading = ref(true), loaded = ref(false), saving = ref(false), saved = ref(false), error = ref('')
 const search = ref(''), groupFilter = ref(0), showAdd = ref(false)
+let savedTimer: ReturnType<typeof setTimeout> | undefined
+watch(saved, value => {
+  clearTimeout(savedTimer)
+  if (value) savedTimer = setTimeout(() => { saved.value = false }, 5000)
+}, { flush: 'sync' })
+onBeforeUnmount(() => { clearTimeout(savedTimer) })
 const draft = ref<StudioModelSetting>({ group_id: 0, model: '', label: '', enabled: true, protocol: 'images' })
 const groupOptions = computed(() => groups.value.map(group => ({ value: group.id, label: group.name })))
 const rows = computed(() => mergeModelSettings([...candidates.value, ...textModels.value], config.value.models))
 const filtered = computed(() => rows.value.filter(item => (!groupFilter.value || groupFilter.value === item.group_id) && `${item.model} ${item.label} ${groupName(item.group_id)}`.toLowerCase().includes(search.value.toLowerCase())))
+const editableFiltered = computed(() => filtered.value.filter(item => groups.value.some(group => group.id === item.group_id)))
+function setFilteredVisibility(enabled: boolean) {
+  if (loading.value || saving.value) return
+  for (const item of editableFiltered.value) update({ ...item, enabled })
+}
 function groupName(id: number) { return groups.value.find(group => group.id === id)?.name || candidates.value.find(model => model.group_id === id)?.group_name || `#${id}` }
 function same(a:StudioModelSetting,b:StudioModelSetting) { return a.group_id === b.group_id && a.model === b.model }
 function hasOverride(item:StudioModelSetting) { return config.value.models.some(value => same(value,item)) }

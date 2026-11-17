@@ -28,6 +28,98 @@ beforeEach(() => {
 afterEach(() => { wrapper?.unmount(); vi.useRealTimers() })
 
 describe('image studio task lifecycle', () => {
+  it('sends and persists an edit mask with the original image, retries it, and isolates ordinary generation', async () => {
+    mocks.catalog.mockResolvedValue({ enabled: true, models: [{ ...model, supports_mask: true }] })
+    await setup()
+    const original = new Blob(['original'], { type: 'image/png' })
+    const mask = new Blob(['mask'], { type: 'image/png' })
+    studio.references.value = [new Blob(['unrelated'], { type: 'image/png' })]
+    await studio.submit(['Edit only here'], { modelID: model.id, references: [original], mask })
+    await flushPromises()
+    expect(mocks.generate).toHaveBeenLastCalledWith(expect.objectContaining({ mask: expect.any(String), references: [expect.any(String)] }), expect.any(AbortSignal))
+    const saved = mocks.db.saveHistory.mock.calls[0][0]
+    expect(saved.snapshot.mask).toBe(mask)
+    expect(saved.references).toEqual([original])
+    await studio.retry(saved)
+    await flushPromises()
+    expect(mocks.generate.mock.calls[1][0].mask).toEqual(expect.any(String))
+    studio.prompt.value = 'ordinary'
+    await studio.submit()
+    await flushPromises()
+    expect(mocks.generate.mock.calls[2][0].mask).toBeUndefined()
+  })
+
+  it('rejects stale models and unsupported masks before generating', async () => {
+    await setup()
+    const original = new Blob(['original'], { type: 'image/png' })
+    const mask = new Blob(['mask'], { type: 'image/png' })
+    await studio.submit(['edit'], { modelID: model.id, references: [original], mask })
+    await studio.submit(['edit'], { modelID: 'stale-model', references: [original] })
+    await flushPromises()
+    expect(mocks.generate).not.toHaveBeenCalled()
+    expect(mocks.db.saveTask).not.toHaveBeenCalled()
+  })
+
+  it('does not report a successfully re-saved image as unsaved when its batch finishes', async () => {
+    await setup()
+    studio.prompt.value = 'Re-save before batch finishes'
+    studio.count.value = 2
+    const resolvers: ((result: unknown) => void)[] = []
+    mocks.generate.mockImplementation(() => new Promise(resolve => resolvers.push(resolve)))
+    mocks.db.saveHistory.mockRejectedValueOnce(new Error('quota'))
+    await studio.submit()
+    await flushPromises()
+    const image = { images: [new Blob(['png'], { type: 'image/png' })] }
+    resolvers[0](image)
+    await flushPromises()
+    const unsaved = studio.tasks.value.find(task => task.status === 'success')!
+    expect(unsaved.saved).toBe(false)
+    await studio.saveUnsaved(unsaved)
+    await flushPromises()
+    resolvers[1](image)
+    await flushPromises()
+    expect(studio.completedBatch.value).toMatchObject({ success: 2, unsaved: 0 })
+  })
+
+  it('keeps one persistent batch identity for a submission and reports completion once', async () => {
+    await setup()
+    studio.prompt.value = 'Batch'
+    studio.count.value = 2
+    const resolvers: ((result: unknown) => void)[] = []
+    mocks.generate.mockImplementation(() => new Promise(resolve => resolvers.push(resolve)))
+    await studio.submit()
+    await flushPromises()
+    const tasks = [...studio.tasks.value]
+    expect(tasks[0].batch).toEqual({ id: expect.any(String), index: 0, total: 2 })
+    expect(tasks[1].batch).toEqual({ ...tasks[0].batch, index: 1 })
+    expect(mocks.db.saveTask).toHaveBeenCalledWith(expect.objectContaining({ batch: tasks[0].batch }))
+    resolvers[0]({ images: [new Blob(['png'], { type: 'image/png' })] })
+    await flushPromises()
+    expect(studio.completedBatch.value).toBeNull()
+    expect(mocks.db.saveHistory).toHaveBeenCalledWith(expect.objectContaining({ batch: tasks[0].batch }))
+    resolvers[1]({ images: [new Blob(['png'], { type: 'image/png' })] })
+    await flushPromises()
+    expect(studio.completedBatch.value).toMatchObject({ id: tasks[0].batch!.id, success: 2, failed: 0, cancelled: 0, unsaved: 0 })
+    const completed = studio.completedBatch.value
+    await studio.refresh()
+    expect(studio.completedBatch.value).toBe(completed)
+  })
+
+  it('completes a batch after queued cancellation and partial failure without replay', async () => {
+    await setup()
+    studio.prompt.value = 'Mixed batch'
+    studio.count.value = 4
+    const rejectors: ((reason: Error) => void)[] = []
+    mocks.generate.mockImplementation(() => new Promise((_, reject) => rejectors.push(reject)))
+    await studio.submit()
+    await flushPromises()
+    studio.cancel(studio.tasks.value[3].id)
+    rejectors.forEach(reject => reject(new Error('failed')))
+    await flushPromises()
+    expect(studio.completedBatch.value).toMatchObject({ success: 0, failed: 3, cancelled: 1 })
+    expect(mocks.generate).toHaveBeenCalledTimes(3)
+  })
+
   it('restores imported draft contents and cancels the pending old autosave', async () => {
     await setup()
     vi.useFakeTimers()

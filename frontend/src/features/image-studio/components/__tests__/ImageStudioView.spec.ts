@@ -44,6 +44,42 @@ function render() {
 }
 
 describe('ImageStudioView', () => {
+  it('requires confirmation for another generation from either entry and submits once', async () => {
+    fixture.state.activeCount = 1
+    fixture.state.canGenerate = true
+    const wrapper = render()
+    await wrapper.get('form').trigger('submit')
+    expect(fixture.state.submit).not.toHaveBeenCalled()
+    expect(wrapper.getComponent(ConfirmDialog).props('show')).toBe(true)
+    wrapper.getComponent(ConfirmDialog).vm.$emit('cancel')
+    await nextTick()
+    expect(fixture.state.submit).not.toHaveBeenCalled()
+    observeSubmit(false)
+    await nextTick()
+    await wrapper.get('[data-generate]').trigger('click')
+    wrapper.getComponent(ConfirmDialog).vm.$emit('confirm')
+    wrapper.getComponent(ConfirmDialog).vm.$emit('confirm')
+    await flushPromises()
+    expect(fixture.state.submit).toHaveBeenCalledTimes(1)
+  })
+
+  it('makes favorites readable and dismisses completion feedback after five seconds', async () => {
+    vi.useFakeTimers()
+    fixture.state = reactive(fixture.state)
+    fixture.state.history[0].favorite = true
+    const wrapper = render()
+    const favorite = wrapper.get('[aria-label="imageStudio.unfavorite"]')
+    expect(favorite.text()).toContain('imageStudio.favorited')
+    expect(favorite.find('icon-stub').attributes('name')).toBe('check')
+    fixture.state.completedBatch = { id: 'new-batch', success: 2, failed: 0, cancelled: 0, unsaved: 0 }
+    await nextTick()
+    expect(wrapper.find('[data-studio-notice]').text()).toContain('imageStudio.batchCompleted')
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(wrapper.find('[data-studio-notice]').exists()).toBe(false)
+    wrapper.unmount()
+    vi.useRealTimers()
+  })
+
   it('offers a dock when the original submit is clipped, with the same validation and one submission', async () => {
     fixture.state = reactive(fixture.state)
     const wrapper = render()
@@ -206,15 +242,32 @@ describe('ImageStudioView', () => {
 
   it('submits exactly one mask edit when the normal batch count is larger', async () => {
     fixture.state.count = 3
-    fixture.state.selectedModel = { max_references: 3, pricing: { mode: 'token' } }
-    const image = new Blob(['marked image'], { type: 'image/png' })
-    fixture.state.addReferences.mockImplementation(async (images: Blob[]) => { fixture.state.references.push(...images) })
+    fixture.state.selectedModel = { id: 'native', supports_mask: true, max_references: 3, pricing: { mode: 'token' } }
+    const original = new Blob(['original'], { type: 'image/png' }), mask = new Blob(['mask'], { type: 'image/png' })
     const wrapper = render()
     await wrapper.findAll('button').find(button => button.text() === 'imageStudio.maskEdit')!.trigger('click')
-    wrapper.getComponent(MaskEditor).vm.$emit('confirm', { blob: image, prompt: 'blue ceramic' })
+    wrapper.getComponent(MaskEditor).vm.$emit('confirm', { original, mask, prompt: 'blue ceramic' })
     await flushPromises()
-    expect(fixture.state.submit).toHaveBeenCalledWith(['imageStudio.maskPromptPrefixblue ceramic'])
+    expect(fixture.state.submit).toHaveBeenCalledWith(['imageStudio.nativeMaskPromptPrefixblue ceramic'], { modelID: 'native', references: [original], mask })
+    expect(fixture.state.references).toEqual([])
+    expect(fixture.state.prompt).toBe('')
     wrapper.unmount()
+  })
+
+  it('keeps guided edit inputs separate and confirms before submitting during an active task', async () => {
+    fixture.state.selectedModel = { id: 'guided', supports_mask: false, max_references: 3, pricing: { mode: 'token' } }
+    fixture.state.activeCount = 1
+    const original = new Blob(['original'], { type: 'image/png' }), guide = new Blob(['guide'], { type: 'image/png' })
+    const wrapper = render()
+    await wrapper.findAll('button').find(button => button.text() === 'imageStudio.maskEdit')!.trigger('click')
+    wrapper.getComponent(MaskEditor).vm.$emit('confirm', { original, guide, prompt: 'remove object' })
+    await flushPromises()
+    expect(fixture.state.submit).not.toHaveBeenCalled()
+    wrapper.getComponent(ConfirmDialog).vm.$emit('confirm')
+    wrapper.getComponent(ConfirmDialog).vm.$emit('confirm')
+    await flushPromises()
+    expect(fixture.state.submit).toHaveBeenCalledTimes(1)
+    expect(fixture.state.submit).toHaveBeenCalledWith(['imageStudio.maskPromptPrefixremove object'], { modelID: 'guided', references: [original, guide] })
   })
 
   it('confirms before dismissing a failed task', async () => {

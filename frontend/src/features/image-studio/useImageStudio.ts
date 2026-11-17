@@ -4,7 +4,7 @@ import { extractApiErrorMessage } from '@/utils/apiError'
 import { generateImages, imageStudioAPI, imageToDataURL, type StudioModel } from './api'
 import { createImageStudioDB } from './storage'
 import { createTaskOwner } from './taskOwner'
-import type { ImageAsset, ImageCategory, ImageHistory, ImagePrompt, ImageSnapshot, ImageTask } from './types'
+import type { ImageAsset, ImageCategory, ImageEdit, ImageHistory, ImagePrompt, ImageSnapshot, ImageTask } from './types'
 
 export interface StudioTask extends ImageTask {
   images?: Blob[]
@@ -12,6 +12,8 @@ export interface StudioTask extends ImageTask {
   completedAt?: number
   categoryID?: string | null
 }
+
+export interface BatchCompletion { id: string; success: number; failed: number; cancelled: number; unsaved: number }
 
 export function useImageStudio() {
   const auth = useAuthStore()
@@ -32,6 +34,8 @@ export function useImageStudio() {
   const layout = ref<'side' | 'bottom'>('side')
   const history = shallowRef<ImageHistory[]>([])
   const tasks = ref<StudioTask[]>([])
+  const completedBatch = shallowRef<BatchCompletion | null>(null)
+  const pendingBatches = new Map<string, { pending: Set<string>; unsaved: Map<string, number>; result: BatchCompletion }>()
   const externalTasksCount = ref(0)
   const assets = shallowRef<ImageAsset[]>([])
   const categories = shallowRef<ImageCategory[]>([])
@@ -137,6 +141,7 @@ export function useImageStudio() {
     for (const controller of controllers.values()) controller.abort()
     controllers.clear()
     dismissedTasks.clear()
+    pendingBatches.clear(); completedBatch.value = null
     owner?.release(); owner = undefined
     externalTasksCount.value = 0
     db?.close(); db = undefined
@@ -172,16 +177,29 @@ export function useImageStudio() {
 
   async function storeTask(task: StudioTask, source = db) {
     if (!source) return
-    const { id, ownerID, createdAt, status, snapshot: saved, references: refs, error: detail } = task
+    const { id, ownerID, createdAt, status, snapshot: saved, references: refs, error: detail, batch } = task
     try {
-      await source.saveTask({ id, ...(ownerID ? { ownerID } : {}), createdAt, status, snapshot: { ...saved }, references: [...refs], ...(detail ? { error: detail } : {}) })
+      await source.saveTask({ id, ...(batch ? { batch: { ...batch } } : {}), ...(ownerID ? { ownerID } : {}), createdAt, status, snapshot: { ...saved }, references: [...refs], ...(detail ? { error: detail } : {}) })
       if (dismissedTasks.has(id)) await source.deleteTask(id)
       if (source === db) changed()
     }
     catch { if (source === db) localFailure() }
   }
   function record(task: StudioTask): ImageHistory {
-    return { id: task.id, createdAt: task.createdAt, status: 'success', snapshot: { ...task.snapshot }, images: [...task.images!], references: [...task.references], favorite: false, categoryID: task.categoryID || null }
+    return { id: task.id, ...(task.batch ? { batch: { ...task.batch } } : {}), createdAt: task.createdAt, status: 'success', snapshot: { ...task.snapshot }, images: [...task.images!], references: [...task.references], favorite: false, categoryID: task.categoryID || null }
+  }
+  function settleBatch(task: StudioTask) {
+    const batch = task.batch && pendingBatches.get(task.batch.id)
+    if (!batch || !batch.pending.delete(task.id)) return
+    if (task.status === 'success') {
+      batch.result.success += task.images?.length || 0
+      if (!task.saved) batch.unsaved.set(task.id, task.images?.length || 0)
+    } else if (task.status === 'cancelled') batch.result.cancelled++
+    else batch.result.failed++
+    if (!batch.pending.size) {
+      completedBatch.value = { ...batch.result, unsaved: [...batch.unsaved.values()].reduce((total, count) => total + count, 0) }
+      pendingBatches.delete(batch.result.id)
+    }
   }
   async function run(task: StudioTask, currentEpoch: number) {
     const source = db
@@ -193,9 +211,11 @@ export function useImageStudio() {
       if (controller.signal.aborted || currentEpoch !== epoch) return
       const model = models.value.find(model => model.id === task.snapshot.modelID && model.group_id === task.snapshot.groupID && model.model === task.snapshot.model)
       if (!model || !enabled.value) throw new Error('imageStudio.errors.modelUnavailable')
+      if (task.snapshot.mask && (!model.supports_mask || !task.references.length)) throw new Error('imageStudio.maskUnsupported')
       const refs = await Promise.all(task.references.map(imageToDataURL))
+      const mask = task.snapshot.mask ? await imageToDataURL(task.snapshot.mask) : undefined
       if (controller.signal.aborted || currentEpoch !== epoch) return
-      const result = await generateImages({ model_id: model.id, prompt: task.snapshot.prompt, n: 1, size: task.snapshot.size, ...(model.qualities.length ? { quality: task.snapshot.quality } : {}), ...(model.protocol === 'gemini' ? { aspect_ratio: task.snapshot.aspectRatio, resolution: task.snapshot.size } : {}), references: refs }, controller.signal)
+      const result = await generateImages({ model_id: model.id, prompt: task.snapshot.prompt, n: 1, size: task.snapshot.size, ...(model.qualities.length ? { quality: task.snapshot.quality } : {}), ...(model.protocol === 'gemini' ? { aspect_ratio: task.snapshot.aspectRatio, resolution: task.snapshot.size } : {}), references: refs, ...(mask ? { mask } : {}) }, controller.signal)
       if (controller.signal.aborted || currentEpoch !== epoch) return
       task.status = 'success'; task.images = result.images; task.saved = false
       try {
@@ -214,6 +234,7 @@ export function useImageStudio() {
     } finally {
       if (currentEpoch === epoch) {
         task.completedAt = Date.now()
+        settleBatch(task)
         controllers.delete(task.id)
         if (task.saved) tasks.value = tasks.value.filter(item => item.id !== task.id)
         pump()
@@ -226,16 +247,20 @@ export function useImageStudio() {
     const available = Math.max(0, 3 - controllers.size)
     for (const task of waiting.slice(0, available)) void run(task, epoch)
   }
-  async function submit(series?: string[]) {
+  async function submit(series?: string[], edit?: ImageEdit) {
     error.value = ''
     const model = selectedModel.value
     const texts = series || Array.from({ length: Math.min(10, Math.max(1, Number(count.value) || 1)) }, () => prompt.value)
     if (!enabled.value || !model) { error.value = 'imageStudio.errors.modelUnavailable'; return }
+    if (edit && (edit.modelID !== model.id || !edit.references.length || (edit.mask && (!model.supports_mask || edit.mask.type !== 'image/png')))) { error.value = 'imageStudio.maskUnsupported'; return }
     if (!texts.length || texts.some(text => !text.trim() || Array.from(text).length > 16000) || texts.length + activeCount.value > 30) { error.value = 'imageStudio.errors.invalidPrompt'; return }
-    if (references.value.length > model.max_references) { error.value = 'imageStudio.errors.tooManyReferences'; return }
-    const input = [...references.value]
+    const input = [...(edit?.references || references.value)]
+    if (input.length > model.max_references) { error.value = 'imageStudio.errors.tooManyReferences'; return }
+    if (edit && [...input, ...(edit.mask ? [edit.mask] : [])].some(image => !image.size || image.size > 10 * 1024 * 1024)) { error.value = 'imageStudio.errors.invalidImage'; return }
     const currentEpoch = epoch, source = db
-    const newTasks: StudioTask[] = texts.map(text => ({ id: crypto.randomUUID(), ownerID: owner?.id, createdAt: Date.now(), status: 'queued', snapshot: snapshot(text.trim()), references: input, categoryID: categoryID.value }))
+    const batchID = crypto.randomUUID()
+    const newTasks: StudioTask[] = texts.map((text, index) => ({ id: crypto.randomUUID(), batch: { id: batchID, index, total: texts.length }, ownerID: owner?.id, createdAt: Date.now(), status: 'queued', snapshot: { ...snapshot(text.trim()), ...(edit?.mask ? { mask: edit.mask } : {}) }, references: input, categoryID: categoryID.value }))
+    pendingBatches.set(batchID, { pending: new Set(newTasks.map(task => task.id)), unsaved: new Map(), result: { id: batchID, success: 0, failed: 0, cancelled: 0, unsaved: 0 } })
     tasks.value = [...newTasks, ...tasks.value]
     await Promise.all(newTasks.map(task => storeTask(task, source)))
     if (currentEpoch === epoch) pump()
@@ -243,13 +268,16 @@ export function useImageStudio() {
   function cancel(id: string) {
     const task = tasks.value.find(item => item.id === id)
     if (!task || !['queued', 'running'].includes(task.status)) return
+    const queued = task.status === 'queued'
     controllers.get(id)?.abort()
     task.status = 'cancelled'; task.completedAt = Date.now(); task.error = 'imageStudio.cancelledHint'
+    if (queued) settleBatch(task)
     void storeTask(task)
   }
   async function retry(task: ImageTask) {
     restore(task.snapshot, task.references)
-    await submit([task.snapshot.prompt])
+    if (task.snapshot.mask) await submit([task.snapshot.prompt], { modelID: modelID.value, references: task.references, mask: task.snapshot.mask })
+    else await submit([task.snapshot.prompt])
   }
   async function dismissTask(id: string) {
     const task = tasks.value.find(item => item.id === id)
@@ -331,7 +359,11 @@ export function useImageStudio() {
     const currentEpoch = epoch
     await localAction(async source => {
       await source.saveHistory(record(task))
-      if (currentEpoch === epoch) tasks.value = tasks.value.filter(item => item.id !== task.id)
+      if (currentEpoch === epoch) {
+        task.saved = true
+        if (task.batch) pendingBatches.get(task.batch.id)?.unsaved.delete(task.id)
+        tasks.value = tasks.value.filter(item => item.id !== task.id)
+      }
     })
   }
   function onFocus() { if (document.visibilityState !== 'hidden') void refresh() }
@@ -361,7 +393,7 @@ export function useImageStudio() {
     controllers.clear(); owner?.release(); db?.close(); broadcast?.close()
     window.removeEventListener('focus', onFocus); document.removeEventListener('visibilitychange', onFocus); window.removeEventListener('beforeunload', beforeUnload)
   })
-  return { models, enabled, catalogLoading, loading, error, storageError, modelID, prompt, size, quality, count, aspectRatio, resolution, references, layout, history, tasks, externalTasksCount, assets, categories, prompts, categoryID, selectedModel, activeCount, canGenerate, refresh, submit, cancel, retry, dismissTask, loadHistory, newDraft, addReferences, removeReference, deleteHistory, favorite, categorize, saveCategory, deleteCategory, saveAsset, deleteAsset, savePrompt, deletePrompt, exportBackup, importBackup, saveUnsaved }
+  return { models, enabled, catalogLoading, loading, error, storageError, modelID, prompt, size, quality, count, aspectRatio, resolution, references, layout, history, tasks, completedBatch, externalTasksCount, assets, categories, prompts, categoryID, selectedModel, activeCount, canGenerate, refresh, submit, cancel, retry, dismissTask, loadHistory, newDraft, addReferences, removeReference, deleteHistory, favorite, categorize, saveCategory, deleteCategory, saveAsset, deleteAsset, savePrompt, deletePrompt, exportBackup, importBackup, saveUnsaved }
 }
 
 export function downloadImage(image: Blob, name = `image-${Date.now()}.${image.type === 'image/jpeg' ? 'jpg' : image.type === 'image/webp' ? 'webp' : 'png'}`) {

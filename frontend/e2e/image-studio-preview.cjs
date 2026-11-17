@@ -73,10 +73,11 @@ const model = { id: '7:gpt-image-2', group_id: 7, group_name: '图像创作', mo
     await page.keyboard.press('Escape'); await preview.waitFor({state:'hidden'})
     assert.equal(await reference.evaluate(el => document.activeElement === el),true)
     assert.equal(generations,0)
-    // Create two independent saved results and inspect the gallery plus historical references.
+    // Expand a two-image batch and inspect its gallery plus historical references.
     await page.locator('#studio-prompt').fill('完整图片预览：保留四周边框和原始比例')
     await page.locator('#studio-count').fill('2')
     await page.getByRole('button', { name: '开始生成', exact: true }).click()
+    await page.getByRole('button', { name: '展开这一组', exact: true }).first().click()
     await page.waitForFunction(() => document.querySelectorAll('.result-card .preview-trigger').length === 2)
     await page.locator('.result-card .preview-trigger').first().click(); await ready()
     assert.equal(await preview.locator('.preview-thumbnails button').count(),2)

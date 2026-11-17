@@ -82,6 +82,7 @@ const textModel = { id: 'text', group_id: 8, group_name: '创作文本分组', m
     await dialog.screenshot({ path: `${output}/series-mobile-dark.png`, animations: 'disabled' })
     assert.equal(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth), true)
     await dialog.getByRole('button', { name: '生成全部 2 张', exact: true }).click()
+    await page.getByRole('button', { name: '展开这一组', exact: true }).first().click()
     await page.waitForFunction(() => document.querySelectorAll('.result-card img').length >= 2)
     assert.deepEqual(imageRequests.map(item => item.prompt).sort(), ['白色咖啡杯，窗边正面全景', '白色咖啡杯，审核后的细节图'].sort())
     await page.getByRole('button', { name: '创作工作流', exact: true }).click()

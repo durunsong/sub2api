@@ -51,11 +51,12 @@ const model = { id: '7:gpt-image-2', group_id: 7, group_name: '图像创作', mo
     await dock.waitFor()
     await page.screenshot({ path: `${output}/short-before.png` })
     await dock.locator('[data-generate]').click()
-    await page.waitForFunction(() => document.querySelectorAll('.generation-pending[data-status="running"]').length === 3 && document.querySelectorAll('.generation-pending[data-status="queued"]').length === 1)
+    await page.locator('[data-result-batch] .batch-fan[aria-expanded="false"]').click()
+    await page.waitForFunction(() => document.querySelectorAll('.result-card .generation-pending[data-status="running"]').length === 3 && document.querySelectorAll('.result-card .generation-pending[data-status="queued"]').length === 1)
     assert.equal(requests.length, 3)
     assert.ok(requests.every(request => request.n === 1))
     await page.waitForTimeout(400) // Allow only the deliberate scroll transition to settle.
-    const pending = page.locator('.generation-pending').first()
+    const pending = page.locator('.result-card .generation-pending').first()
     await pending.scrollIntoViewIfNeeded()
     await page.screenshot({ path: `${output}/short-running.png` })
     const capture = async (name, reduced) => {
@@ -76,7 +77,7 @@ const model = { id: '7:gpt-image-2', group_id: 7, group_name: '图像创作', mo
     await page.emulateMedia({ reducedMotion: 'no-preference' })
     const sampleMotion = () => pending.evaluate(el => ({ motion: el.dataset.motion, hidden: document.hidden, animations: el.querySelector('.fragment-one').getAnimations().map(animation => ({ state: animation.playState, time: animation.currentTime })) }))
     const pauseSamples = { visible: await sampleMotion() }
-    const queued = page.locator('.generation-pending[data-status="queued"]')
+    const queued = page.locator('.result-card .generation-pending[data-status="queued"]')
     await queued.scrollIntoViewIfNeeded()
     await queued.screenshot({ path: `${output}/queued-before.png` })
     const queuedAnimations = await queued.evaluate(el => el.getAnimations({ subtree: true }).length)
@@ -84,7 +85,7 @@ const model = { id: '7:gpt-image-2', group_id: 7, group_name: '图像创作', mo
     await queued.screenshot({ path: `${output}/queued-after.png` })
     assert.equal(queuedAnimations, 0)
     await page.evaluate(() => window.scrollTo(0,document.body.scrollHeight))
-    await page.waitForFunction(() => document.querySelector('.generation-pending').dataset.motion === 'paused')
+    await page.waitForFunction(() => document.querySelector('.result-card .generation-pending').dataset.motion === 'paused')
     assert.equal(await pending.locator('.fragment-one').evaluate(el => getComputedStyle(el).animationPlayState), 'paused')
     await page.waitForTimeout(100)
     pauseSamples.offscreen = await sampleMotion()

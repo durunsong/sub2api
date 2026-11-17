@@ -13,6 +13,14 @@ const backup = (extra: Record<string, unknown> = {}) => new Blob([JSON.stringify
 afterEach(() => vi.unstubAllGlobals())
 
 describe('image studio storage boundaries', () => {
+  it('round trips optional batch identity while preserving old backups', async () => {
+    const task = { id: 'task', createdAt: 1, status: 'running', snapshot, references: [], batch: { id: 'batch-1', index: 1, total: 3 } }
+    await expect(parseBackup(backup({ tasks: [task] }))).resolves.toMatchObject({ tasks: [task] })
+    for (const batch of [{ id: '', index: 0, total: 2 }, { id: 'b', index: 2, total: 2 }, { id: 'b', index: 0, total: 31 }, { id: 'b', index: 0.5, total: 2 }]) {
+      await expect(parseBackup(backup({ tasks: [{ ...task, batch }] }))).rejects.toMatchObject({ code: 'invalid' })
+    }
+  })
+
   it('rejects a success record without locally stored image bytes', async () => {
     await expect(validateHistoryRecord(record())).rejects.toMatchObject({ code: 'invalid' })
   })
