@@ -948,7 +948,7 @@ func (s *OpenAIGatewayService) readOpenAICompatBufferedTerminal(
 			resetTimeout()
 			if ev.err != nil {
 				if !errors.Is(ev.err, context.Canceled) && !errors.Is(ev.err, context.DeadlineExceeded) {
-					logger.L().Warn(logPrefix+": read error",
+					logger.FromContext(c.Request.Context()).Warn(logPrefix+": read error",
 						zap.Error(ev.err),
 						zap.String("request_id", requestID),
 					)
@@ -968,7 +968,7 @@ func (s *OpenAIGatewayService) readOpenAICompatBufferedTerminal(
 
 			var event apicompat.ResponsesStreamEvent
 			if err := json.Unmarshal([]byte(payload), &event); err != nil {
-				logger.L().Warn(logPrefix+": failed to parse event",
+				logger.FromContext(c.Request.Context()).Warn(logPrefix+": failed to parse event",
 					zap.Error(err),
 					zap.String("request_id", requestID),
 				)
@@ -995,7 +995,7 @@ func (s *OpenAIGatewayService) readOpenAICompatBufferedTerminal(
 
 		case <-timeoutCh:
 			_ = resp.Body.Close()
-			logger.L().Warn(logPrefix+": data interval timeout",
+			logger.FromContext(c.Request.Context()).Warn(logPrefix+": data interval timeout",
 				zap.String("request_id", requestID),
 				zap.Duration("interval", streamInterval),
 			)

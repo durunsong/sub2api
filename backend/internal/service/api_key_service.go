@@ -727,6 +727,9 @@ func (s *APIKeyService) GetByID(ctx context.Context, id int64) (*APIKey, error) 
 	if err != nil {
 		return nil, fmt.Errorf("get api key: %w", err)
 	}
+	if apiKey != nil && IsImageStudioKey(apiKey.Key) {
+		return nil, ErrAPIKeyNotFound
+	}
 	s.compileAPIKeyIPRules(apiKey)
 	if apiKey != nil {
 		apiKey.CurrentConcurrency = s.currentConcurrencyForAPIKey(ctx, apiKey.ID)
@@ -736,6 +739,9 @@ func (s *APIKeyService) GetByID(ctx context.Context, id int64) (*APIKey, error) 
 
 // GetByKey 根据Key字符串获取API Key（用于认证）
 func (s *APIKeyService) GetByKey(ctx context.Context, key string) (*APIKey, error) {
+	if IsImageStudioKey(key) && ctx.Value(imageStudioAuthContextKey{}) != key {
+		return nil, ErrAPIKeyNotFound
+	}
 	// 非 UTF-8 的 key 不可能存在（生成和自定义的 key 都是 ASCII），且 Postgres 会以
 	// invalid byte sequence 拒绝该参数；直接按不存在处理，避免返回 500。
 	if len(key) == 0 || len(key) > MaxAPIKeyCredentialBytes || !utf8.ValidString(key) {
@@ -802,6 +808,9 @@ func (s *APIKeyService) Update(ctx context.Context, id int64, userID int64, req 
 	}
 
 	// 验证所有权
+	if IsImageStudioKey(apiKey.Key) {
+		return nil, ErrAPIKeyNotFound
+	}
 	if apiKey.UserID != userID {
 		return nil, ErrInsufficientPerms
 	}
@@ -950,6 +959,10 @@ func (s *APIKeyService) Delete(ctx context.Context, id int64, userID int64) erro
 	key, ownerID, err := s.apiKeyRepo.GetKeyAndOwnerID(ctx, id)
 	if err != nil {
 		return fmt.Errorf("get api key: %w", err)
+	}
+
+	if IsImageStudioKey(key) {
+		return ErrAPIKeyNotFound
 	}
 
 	// 验证当前用户是否为该 API Key 的所有者

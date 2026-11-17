@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/claude"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/ctxkey"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
 	"github.com/tidwall/gjson"
 
@@ -1089,7 +1090,7 @@ func (s *GatewayService) sseStreamErrorEventFailover(ctx context.Context, c *gin
 	)
 
 	upstreamDetail := ""
-	if s.cfg != nil && s.cfg.Gateway.LogUpstreamErrorBody {
+	if s.cfg != nil && s.cfg.Gateway.LogUpstreamErrorBody && !ctxkey.NoContentPersistence(ctx) {
 		maxBytes := s.cfg.Gateway.LogUpstreamErrorBodyMaxBytes
 		if maxBytes <= 0 {
 			maxBytes = 2048
@@ -1110,11 +1111,13 @@ func (s *GatewayService) sseStreamErrorEventFailover(ctx context.Context, c *gin
 		Detail:             upstreamDetail,
 	})
 
-	logger.LegacyPrintf("service.gateway",
-		"[Forward] SSE error event in stream: Account=%d(%s) RequestID=%s Body=%s",
-		account.ID, account.Name, resp.Header.Get("x-request-id"),
-		truncateString(rawData, 1000),
-	)
+	if !ctxkey.NoContentPersistence(ctx) {
+		logger.LegacyPrintf("service.gateway",
+			"[Forward] SSE error event in stream: Account=%d(%s) RequestID=%s Body=%s",
+			account.ID, account.Name, resp.Header.Get("x-request-id"),
+			truncateString(rawData, 1000),
+		)
+	}
 
 	return &UpstreamFailoverError{
 		StatusCode:   semanticStatus,

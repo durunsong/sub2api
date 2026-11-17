@@ -557,7 +557,7 @@ func (s *AntigravityGatewayService) handleAntigravityCompatReadError(
 		}
 		return nil, antigravityCompatEmptyStreamError()
 	}
-	if disconnect, handled := handleStreamReadError(err, session.writer.Disconnected(), prefix); handled {
+	if disconnect, handled := handleStreamReadError(c, err, session.writer.Disconnected(), prefix); handled {
 		return session.collectResult(disconnect), nil
 	}
 	if errors.Is(err, bufio.ErrTooLong) {

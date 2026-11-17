@@ -1,0 +1,132 @@
+/* eslint-disable @typescript-eslint/no-var-requires -- Host Playwright runtime is provided through NODE_PATH. */
+// Actual local upload, Blob URLs and IndexedDB. Only generation responses are fixtures.
+const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const { chromium } = require('playwright')
+const base = process.env.STUDIO_TEST_URL || 'http://127.0.0.1:5179'
+const output = process.env.STUDIO_PREVIEW_DIR || '/tmp/sub2api-image-preview'
+const user = { id: 900006, email: 'preview@example.invalid', username: 'Preview', role: 'user', status: 'active', balance: 100, concurrency: 5, allowed_groups: [7] }
+const model = { id: '7:gpt-image-2', group_id: 7, group_name: '图像创作', model: 'gpt-image-2', label: 'GPT Image 2', protocol: 'images', sizes: ['1024x1024'], qualities: ['auto'], max_images: 1, max_references: 3, pricing: { currency: 'USD', mode: 'image', rate_multiplier: 1, image_price_1k: 0.03 } }
+;(async () => {
+  const browser = await chromium.launch({ headless: true, channel: 'chrome' })
+  try {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: 'zh-CN', hasTouch: true, acceptDownloads: true })
+    await context.addInitScript(user => {
+      localStorage.setItem('auth_token','test-image-studio-token')
+      localStorage.setItem('auth_user',JSON.stringify(user))
+      localStorage.setItem('sub2api_locale','zh')
+      localStorage.setItem(`user_guide_${user.id}_user_v4_interactive`,'true')
+    },user)
+    let generations = 0, fixtures = []
+    const writes = [], errors = []
+    await context.route('**/api/v1/**', async route => {
+      const url = new URL(route.request().url())
+      let data = []
+      if (route.request().method() !== 'GET') writes.push(url.pathname)
+      if (url.pathname.endsWith('/auth/me')) data = user
+      else if (url.pathname.endsWith('/settings/public')) data = { site_name: 'Sub2API', backend_mode_enabled: false, custom_menu_items: [] }
+      else if (url.pathname.endsWith('/image-studio/catalog')) data = { enabled: true, models: [model] }
+      else if (url.pathname.endsWith('/image-studio/generate')) { generations++; data = { images: [{ b64_json: fixtures[(generations - 1) % 2], mime_type: 'image/png' }] } }
+      else if (url.pathname.endsWith('/subscriptions/summary')) data = { subscriptions: [], total: 0 }
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 0, data }) })
+    })
+    const page = await context.newPage()
+    page.on('pageerror', error => errors.push(error.message))
+    await page.goto(`${base}/image-studio`)
+    await page.getByRole('main').getByRole('heading', { name: '生图工作台', exact: true }).waitFor()
+    fixtures = await page.evaluate(() => [[1800,1200],[600,1200]].map(([width,height]) => {
+      const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height
+      const ctx = canvas.getContext('2d'); ctx.fillStyle = '#e8dfd0'; ctx.fillRect(0,0,width,height)
+      ctx.fillStyle = '#456255'; ctx.beginPath(); ctx.moveTo(0,height); ctx.lineTo(width*.38,height*.2); ctx.lineTo(width*.7,height*.72); ctx.lineTo(width*.88,height*.4); ctx.lineTo(width,height); ctx.fill()
+      ctx.strokeStyle = '#a67c52'; ctx.lineWidth = 12; ctx.strokeRect(6,6,width-12,height-12)
+      return canvas.toDataURL('image/png').split(',')[1]
+    }))
+    await page.locator('input[type="file"]').nth(0).setInputFiles(fixtures.map((image,i) => ({ name: `reference-${i}.png`, mimeType: 'image/png', buffer: Buffer.from(image,'base64') })))
+    const reference = page.locator('[data-reference-dropzone]').getByRole('button', { name: '预览参考图 1', exact: true })
+    await reference.waitFor()
+    const preview = page.locator('[data-image-preview]'), stage = preview.locator('[data-preview-stage]')
+    const image = stage.locator('img')
+    const ready = () => page.waitForFunction(() => document.querySelector('[data-preview-stage]')?.getAttribute('aria-busy') === 'false')
+    await reference.click(); await preview.waitFor(); await ready()
+    assert.equal(await image.evaluate(el => el.naturalWidth),1800)
+    assert.ok(Number(await stage.getAttribute('data-zoom')) < 1)
+    const fitted = await image.boundingBox(), area = await stage.boundingBox()
+    assert.ok(fitted.width <= area.width + 1 && fitted.height <= area.height + 1)
+    assert.ok(Math.abs(fitted.width / fitted.height - 1.5) < 0.01)
+    fs.mkdirSync(output,{recursive:true})
+    await page.waitForTimeout(350)
+    await page.screenshot({ path: `${output}/reference-desktop.png` })
+    await preview.getByRole('button', { name: '原始尺寸', exact: true }).click()
+    assert.equal(Number(await stage.getAttribute('data-zoom')),1)
+    const box = await stage.boundingBox()
+    await page.mouse.move(box.x + box.width/2,box.y + box.height/2)
+    await page.mouse.down(); await page.mouse.move(box.x + box.width/2 + 110,box.y + box.height/2 + 50,{steps:6}); await page.mouse.up()
+    assert.ok(Number(await stage.getAttribute('data-pan-x')) > 0)
+    await page.keyboard.press('ArrowRight'); await ready()
+    assert.equal(await image.evaluate(el => el.naturalWidth),600)
+    assert.equal(await stage.getAttribute('data-pan-x'),'0')
+    assert.equal(await preview.getByRole('button', { name: '下一张', exact: true }).isDisabled(),true)
+    await preview.getByRole('button', { name: '查看第 1 张图片', exact: true }).click(); await ready()
+    const downloadEvent = page.waitForEvent('download')
+    await preview.getByRole('button', { name: '下载', exact: true }).click()
+    assert.ok((await downloadEvent).suggestedFilename().endsWith('.png'))
+    await page.keyboard.press('Escape'); await preview.waitFor({state:'hidden'})
+    assert.equal(await reference.evaluate(el => document.activeElement === el),true)
+    assert.equal(generations,0)
+    // Create two independent saved results and inspect the gallery plus historical references.
+    await page.locator('#studio-prompt').fill('完整图片预览：保留四周边框和原始比例')
+    await page.locator('#studio-count').fill('2')
+    await page.getByRole('button', { name: '开始生成', exact: true }).click()
+    await page.waitForFunction(() => document.querySelectorAll('.result-card .preview-trigger').length === 2)
+    await page.locator('.result-card .preview-trigger').first().click(); await ready()
+    assert.equal(await preview.locator('.preview-thumbnails button').count(),2)
+    await page.keyboard.press('ArrowRight'); await ready()
+    await preview.getByText('图片说明 / 提示词',{exact:true}).click()
+    await preview.getByText('完整图片预览：保留四周边框和原始比例',{exact:true}).waitFor()
+    await page.screenshot({ path: `${output}/generated-desktop.png` })
+    await preview.getByRole('button',{name:'关闭预览',exact:true}).click(); await preview.waitFor({state:'hidden'})
+    await page.locator('.result-card [data-preview-reference]').first().click(); await ready()
+    assert.equal(await image.evaluate(el=>el.naturalWidth),1800)
+    await page.keyboard.press('Escape'); await preview.waitFor({state:'hidden'})
+    // Asset upload and nested preview must not silently insert a reference or close the library.
+    await page.getByRole('button',{name:'我的素材',exact:true}).click()
+    await page.locator('input[type="file"]').nth(2).setInputFiles({name:'uploaded-landscape.png',mimeType:'image/png',buffer:Buffer.from(fixtures[0],'base64')})
+    const asset = page.locator('[data-preview-asset]')
+    await asset.waitFor(); await asset.click(); await ready()
+    assert.equal(await page.getByRole('dialog').count(),2)
+    assert.equal(await page.locator('[data-reference-dropzone]').getByRole('button',{name:/^移除参考图/}).count(),2)
+    await page.keyboard.press('Escape'); await preview.waitFor({state:'hidden'})
+    assert.equal(await page.getByRole('dialog').count(),1)
+    assert.equal(await asset.evaluate(el=>document.activeElement===el),true)
+    await page.getByRole('dialog').getByRole('button',{name:'用作参考图',exact:true}).click()
+    await page.getByRole('dialog').waitFor({state:'hidden'})
+    await page.locator('[data-reference-dropzone]').getByRole('button',{name:'移除参考图 3',exact:true}).waitFor()
+    // Real touch input through CDP exercises two-pointer zoom in the mobile viewport.
+    await page.setViewportSize({width:390,height:844})
+    await page.evaluate(()=>document.documentElement.classList.add('dark'))
+    await reference.click(); await ready(); await page.waitForTimeout(350)
+    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth))
+    await page.screenshot({path:`${output}/mobile-portrait.png`})
+    const touchBox=await stage.boundingBox(), startZoom=Number(await stage.getAttribute('data-zoom'))
+    const client=await context.newCDPSession(page)
+    const cx=touchBox.x+touchBox.width/2, cy=touchBox.y+touchBox.height/2
+    await client.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:cx-30,y:cy,id:1},{x:cx+30,y:cy,id:2}]})
+    await client.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:cx-60,y:cy,id:1},{x:cx+60,y:cy,id:2}]})
+    await client.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]})
+    assert.ok(Number(await stage.getAttribute('data-zoom'))>startZoom)
+    await preview.getByRole('button',{name:'适应窗口',exact:true}).click()
+    await page.setViewportSize({width:844,height:390}); await page.waitForTimeout(350)
+    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth))
+    assert.ok((await stage.boundingBox()).height >= 140)
+    const closeBox=await preview.getByRole('button',{name:'关闭预览',exact:true}).boundingBox()
+    assert.ok(closeBox.y>=0 && closeBox.y+closeBox.height<=390)
+    await page.screenshot({path:`${output}/mobile-landscape.png`})
+    await preview.getByRole('button',{name:'关闭预览',exact:true}).click(); await preview.waitFor({state:'hidden'})
+    assert.equal(generations,2)
+    assert.deepEqual(writes,['/api/v1/image-studio/generate','/api/v1/image-studio/generate'])
+    assert.deepEqual(errors,[])
+    const checks={uploadedReferences:true,localDownload:true,generatedGallery:true,historicalReferences:true,assetPreviewSeparateFromUse:true,nestedEscapeAndFocus:true,originalSizeAndFit:true,mousePan:true,touchPinch:true,mobilePortraitAndLandscape:true,noExtraGenerationOrUploads:true,generations,pageErrors:errors,output}
+    fs.writeFileSync(`${output}/checks.json`,JSON.stringify(checks,null,2));console.log(JSON.stringify(checks,null,2))
+    await context.close()
+  }finally{await browser.close()}
+})().catch(error=>{console.error(error);process.exitCode=1})

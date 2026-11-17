@@ -136,7 +136,7 @@ func (s *AntigravityGatewayService) ForwardGemini(ctx context.Context, c *gin.Co
 		injectedBody = cleanedBody
 		logger.LegacyPrintf("service.antigravity_gateway", "[Antigravity] Cleaned request schema in forwarded request for account %s", account.Name)
 	} else {
-		logger.LegacyPrintf("service.antigravity_gateway", "[Antigravity] Failed to clean schema: %v", err)
+		logger.LegacyPrintf("service.antigravity_gateway", "[Antigravity] Failed to clean schema: %v", ephemeralLogText(ctx, err.Error()))
 	}
 
 	// Antigravity v1internal rejects built-in + functionDeclarations mixes (#6464).
@@ -365,7 +365,7 @@ func (s *AntigravityGatewayService) ForwardGemini(ctx context.Context, c *gin.Co
 
 		// 精确匹配服务端配置类 400 错误，触发同账号重试 + failover
 		if resp.StatusCode == http.StatusBadRequest && isGoogleProjectConfigError(strings.ToLower(upstreamMsg)) {
-			log.Printf("%s status=400 google_config_error failover=true upstream_message=%q account=%d", prefix, upstreamMsg, account.ID)
+			log.Printf("%s status=400 google_config_error failover=true upstream_message=%q account=%d", prefix, ephemeralLogText(ctx, upstreamMsg), account.ID)
 			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
 				ProxyID:            opsUpstreamProxyID(account),
 				ProxyName:          opsUpstreamProxyName(account),
@@ -408,7 +408,7 @@ func (s *AntigravityGatewayService) ForwardGemini(ctx context.Context, c *gin.Co
 			Message:            upstreamMsg,
 			Detail:             upstreamDetail,
 		})
-		logger.LegacyPrintf("service.antigravity_gateway", "[antigravity-Forward] upstream error status=%d body=%s", resp.StatusCode, truncateForLog(unwrappedForOps, 500))
+		logger.LegacyPrintf("service.antigravity_gateway", "[antigravity-Forward] upstream error status=%d body=%s", resp.StatusCode, ephemeralLogText(ctx, truncateForLog(unwrappedForOps, 500)))
 		MarkResponseCommitted(c)
 		// 原始上游错误体仅保留在 ops 日志中；返回客户端的错误体需脱敏，避免泄露账号池身份（项目号/服务账号等）
 		c.Data(resp.StatusCode, "application/json", buildAntigravityClientErrorBody(resp.StatusCode, unwrappedForOps))
@@ -429,7 +429,7 @@ handleSuccess:
 		// 客户端要求流式，直接透传
 		streamRes, err := s.handleGeminiStreamingResponse(c, resp, startTime)
 		if err != nil {
-			logger.LegacyPrintf("service.antigravity_gateway", "%s status=stream_error error=%v", prefix, err)
+			logger.LegacyPrintf("service.antigravity_gateway", "%s status=stream_error error=%v", prefix, ephemeralLogText(ctx, err.Error()))
 			return nil, err
 		}
 		usage = streamRes.usage
@@ -439,7 +439,7 @@ handleSuccess:
 		// 客户端要求非流式，收集流式响应后返回
 		streamRes, err := s.handleGeminiStreamToNonStreaming(c, resp, startTime)
 		if err != nil {
-			logger.LegacyPrintf("service.antigravity_gateway", "%s status=stream_collect_error error=%v", prefix, err)
+			logger.LegacyPrintf("service.antigravity_gateway", "%s status=stream_collect_error error=%v", prefix, ephemeralLogText(ctx, err.Error()))
 			return nil, err
 		}
 		usage = streamRes.usage

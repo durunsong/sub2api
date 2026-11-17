@@ -39,6 +39,10 @@ func RequestLogger() gin.HandlerFunc {
 			zap.String("method", c.Request.Method),
 		)
 
+		if ctxkey.NoContentPersistence(ctx) {
+			requestLogger = zap.NewNop()
+		}
+
 		ctx = logger.IntoContext(ctx, requestLogger)
 		c.Request = c.Request.WithContext(ctx)
 		c.Next()

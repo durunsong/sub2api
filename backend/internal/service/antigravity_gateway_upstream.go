@@ -80,7 +80,7 @@ func (s *AntigravityGatewayService) ForwardUpstream(ctx context.Context, c *gin.
 	// 发送请求
 	resp, err := s.httpUpstream.Do(req, proxyURL, account.ID, account.Concurrency)
 	if err != nil {
-		logger.LegacyPrintf("service.antigravity_gateway", "%s upstream request failed: %v", prefix, err)
+		logger.LegacyPrintf("service.antigravity_gateway", "%s upstream request failed: %v", prefix, ephemeralLogText(ctx, err.Error()))
 		return nil, fmt.Errorf("upstream request failed: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
@@ -250,10 +250,10 @@ func (s *AntigravityGatewayService) streamUpstreamResponse(c *gin.Context, resp 
 				return &antigravityStreamResult{usage: usage, firstTokenMs: firstTokenMs, clientDisconnect: cw.Disconnected()}
 			}
 			if ev.err != nil {
-				if disconnect, handled := handleStreamReadError(ev.err, cw.Disconnected(), "antigravity upstream"); handled {
+				if disconnect, handled := handleStreamReadError(c, ev.err, cw.Disconnected(), "antigravity upstream"); handled {
 					return &antigravityStreamResult{usage: usage, firstTokenMs: firstTokenMs, clientDisconnect: disconnect}
 				}
-				logger.LegacyPrintf("service.antigravity_gateway", "Stream read error (antigravity upstream): %v", ev.err)
+				logger.LegacyPrintf("service.antigravity_gateway", "Stream read error (antigravity upstream): %v", ephemeralRequestLogText(c, ev.err.Error()))
 				return &antigravityStreamResult{usage: usage, firstTokenMs: firstTokenMs}
 			}
 

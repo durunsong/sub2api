@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"strconv"
@@ -12,6 +13,22 @@ import (
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
+
+// ephemeralLogText must only be used at logging/persistence boundaries, after
+// error classification and account policy decisions have used the real response.
+func ephemeralLogText(ctx context.Context, text string) string {
+	if ctxkey.NoContentPersistence(ctx) {
+		return ""
+	}
+	return text
+}
+
+func ephemeralRequestLogText(c *gin.Context, text string) string {
+	if c != nil && c.Request != nil {
+		return ephemeralLogText(c.Request.Context(), text)
+	}
+	return text
+}
 
 // Gin context keys used by Ops error logger for capturing upstream error details.
 // These keys are set by gateway services and consumed by handler/ops_error_logger.go.
@@ -276,6 +293,9 @@ func markOpsStreamError(c *gin.Context, streamErr OpsStreamError) {
 		streamErr.SkipMonitoring = currentOpsFailureSkipMonitoring(c)
 	}
 	snapshotOpsStreamErrorContext(c, &streamErr)
+	if c.Request != nil && ctxkey.NoContentPersistence(c.Request.Context()) {
+		streamErr.Message, streamErr.UpstreamMessage, streamErr.UpstreamDetail = "", "", ""
+	}
 	if GetOpenAIClientTransport(c) == OpenAIClientTransportWS {
 		if value, ok := c.Get(OpsStreamTurnKey); ok {
 			streamErr.Turn, _ = value.(int)
@@ -411,6 +431,11 @@ func setOpsUpstreamError(c *gin.Context, upstreamStatusCode int, upstreamMessage
 	if upstreamStatusCode > 0 {
 		c.Set(OpsUpstreamStatusCodeKey, upstreamStatusCode)
 	}
+	if c.Request != nil && ctxkey.NoContentPersistence(c.Request.Context()) {
+		c.Set(OpsUpstreamErrorMessageKey, "")
+		c.Set(OpsUpstreamErrorDetailKey, "")
+		return
+	}
 	if msg := strings.TrimSpace(upstreamMessage); msg != "" {
 		c.Set(OpsUpstreamErrorMessageKey, msg)
 	}
@@ -523,6 +548,9 @@ func appendOpsUpstreamError(c *gin.Context, ev OpsUpstreamErrorEvent) {
 	c.Set(OpsUpstreamErrorsKey, existing)
 
 	checkSkipMonitoringForUpstreamEvent(c, &evCopy)
+	if c.Request != nil && ctxkey.NoContentPersistence(c.Request.Context()) {
+		evCopy.Message, evCopy.Detail, evCopy.UpstreamResponseBody = "", "", ""
+	}
 }
 
 // opsUpstreamProxyAttribution derives both attribution fields from one

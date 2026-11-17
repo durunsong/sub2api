@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/Wei-Shaw/sub2api/internal/pkg/ctxkey"
 	"github.com/gin-gonic/gin"
 	"github.com/tidwall/gjson"
 )
@@ -41,6 +42,9 @@ func MarkOpsCyberPolicy(c *gin.Context, mark CyberPolicyMark) {
 	mark.Code = "cyber_policy"
 	mark.Message = strings.TrimSpace(mark.Message)
 	mark.Body = strings.TrimSpace(mark.Body)
+	if c.Request != nil && ctxkey.NoContentPersistence(c.Request.Context()) {
+		mark.Message, mark.Body = "", ""
+	}
 	c.Set(opsCyberPolicyKey, &mark)
 }
 

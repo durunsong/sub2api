@@ -50,6 +50,8 @@ Cursor 场景下还会加载 [`.cursor/rules/sub2api-fork.mdc`](.cursor/rules/su
 
 ### 其他 Fork 定制
 
+- **生图审查边界**：收藏/分类必须原子更新已有 IndexedDB 记录；备份导入必须协调旧草稿自动保存。已保存的失效分组展示覆盖允许原样保留或删除，但不得新增/修改。AI 创建工作流与 AI 系列提示词通过授权文本模型及既有网关计费，必须先审核再保存本地或生图；未知视觉能力不发送参考图。所有可达文本网关错误日志也必须遵守 `NoContentPersistence`，不得把上游回显正文写入日志或账号错误字段。
+- **在线 AI 生图工作台**：用户 `/image-studio`、管理员 `/admin/image-studio`；短视口自动显示底部生成操作条，等待卡片提供取景框显影动效（低动态替代、离屏/后台暂停）；配置流程见 `docs/IMAGE_STUDIO_SETUP.md`。上传/生成/历史参考/素材图片统一本地预览，支持切图、原始尺寸、缩放拖动、触摸及键盘；素材预览与用作参考图分离。参考图支持 Ctrl/Cmd+V 直接粘贴和拖拽高亮，保留文字/弹窗粘贴行为及并发数量校验；按授权分组自动发现 GPT/Grok/Gemini 与已映射图片别名，配置只覆盖工作台展示。JWT 请求经进程内同步网关复用分组计费与配额；`internal:images:` 凭据只作内部账务身份，禁止外部认证、常规密钥管理与 DTO 回显。图片、参考图、历史、素材、分类、模板和草稿仅按用户隔离保存在 IndexedDB；`NoContentPersistence` 路径保留安全判定及账务元数据，但不得把创作内容写入审核、Ops、账号错误或日志。无新增迁移。详见 `docs/FORK_VS_UPSTREAM.md` §8.8。
 - **Grok + Kiro 配额**：迁移 `157` CHECK 必须含 `kiro` 与 `grok`
 - **Ops**：`DELETE /ops/errors` 批量删错误日志
 - **VersionBadge**：隐藏「立即更新」，保留版本提示与 changelog 链接

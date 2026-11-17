@@ -32,6 +32,13 @@ func RegisterAdminRoutes(
 	admin.Use(middleware.AdminComplianceGuard(settingService))
 	// 受限密钥的账户操作走独立资源校验，普通管理员保持原处理器。
 	admin.Use(h.Admin.Account.ScopedAdminKeyAccounts)
+	if h.ImageStudio != nil {
+		admin.GET("/image-studio/config", h.ImageStudio.GetConfig)
+		admin.PUT("/image-studio/config", h.ImageStudio.SetConfig)
+		admin.GET("/image-studio/catalog", h.ImageStudio.AdminCatalog)
+		admin.GET("/image-studio/workflow-models", h.ImageStudio.AdminWorkflowModels)
+	}
+
 	{
 		// 部署与运营合规确认
 		registerAdminComplianceRoutes(admin, h)

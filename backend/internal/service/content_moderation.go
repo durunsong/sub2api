@@ -20,6 +20,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/pkg/ctxkey"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/httpclient"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
@@ -317,19 +318,20 @@ type ContentModerationModelFilter struct {
 }
 
 type ContentModerationCheckInput struct {
-	riskControlLogOnly bool // Captured at admission and retained by asynchronous tasks.
-	RequestID          string
-	UserID             int64
-	UserEmail          string
-	APIKeyID           int64
-	APIKeyName         string
-	GroupID            *int64
-	GroupName          string
-	Endpoint           string
-	Provider           string
-	Model              string
-	Protocol           string
-	Body               []byte
+	noContentPersistence bool // Ephemeral image studio content must not enter background queues.
+	riskControlLogOnly   bool // Captured at admission and retained by asynchronous tasks.
+	RequestID            string
+	UserID               int64
+	UserEmail            string
+	APIKeyID             int64
+	APIKeyName           string
+	GroupID              *int64
+	GroupName            string
+	Endpoint             string
+	Provider             string
+	Model                string
+	Protocol             string
+	Body                 []byte
 }
 
 type ContentModerationInput struct {
@@ -822,6 +824,7 @@ func (s *ContentModerationService) TestAPIKeys(ctx context.Context, input TestCo
 }
 
 func (s *ContentModerationService) Check(ctx context.Context, input ContentModerationCheckInput) (decision *ContentModerationDecision, err error) {
+	input.noContentPersistence = ctxkey.NoContentPersistence(ctx)
 	allow := &ContentModerationDecision{Allowed: true, Action: ContentModerationActionAllow}
 	if s == nil || s.settingRepo == nil || s.repo == nil {
 		slog.Info("content_moderation.skip_unavailable",
@@ -932,6 +935,10 @@ func (s *ContentModerationService) Check(ctx context.Context, input ContentModer
 		if cfg.KeywordBlockingMode != ContentModerationKeywordModeAPIOnly && len(cfg.BlockedKeywords) > 0 {
 			keywordText := extractContentModerationKeywordText(input.Protocol, input.Body)
 			if keyword, hit := runtimeSnapshot.matchBlockedKeyword(keywordText); hit {
+				logKeyword := keyword
+				if input.noContentPersistence {
+					logKeyword = ""
+				}
 				metricAction := ContentModerationActionKeywordBlock
 				if input.riskControlLogOnly {
 					metricAction = ContentModerationActionAllow
@@ -944,11 +951,11 @@ func (s *ContentModerationService) Check(ctx context.Context, input ContentModer
 					"endpoint", input.Endpoint,
 					"protocol", input.Protocol,
 					"keyword_blocking_mode", cfg.KeywordBlockingMode,
-					"keyword", keyword)
+					"keyword", logKeyword)
 				scores := map[string]float64{contentModerationKeywordCategory: 1.0}
 				log := s.buildLog(input, cfg, ContentModerationActionKeywordBlock, true, contentModerationKeywordCategory, 1.0, scores, keywordText, nil, nil, "")
-				log.MatchedKeyword = keyword
-				s.enqueueRecord(input, cfg, log, (ContentModerationInput{Text: keywordText}).Hash(), false, true)
+				log.MatchedKeyword = logKeyword
+				s.enqueueRecord(ctx, input, cfg, log, (ContentModerationInput{Text: keywordText}).Hash(), false, true)
 				return &ContentModerationDecision{
 					Allowed:         false,
 					Blocked:         true,
@@ -1020,7 +1027,7 @@ func (s *ContentModerationService) Check(ctx context.Context, input ContentModer
 			}
 			scores := map[string]float64{"hash": 1.0}
 			log := s.buildLog(input, cfg, ContentModerationActionHashBlock, true, "hash", 1.0, scores, content.ExcerptText(), nil, nil, "")
-			s.enqueueRecord(input, cfg, log, hashText, false, false)
+			s.enqueueRecord(ctx, input, cfg, log, hashText, false, false)
 			return &ContentModerationDecision{
 				Allowed:    false,
 				Blocked:    true,
@@ -1058,6 +1065,9 @@ func (s *ContentModerationService) Check(ctx context.Context, input ContentModer
 		return allow, nil
 	}
 	if cfg.Mode == ContentModerationModeObserve {
+		if input.noContentPersistence {
+			return s.checkSync(ctx, input, cfg, content, hashText, nil, false), nil
+		}
 		slog.Info("content_moderation.enqueue_observe",
 			"user_id", input.UserID,
 			"api_key_id", input.APIKeyID,
@@ -1086,6 +1096,10 @@ func (s *ContentModerationService) checkSync(ctx context.Context, input ContentM
 		if trackPreBlock {
 			s.recordPreBlockSyncMetric(latency, ContentModerationActionError)
 		}
+		logError := err
+		if input.noContentPersistence {
+			logError = errors.New("moderation request failed")
+		}
 		slog.Warn("content_moderation.audit_api_failed",
 			"audit_engine", cfg.Engine,
 			"user_id", input.UserID,
@@ -1097,13 +1111,15 @@ func (s *ContentModerationService) checkSync(ctx context.Context, input ContentM
 			"allow_block", allowBlock,
 			"queue_delay_ms", queueDelay,
 			"latency_ms", latency,
-			"error", err)
+			"error", logError)
 		if queueDelay != nil {
 			s.asyncErrors.Add(1)
 		}
 		if cfg.RecordNonHits {
 			log := s.buildLog(input, cfg, ContentModerationActionError, false, "", 0, nil, content.ExcerptText(), &latency, queueDelay, err.Error())
-			log.EngineMeta = moderationAttemptMeta(cfg, content)
+			if !input.noContentPersistence {
+				log.EngineMeta = moderationAttemptMeta(cfg, content)
+			}
 			_ = s.repo.CreateLog(ctx, log)
 		}
 		return allow
@@ -1131,15 +1147,17 @@ func (s *ContentModerationService) checkSync(ctx context.Context, input ContentM
 		"flagged", flagged,
 		"blocked", blocked,
 		"action", action,
-		"highest_category", highestCategory,
+		"highest_category", ephemeralLogText(ctx, highestCategory),
 		"highest_score", highestScore,
 		"latency_ms", latency,
 		"queue_delay_ms", queueDelay)
 	if flagged || cfg.RecordNonHits {
 		log := s.buildLog(input, cfg, action, flagged, highestCategory, highestScore, result.CategoryScores, content.ExcerptText(), &latency, queueDelay, "")
-		log.EngineMeta = result.EngineMeta
+		if !input.noContentPersistence {
+			log.EngineMeta = result.EngineMeta
+		}
 		if queueDelay == nil && cfg.Mode == ContentModerationModePreBlock {
-			s.enqueueRecord(input, cfg, log, hashText, flagged, flagged)
+			s.enqueueRecord(ctx, input, cfg, log, hashText, flagged, flagged)
 		} else {
 			s.persistContentModerationLog(ctx, cfg, log, hashText, flagged, flagged)
 		}
@@ -1188,6 +1206,9 @@ func (s *ContentModerationService) recordPreBlockSyncMetric(latencyMS int, actio
 }
 
 func (s *ContentModerationService) enqueueAsync(input ContentModerationCheckInput, cfg *ContentModerationConfig, content ContentModerationInput, hashText string) {
+	if input.noContentPersistence {
+		return
+	}
 	if s == nil || s.asyncQueue == nil {
 		return
 	}
@@ -1215,7 +1236,12 @@ func (s *ContentModerationService) enqueueAsync(input ContentModerationCheckInpu
 	}
 }
 
-func (s *ContentModerationService) enqueueRecord(input ContentModerationCheckInput, cfg *ContentModerationConfig, log *ContentModerationLog, inputHash string, recordHash bool, applySideEffects bool) {
+func (s *ContentModerationService) enqueueRecord(ctx context.Context, input ContentModerationCheckInput, cfg *ContentModerationConfig, log *ContentModerationLog, inputHash string, recordHash bool, applySideEffects bool) {
+	if input.noContentPersistence {
+		// Preserve risk-control counters and penalties, without retaining request bodies.
+		s.persistContentModerationLog(ctx, cfg, log, inputHash, recordHash, applySideEffects)
+		return
+	}
 	if s == nil || s.asyncQueue == nil || log == nil {
 		return
 	}
@@ -1763,7 +1789,11 @@ func (s *ContentModerationService) callModeration(ctx context.Context, cfg *Cont
 		if trackLoad {
 			s.finishModerationAPIKeyCall(key, latency, false, cfg.Engine)
 		}
-		s.markAPIKeyError(key, err.Error(), latency, httpStatus, cfg.Engine)
+		diagnostic := err.Error()
+		if ctxkey.NoContentPersistence(ctx) {
+			diagnostic = fmt.Sprintf("moderation request failed (HTTP %d)", httpStatus)
+		}
+		s.markAPIKeyError(key, diagnostic, latency, httpStatus, cfg.Engine)
 		lastErr = err
 		if httpStatus == http.StatusBadRequest {
 			break
@@ -1905,6 +1935,12 @@ func (s *ContentModerationService) resolveModerationProxyURL(ctx context.Context
 }
 
 func (s *ContentModerationService) buildLog(input ContentModerationCheckInput, cfg *ContentModerationConfig, action string, flagged bool, highestCategory string, highestScore float64, scores map[string]float64, text string, latency *int, queueDelay *int, errText string) *ContentModerationLog {
+	if input.noContentPersistence {
+		text, errText = "", ""
+		// Providers can return arbitrary labels and evidence alongside scores.
+		// Keep outcome/counters, not untrusted response strings or map keys.
+		highestCategory, scores = "", nil
+	}
 	var userID *int64
 	if input.UserID > 0 {
 		userID = &input.UserID
@@ -3089,6 +3125,9 @@ func (s *ContentModerationService) RecordCyberPolicyEvent(ctx context.Context, i
 	}
 	if in.UpstreamInTok > 0 || in.UpstreamOutTok > 0 {
 		errBody = fmt.Sprintf("%s\nupstream_usage=in:%d,out:%d", errBody, in.UpstreamInTok, in.UpstreamOutTok)
+	}
+	if ctxkey.NoContentPersistence(ctx) {
+		errBody = ""
 	}
 	log := &ContentModerationLog{
 		RequestID:       in.RequestID,

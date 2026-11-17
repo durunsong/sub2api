@@ -5,6 +5,8 @@ import (
 	"errors"
 	"net/http"
 	"sync"
+
+	"github.com/Wei-Shaw/sub2api/internal/pkg/ctxkey"
 )
 
 type LegacyEngine interface {
@@ -36,6 +38,13 @@ func (c *Coordinator) Check(ctx context.Context, req Request) Decision {
 	}
 	switch mode {
 	case ModeAsync:
+		if ctxkey.NoContentPersistence(ctx) {
+			// Observe synchronously without sending creative content to durable queues.
+			// Its result stays non-blocking, exactly as in normal observe mode.
+			_, _ = c.prompt.Evaluate(ctx, req)
+			legacy, _ := c.checkLegacy(ctx, req)
+			return prioritize(legacy, nil)
+		}
 		// Enqueue is deliberately best-effort. The implementation owns a bounded
 		// context and copies request memory before it can outlive the Handler.
 		_ = c.prompt.Enqueue(ctx, req.Clone())

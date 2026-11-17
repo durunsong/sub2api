@@ -133,6 +133,7 @@ deploy/docker-compose.override.yml
 .gocache/
 vite.config.js
 docs/*
+!docs/IMAGE_STUDIO_SETUP.md
 !docs/ANTIGRAVITY_ATTRIBUTION_429.md
 !docs/seedance-api.md
 !docs/agent-resource-safety.md

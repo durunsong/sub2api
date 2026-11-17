@@ -110,6 +110,11 @@ func APIKeyFromService(k *service.APIKey) *APIKey {
 		User:               UserFromServiceShallow(k.User),
 		Group:              GroupFromServiceShallow(k.Group),
 	}
+	// Accounting identities can appear in usage rows, but their private credential never leaves the server.
+	if service.IsImageStudioKey(k.Key) {
+		out.Key = ""
+	}
+
 	if k.Window5hStart != nil && !service.IsWindowExpired(k.Window5hStart, service.RateLimitWindow5h) {
 		t := k.Window5hStart.Add(service.RateLimitWindow5h)
 		out.Reset5hAt = &t

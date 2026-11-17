@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/anthropictokenizer"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/ctxkey"
 	kiropkg "github.com/Wei-Shaw/sub2api/internal/pkg/kiro"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
 	"github.com/cespare/xxhash/v2"
@@ -423,7 +424,7 @@ func (s *GatewayService) executeKiroUpstreamWithParsed(ctx context.Context, acco
 			}
 
 			if resp.StatusCode == http.StatusTooManyRequests {
-				dumpKiro429ResponseForDebug(resp, account.ID, endpoint.URL, endpoint.Name)
+				dumpKiro429ResponseForDebug(ctx, resp, account.ID, endpoint.URL, endpoint.Name)
 
 				cooldown, err := s.markKiro429(ctx, account.ID, accountKey)
 				if err != nil {
@@ -531,7 +532,7 @@ func (s *GatewayService) executeKiroUpstreamWithParsed(ctx context.Context, acco
 					return nil, requestCtx, readErr
 				}
 				classification := classifyKiroHTTPError(resp.StatusCode, string(respBody))
-				logKiroBadRequestClassification(classification, account, mappedModel, resp.Header, respBody)
+				logKiroBadRequestClassification(ctx, classification, account, mappedModel, resp.Header, respBody)
 				resetHTTPResponseBody(resp, respBody)
 				return resp, requestCtx, nil
 			}
@@ -734,6 +735,9 @@ func (s *GatewayService) markKiroAuthTemporarilyUnavailable(ctx context.Context,
 	}
 	until := time.Now().Add(10 * time.Minute)
 	reason := fmt.Sprintf("kiro auth failure (%d): %s", statusCode, strings.TrimSpace(body))
+	if ctxkey.NoContentPersistence(ctx) {
+		reason = fmt.Sprintf("kiro auth failure (%d)", statusCode)
+	}
 	_ = s.accountRepo.SetTempUnschedulable(ctx, account.ID, until, reason)
 }
 
@@ -845,7 +849,7 @@ func (s *GatewayService) handleKiroHTTPError(ctx context.Context, resp *http.Res
 	}
 	classification := classifyKiroHTTPError(resp.StatusCode, string(respBody))
 	if resp.StatusCode == http.StatusBadRequest {
-		logKiroBadRequestClassification(classification, account, "", resp.Header, respBody)
+		logKiroBadRequestClassification(ctx, classification, account, "", resp.Header, respBody)
 	}
 	if classification.Category == kiroErrorMonthlyRequest {
 		s.markKiroMonthlyRequestCountRateLimited(ctx, account, string(respBody))
@@ -950,8 +954,8 @@ func (s *GatewayService) buildKiroInvalidModelUpstreamEvent(account *Account, re
 	}
 }
 
-func logKiroBadRequestClassification(classification kiroErrorClassification, account *Account, model string, headers http.Header, body []byte) {
-	if classification.StatusCode != http.StatusBadRequest {
+func logKiroBadRequestClassification(ctx context.Context, classification kiroErrorClassification, account *Account, model string, headers http.Header, body []byte) {
+	if ctxkey.NoContentPersistence(ctx) || classification.StatusCode != http.StatusBadRequest {
 		return
 	}
 	var accountID int64
@@ -972,8 +976,8 @@ func logKiroBadRequestClassification(classification kiroErrorClassification, acc
 // and the rate-limit-relevant headers, then restores resp.Body so the caller can
 // still consume it. Used to investigate whether Kiro returns a reset-time field
 // (e.g. nextDateReset) we should parse instead of falling back to fixed cooldown.
-func dumpKiro429ResponseForDebug(resp *http.Response, accountID int64, endpointURL, endpointName string) {
-	if resp == nil || resp.Body == nil {
+func dumpKiro429ResponseForDebug(ctx context.Context, resp *http.Response, accountID int64, endpointURL, endpointName string) {
+	if ctxkey.NoContentPersistence(ctx) || resp == nil || resp.Body == nil {
 		return
 	}
 	const maxBytes = 2048

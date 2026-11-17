@@ -18,6 +18,16 @@ import { resolveRouteDocumentTitle } from './title'
  * Route definitions with lazy loading
  */
 const routes: RouteRecordRaw[] = [
+  {
+    path: '/image-studio', name: 'ImageStudio',
+    component: () => import('@/views/user/ImageStudioView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: false, title: 'Image Studio', titleKey: 'imageStudio.title' }
+  },
+  {
+    path: '/admin/image-studio', name: 'ImageStudioSettings',
+    component: () => import('@/views/admin/ImageStudioSettingsView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true, title: 'Image Studio Settings', titleKey: 'studioAdmin.title' }
+  },
   // ==================== Setup Routes ====================
   {
     path: '/setup',

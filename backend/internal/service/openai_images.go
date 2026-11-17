@@ -258,11 +258,15 @@ func (s *OpenAIGatewayService) ParseOpenAIImagesRequest(c *gin.Context, body []b
 			req.Model = model
 		}
 	}
-	if err := validateCompatibleImagesModel(req.Model); err != nil {
+	capabilityModel := imageStudioValidationModel(c.Request.Context(), req.Model)
+	if err := validateCompatibleImagesModel(capabilityModel); err != nil {
 		return nil, err
 	}
 	req.SizeTier = normalizeOpenAIImageSizeTier(req.Size)
 	req.RequiredCapability = classifyOpenAIImagesCapability(req)
+	if isGeminiCompatibleImageModel(capabilityModel) {
+		req.RequiredCapability = OpenAIImagesCapabilityAPIKey
+	}
 	return req, nil
 }
 
@@ -713,7 +717,7 @@ func (s *OpenAIGatewayService) forwardOpenAIImagesAPIKey(
 	if mapped := strings.TrimSpace(channelMappedModel); mapped != "" {
 		requestModel = mapped
 	}
-	if err := validateCompatibleImagesModel(requestModel); err != nil {
+	if err := validateCompatibleImagesModel(imageStudioValidationModel(ctx, requestModel)); err != nil {
 		return nil, err
 	}
 	upstreamModel := account.GetMappedModel(requestModel)

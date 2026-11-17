@@ -1485,6 +1485,9 @@ func (s *adminServiceImpl) AdminUpdateAPIKeyGroupID(ctx context.Context, keyID i
 	if err != nil {
 		return nil, err
 	}
+	if IsImageStudioKey(apiKey.Key) {
+		return nil, ErrAPIKeyNotFound
+	}
 
 	if groupID == nil {
 		// nil 表示不修改，直接返回
@@ -1589,6 +1592,10 @@ func (s *adminServiceImpl) AdminResetAPIKeyRateLimitUsage(ctx context.Context, k
 	if err != nil {
 		return nil, err
 	}
+	if IsImageStudioKey(apiKey.Key) {
+		return nil, ErrAPIKeyNotFound
+	}
+
 	apiKey.Usage5h = 0
 	apiKey.Usage1d = 0
 	apiKey.Usage7d = 0

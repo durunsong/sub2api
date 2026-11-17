@@ -3,6 +3,8 @@ package securityaudit
 import (
 	"context"
 	"errors"
+
+	"github.com/Wei-Shaw/sub2api/internal/pkg/ctxkey"
 )
 
 type Enqueuer struct {
@@ -22,6 +24,9 @@ func NewEnqueuer(config ConfigStore, repo JobRepository, payload PayloadStore, m
 }
 
 func (e *Enqueuer) Enqueue(ctx context.Context, req Request) error {
+	if ctxkey.NoContentPersistence(ctx) {
+		return errors.New("ephemeral content requires synchronous audit")
+	}
 	if e == nil || e.config == nil || e.repo == nil || e.payload == nil {
 		return errors.New("prompt audit enqueuer unavailable")
 	}

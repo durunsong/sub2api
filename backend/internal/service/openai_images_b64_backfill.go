@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/pkg/ctxkey"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
 	"github.com/Wei-Shaw/sub2api/internal/util/urlvalidator"
 	"github.com/tidwall/gjson"
@@ -40,7 +41,7 @@ func (s *OpenAIGatewayService) backfillOpenAIImagesB64JSON(
 	parsed *OpenAIImagesRequest,
 	body []byte,
 ) []byte {
-	if !ImagesURLToB64JSONEnabled(account) {
+	if !ImagesURLToB64JSONEnabled(account) && !ctxkey.NoContentPersistence(ctx) {
 		return body
 	}
 	if parsed != nil && parsed.ResponseFormat == "url" {
@@ -71,7 +72,7 @@ func (s *OpenAIGatewayService) backfillOpenAIImagesB64JSON(
 				"[OpenAI] Images b64_json backfill skipped account_id=%d index=%d err=%s",
 				account.ID,
 				index,
-				sanitizeUpstreamErrorMessage(err.Error()),
+				ephemeralLogText(ctx, sanitizeUpstreamErrorMessage(err.Error())),
 			)
 			continue
 		}
@@ -82,7 +83,7 @@ func (s *OpenAIGatewayService) backfillOpenAIImagesB64JSON(
 				"[OpenAI] Images b64_json backfill skipped account_id=%d index=%d err=%s",
 				account.ID,
 				index,
-				sanitizeUpstreamErrorMessage(err.Error()),
+				ephemeralLogText(ctx, sanitizeUpstreamErrorMessage(err.Error())),
 			)
 			continue
 		}

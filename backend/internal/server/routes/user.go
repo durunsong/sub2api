@@ -25,6 +25,13 @@ func RegisterUserRoutes(
 	authenticated.Use(panelRateLimiter.Global())
 	// 用户管理面变更类操作入审计（含 TOTP 启用/禁用、step-up 验证、密码修改等安全事件）
 	authenticated.Use(gin.HandlerFunc(auditLog))
+	if h.ImageStudio != nil {
+		authenticated.GET("/image-studio/catalog", mcpAccessBan, h.ImageStudio.Catalog)
+		authenticated.GET("/image-studio/workflow-models", mcpAccessBan, h.ImageStudio.WorkflowModels)
+		authenticated.POST("/image-studio/workflow", mcpAccessBan, h.ImageStudio.RequestBodyLimit(), h.ImageStudio.Workflow)
+		authenticated.POST("/image-studio/generate", mcpAccessBan, h.ImageStudio.RequestBodyLimit(), h.ImageStudio.Generate)
+	}
+
 	{
 		// 用户接口
 		user := authenticated.Group("/user")

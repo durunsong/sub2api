@@ -114,6 +114,13 @@ func registerRoutes(
 
 	accessBan := middleware2.IPBanGuard(ipBanService, cfg)
 
+	// The studio uses the exact gateway middleware chain in-process, with a fixed
+	// server-selected path. There is no loopback HTTP request or user-supplied URL.
+	studioGateway := gin.New()
+	configureTrustedProxies(studioGateway, cfg.Server)
+	routes.RegisterGatewayRoutes(studioGateway, h, apiKeyAuth, apiKeyService, subscriptionService, opsService, settingService, compositeResolver, cfg, ipBanService)
+	h.ImageStudio = handler.NewImageStudioHandler(apiKeyService, settingService, h.Gateway, studioGateway)
+
 	// 注册各模块路由
 	routes.RegisterAuthRoutes(v1, h, jwtAuth, auditLog, redisClient, settingService, ipBanService, cfg, panelRateLimiter)
 	routes.RegisterUserRoutes(v1, h, jwtAuth, auditLog, settingService, panelRateLimiter, accessBan)

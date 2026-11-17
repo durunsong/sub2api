@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/ctxkey"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
 	"github.com/tidwall/gjson"
 )
@@ -531,6 +532,9 @@ func (s *RateLimitService) HandleUpstreamError(ctx context.Context, account *Acc
 				cooldownMinutes = 10
 			}
 			until := time.Now().Add(time.Duration(cooldownMinutes) * time.Minute)
+			if ctxkey.NoContentPersistence(ctx) {
+				msg = "OAuth authentication failed (401)"
+			}
 			s.notifyAccountSchedulingBlocked(authAccount, until, "oauth_401")
 			if err := s.accountRepo.SetTempUnschedulable(ctx, authAccount.ID, until, msg); err != nil {
 				slog.Warn("oauth_401_set_temp_unschedulable_failed", "account_id", authAccount.ID, "error", err)
@@ -569,17 +573,19 @@ func (s *RateLimitService) HandleUpstreamError(ctx context.Context, account *Acc
 		s.handleAuthError(ctx, account, msg)
 		shouldDisable = true
 	case 403:
-		logger.LegacyPrintf(
-			"service.ratelimit",
-			"[HandleUpstreamErrorRaw] account_id=%d platform=%s type=%s status=403 request_id=%s cf_ray=%s upstream_msg=%s raw_body=%s",
-			account.ID,
-			account.Platform,
-			account.Type,
-			strings.TrimSpace(headers.Get("x-request-id")),
-			strings.TrimSpace(headers.Get("cf-ray")),
-			upstreamMsg,
-			truncateForLog(responseBody, 1024),
-		)
+		if !ctxkey.NoContentPersistence(ctx) {
+			logger.LegacyPrintf(
+				"service.ratelimit",
+				"[HandleUpstreamErrorRaw] account_id=%d platform=%s type=%s status=403 request_id=%s cf_ray=%s upstream_msg=%s raw_body=%s",
+				account.ID,
+				account.Platform,
+				account.Type,
+				strings.TrimSpace(headers.Get("x-request-id")),
+				strings.TrimSpace(headers.Get("cf-ray")),
+				upstreamMsg,
+				truncateForLog(responseBody, 1024),
+			)
+		}
 		shouldDisable = s.handle403(ctx, account, upstreamMsg, responseBody)
 	case 429:
 		s.handle429(ctx, account, headers, responseBody)
@@ -978,6 +984,9 @@ func (s *RateLimitService) GeminiCooldown(ctx context.Context, account *Account)
 
 // handleAuthError 处理认证类错误(401/403)，停止账号调度
 func (s *RateLimitService) handleAuthError(ctx context.Context, account *Account, errorMsg string) {
+	if ctxkey.NoContentPersistence(ctx) {
+		errorMsg = "Upstream account authentication or access failed (content omitted)"
+	}
 	s.notifyAccountSchedulingBlocked(account, time.Time{}, "auth_error")
 	if err := s.accountRepo.SetError(ctx, account.ID, errorMsg); err != nil {
 		slog.Warn("account_set_error_failed", "account_id", account.ID, "error", err)
@@ -1018,7 +1027,7 @@ func (s *RateLimitService) handle403(ctx context.Context, account *Account, upst
 			"403_cloudflare_bot_block_skips_account_penalty",
 			"account_id", account.ID,
 			"platform", account.Platform,
-			"upstream_message", upstreamMsg,
+			"upstream_message", ephemeralLogText(ctx, upstreamMsg),
 		)
 		return false
 	}
@@ -1076,7 +1085,7 @@ func (s *RateLimitService) handleOpenAI403(ctx context.Context, account *Account
 		slog.Warn(
 			"openai_403_html_body_skips_account_penalty",
 			"account_id", account.ID,
-			"upstream_message", upstreamMsg,
+			"upstream_message", ephemeralLogText(ctx, upstreamMsg),
 		)
 		return false
 	}
@@ -1107,6 +1116,9 @@ func (s *RateLimitService) handleOpenAI403(ctx context.Context, account *Account
 
 	until := time.Now().Add(time.Duration(openAI403CooldownMinutesDefault) * time.Minute)
 	reason := fmt.Sprintf("OpenAI 403 temporary cooldown (%d/%d): %s", count, openAI403DisableThreshold, msg)
+	if ctxkey.NoContentPersistence(ctx) {
+		reason = fmt.Sprintf("OpenAI 403 temporary cooldown (%d/%d)", count, openAI403DisableThreshold)
+	}
 	s.notifyAccountSchedulingBlocked(account, until, "openai_403_temp")
 	if err := s.accountRepo.SetTempUnschedulable(ctx, account.ID, until, reason); err != nil {
 		slog.Warn("openai_403_set_temp_unschedulable_failed", "account_id", account.ID, "error", err)
@@ -1233,6 +1245,7 @@ func (s *RateLimitService) handleAntigravity403(ctx context.Context, account *Ac
 
 // handleCustomErrorCode 处理自定义错误码，停止账号调度
 func (s *RateLimitService) handleCustomErrorCode(ctx context.Context, account *Account, statusCode int, errorMsg string) {
+	errorMsg = ephemeralLogText(ctx, errorMsg)
 	msg := "Custom error code " + strconv.Itoa(statusCode) + ": " + errorMsg
 	s.notifyAccountSchedulingBlocked(account, time.Time{}, "custom_error_code")
 	if err := s.accountRepo.SetError(ctx, account.ID, msg); err != nil {
@@ -2926,6 +2939,9 @@ func (s *RateLimitService) triggerTempUnschedulable(ctx context.Context, account
 		RuleIndex:       ruleIndex,
 		ErrorMessage:    truncateTempUnschedMessage(responseBody, tempUnschedMessageMaxBytes),
 		Scope:           TempUnschedScopeAccount,
+	}
+	if ctxkey.NoContentPersistence(ctx) {
+		state.MatchedKeyword, state.ErrorMessage = "", ""
 	}
 	if modelScoped {
 		state.Scope = TempUnschedScopeModel

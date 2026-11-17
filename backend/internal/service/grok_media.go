@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/ctxkey"
 	"io"
 	"mime"
 	"mime/multipart"
@@ -764,6 +765,9 @@ func (s *OpenAIGatewayService) ForwardGrokMedia(
 			requestID,
 			grokMediaContentProxyURL(c, requestID),
 		)
+	}
+	if ctxkey.NoContentPersistence(ctx) && (endpoint == GrokMediaEndpointImagesGenerations || endpoint == GrokMediaEndpointImagesEdits) {
+		respBody = s.backfillOpenAIImagesB64JSON(ctx, account, &OpenAIImagesRequest{ResponseFormat: "b64_json"}, respBody)
 	}
 	writeGrokMediaResponse(c, resp, respBody, s.responseHeaderFilter)
 	usage := grokMediaUsageFromResponse(endpoint, requestInfo, respBody)

@@ -1,3 +1,5 @@
+import imageStudio from './imageStudio'
+import studioAdmin from './studioAdmin'
 import adminAccessKeys from './adminAccessKeys'
 import mcp from './mcp'
 import landing from './landing'
@@ -25,6 +27,8 @@ const mergeMessages = <T extends Record<string, unknown>>(base: T, override: Rec
 }
 
 export default mergeMessages({
+  ...imageStudio,
+  ...studioAdmin,
   adminAccessKeys,
   mcp,
   ...landing,
