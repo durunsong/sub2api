@@ -406,9 +406,10 @@ function previewHistory(item: ImageHistory) {
               <div v-else class="flex flex-wrap gap-x-3"><span v-for="tier in (['1k', '2k', '4k'] as const)" :key="tier">{{ tier.toUpperCase() }}: {{ studio.selectedModel.pricing[`image_price_${tier}`] == null ? t('imageStudio.priceUnavailable') : `$${studio.selectedModel.pricing[`image_price_${tier}`]} ${t('imageStudio.perImage')}` }}</span></div>
               <p>{{ t('imageStudio.billingNotice') }}</p>
             </div>
-            <div class="grid grid-cols-2 gap-3">
+            <div class="parameter-grid grid grid-cols-2 gap-3">
               <div><label class="mb-2 block text-xs font-medium">{{ studio.selectedModel?.protocol === 'gemini' ? t('imageStudio.resolution') : t('imageStudio.size') }}</label><Select v-model="sizeChoice" :options="sizes" :aria-label="t('imageStudio.size')" :disabled="!sizes.length" /></div>
               <div v-if="qualities.length"><label class="mb-2 block text-xs font-medium">{{ t('imageStudio.quality') }}</label><Select v-model="studio.quality" :options="qualities" :aria-label="t('imageStudio.quality')" :disabled="!qualities.length" /></div>
+              <div v-if="studio.selectedModel?.protocol === 'gemini'"><label class="mb-2 block text-xs font-medium">{{ t('imageStudio.aspectRatio') }}</label><Select v-model="studio.aspectRatio" :options="['1:1', '2:3', '3:2', '3:4', '4:3', '9:16', '16:9', '21:9'].map(value => ({ value, label: value }))" :aria-label="t('imageStudio.aspectRatio')" /></div>
             </div>
             <div v-if="studio.selectedModel?.supports_custom_size && sizeChoice === '__custom'" class="space-y-2">
               <div class="grid grid-cols-2 gap-3">
@@ -417,9 +418,6 @@ function previewHistory(item: ImageHistory) {
               </div>
               <label class="flex items-center gap-2 text-xs"><input v-model="alignDimensions" type="checkbox" class="accent-primary-600" @change="commitDimensions" />{{ t('imageStudio.alignDimensions', { step: dimensionStep }) }}</label>
               <p v-if="customSizeError" role="alert" class="text-xs leading-5 text-red-600 dark:text-red-400">{{ t('imageStudio.customSizeInvalid', { step: dimensionStep }) }}</p>
-            </div>
-            <div v-if="studio.selectedModel?.protocol === 'gemini'" class="grid grid-cols-2 gap-3">
-              <div><label class="mb-2 block text-xs font-medium">{{ t('imageStudio.aspectRatio') }}</label><Select v-model="studio.aspectRatio" :options="['1:1', '2:3', '3:2', '3:4', '4:3', '9:16', '16:9', '21:9'].map(value => ({ value, label: value }))" :aria-label="t('imageStudio.aspectRatio')" /></div>
             </div>
             <div><label for="studio-count" class="mb-2 block text-xs font-medium">{{ t('imageStudio.count') }}</label><div class="flex gap-2"><button v-for="number in [1, 2, 4]" :key="number" type="button" class="count-button" :class="{ active: studio.count === number }" :aria-pressed="studio.count === number"  @click="studio.count = number">{{ number }}</button><input id="studio-count" v-model.number="studio.count" type="number" min="1" max="10" class="input min-w-0 flex-1 text-center" /></div></div>
           </div>
@@ -508,6 +506,13 @@ function previewHistory(item: ImageHistory) {
 </template>
 
 <style scoped>
+.composer-settings { container-type: inline-size; }
+.parameter-grid > div { min-width: 0; }
+.parameter-grid > div:only-child { grid-column: 1 / -1; }
+@container (max-width: 270px) {
+  .parameter-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
 .favorite-button { @apply absolute right-2 top-2 flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-lg bg-white px-2 text-xs font-semibold text-gray-700 shadow-sm dark:bg-dark-800 dark:text-gray-100; }
 .favorite-button.is-favorite { @apply bg-primary-700 text-white dark:bg-primary-700 dark:text-white; }
 .favorite-button:focus-visible { @apply outline outline-2 outline-offset-2 outline-primary-500; }
