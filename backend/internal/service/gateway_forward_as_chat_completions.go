@@ -329,6 +329,9 @@ func (s *GatewayService) handleCCBufferedFromAnthropic(
 			break
 		}
 
+		if event.Type == "message_start" || event.Type == "message_delta" {
+			mergeKiroCreditsFromAnthropicPayload(&usage, payload)
+		}
 		// message_start carries the initial response structure and cache usage
 		if event.Type == "message_start" && event.Message != nil {
 			finalResp = event.Message
@@ -391,14 +394,7 @@ func (s *GatewayService) handleCCBufferedFromAnthropic(
 	}
 
 	// Update usage from accumulated delta
-	if usage.InputTokens > 0 || usage.OutputTokens > 0 {
-		finalResp.Usage = apicompat.AnthropicUsage{
-			InputTokens:              usage.InputTokens,
-			OutputTokens:             usage.OutputTokens,
-			CacheCreationInputTokens: usage.CacheCreationInputTokens,
-			CacheReadInputTokens:     usage.CacheReadInputTokens,
-		}
-	}
+	normalizeAnthropicEventUsageForResponses(&apicompat.AnthropicStreamEvent{Message: finalResp}, usage)
 
 	// Chain: Anthropic → Responses → Chat Completions
 	responsesResp := apicompat.AnthropicToResponsesResponse(finalResp)
@@ -581,6 +577,9 @@ func (s *GatewayService) handleCCStreamingFromAnthropic(
 			continue
 		}
 
+		if event.Type == "message_start" || event.Type == "message_delta" {
+			mergeKiroCreditsFromAnthropicPayload(&usage, payload)
+		}
 		// Forward received usage regardless of the client stream_options.
 		// The intermediate Responses converter synthesizes usage even when absent.
 		ccState.IncludeUsage = ccState.IncludeUsage || anthropicChatStreamHasUsage(&event, payload)

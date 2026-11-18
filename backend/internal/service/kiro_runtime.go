@@ -755,7 +755,7 @@ func (s *GatewayService) markKiroMonthlyRequestCountRateLimited(ctx context.Cont
 		return
 	}
 	reason := "kiro monthly request count exhausted (402): MONTHLY_REQUEST_COUNT"
-	if trimmed := strings.TrimSpace(body); trimmed != "" {
+	if trimmed := strings.TrimSpace(body); !ctxkey.NoContentPersistence(ctx) && trimmed != "" {
 		reason = fmt.Sprintf("%s body=%s", reason, truncateForLog([]byte(trimmed), 512))
 	}
 	logger.L().Warn("kiro monthly request count rate-limited",

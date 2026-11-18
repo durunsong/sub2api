@@ -11,6 +11,7 @@ import (
 
 	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	"github.com/stretchr/testify/require"
 )
 
@@ -458,8 +459,9 @@ func TestPricingRequestToService_MultipliersGatedByFlag(t *testing.T) {
 	req := channelModelPricingRequest{
 		Models:                     []string{"gpt-5"},
 		BillingMode:                "token",
-		FastMultiplier:             float64Ptr(2.5),
-		FlexMultiplier:             float64Ptr(0.5),
+		FastMultiplier:             new(channelTierMultiplier(2.5)),
+		FlexMultiplier:             new(channelTierMultiplier(0.5)),
+		UltrafastMultiplier:        new(channelTierMultiplier(3)),
 		ReasoningEffortMultipliers: map[string]float64{"high": 1.5, "max": 3},
 		Intervals: []pricingIntervalRequest{{
 			MinTokens:            272000,
@@ -473,6 +475,7 @@ func TestPricingRequestToService_MultipliersGatedByFlag(t *testing.T) {
 	allowed := pricingRequestToService([]channelModelPricingRequest{req}, true)
 	require.Equal(t, float64Ptr(2.5), allowed[0].FastMultiplier)
 	require.Equal(t, float64Ptr(0.5), allowed[0].FlexMultiplier)
+	require.Equal(t, float64Ptr(3), allowed[0].UltrafastMultiplier)
 	require.Equal(t, req.ReasoningEffortMultipliers, allowed[0].ReasoningEffortMultipliers)
 	require.Equal(t, float64Ptr(2), allowed[0].Intervals[0].InputMultiplier)
 	require.Equal(t, float64Ptr(1.5), allowed[0].Intervals[0].OutputMultiplier)
@@ -482,6 +485,7 @@ func TestPricingRequestToService_MultipliersGatedByFlag(t *testing.T) {
 	dropped := pricingRequestToService([]channelModelPricingRequest{req}, false)
 	require.Nil(t, dropped[0].FastMultiplier)
 	require.Nil(t, dropped[0].FlexMultiplier)
+	require.Nil(t, dropped[0].UltrafastMultiplier)
 	require.Equal(t, req.ReasoningEffortMultipliers, dropped[0].ReasoningEffortMultipliers)
 	require.Nil(t, dropped[0].Intervals[0].InputMultiplier)
 	require.Nil(t, dropped[0].Intervals[0].OutputMultiplier)
@@ -489,6 +493,21 @@ func TestPricingRequestToService_MultipliersGatedByFlag(t *testing.T) {
 	require.Nil(t, dropped[0].Intervals[0].CacheReadMultiplier)
 	// 非倍率字段不受开关影响
 	require.Equal(t, 272000, dropped[0].Intervals[0].MinTokens)
+}
+
+func TestPricingRequestAndResponse_UltrafastMultiplier(t *testing.T) {
+	var req channelModelPricingRequest
+	require.NoError(t, json.Unmarshal([]byte(`{"models":["gpt-6-astra"],"ultrafast_multiplier":1.25}`), &req))
+	pricing := pricingRequestToService([]channelModelPricingRequest{req}, true)
+	require.Equal(t, float64Ptr(1.25), pricing[0].UltrafastMultiplier)
+	got := pricingToResponse(&pricing[0])
+	require.Equal(t, float64Ptr(1.25), got.UltrafastMultiplier)
+	data, err := json.Marshal(got)
+	require.NoError(t, err)
+	require.Contains(t, string(data), `"ultrafast_multiplier":1.25`)
+
+	req = channelModelPricingRequest{}
+	require.Error(t, json.Unmarshal([]byte(`{"models":["gpt-6-astra"],"ultrafast_multiplier":0}`), &req))
 }
 
 func TestPricingToResponse_TimePricing(t *testing.T) {
@@ -507,6 +526,26 @@ func TestPricingToResponse_TimePricing(t *testing.T) {
 	require.Equal(t, "Asia/Shanghai", got.TimePricing.Timezone)
 	require.True(t, got.TimePricing.WeekdaysOnly)
 	require.Equal(t, 1.25, got.TimePricing.Periods[0].Multiplier)
+}
+
+func TestChannelTierMultiplierDecimalContract(t *testing.T) {
+	for _, field := range []string{"fast_multiplier", "flex_multiplier", "ultrafast_multiplier"} {
+		for _, raw := range []string{"null", "1e-6", "1.0000010", "999999.999999", "1000000", "0.0000004", "1.00000000000000001"} {
+			t.Run(field+"/"+raw, func(t *testing.T) {
+				var req channelModelPricingRequest
+				err := json.Unmarshal([]byte(`{"models":["public"],"`+field+`":`+raw+`}`), &req)
+				if err == nil {
+					err = binding.Validator.ValidateStruct(&req)
+				}
+				switch raw {
+				case "null", "1e-6", "1.0000010", "999999.999999":
+					require.NoError(t, err)
+				default:
+					require.Error(t, err)
+				}
+			})
+		}
+	}
 }
 
 func TestPricingToResponse_TimePricingNil(t *testing.T) {

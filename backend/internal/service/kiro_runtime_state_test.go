@@ -720,6 +720,8 @@ func TestNextKiroMonthlyResetUTC(t *testing.T) {
 }
 
 func TestExecuteKiroUpstreamMonthlyRequestCountRateLimitsUntilNextMonthAndFailovers(t *testing.T) {
+	logs, restore := captureStructuredLog(t)
+	defer restore()
 	account := &Account{
 		ID:          42,
 		Platform:    PlatformKiro,
@@ -731,7 +733,7 @@ func TestExecuteKiroUpstreamMonthlyRequestCountRateLimitsUntilNextMonthAndFailov
 	repo := &recordingKiroTempUnschedRepo{}
 	upstream := &queuedHTTPUpstream{
 		responses: []*http.Response{
-			newJSONResponse(http.StatusPaymentRequired, `{"message":"You have reached the limit.","reason":"MONTHLY_REQUEST_COUNT"}`),
+			newJSONResponse(http.StatusPaymentRequired, `{"message":"private-402-marker","reason":"MONTHLY_REQUEST_COUNT"}`),
 		},
 	}
 	svc := &GatewayService{
@@ -746,7 +748,7 @@ func TestExecuteKiroUpstreamMonthlyRequestCountRateLimitsUntilNextMonthAndFailov
 	payloadBytes, err := json.Marshal(payload)
 	require.NoError(t, err)
 
-	_, _, err = svc.executeKiroUpstream(context.Background(), account, payloadBytes, "claude-sonnet-4-6", "claude-sonnet-4-6", "test-token", nil)
+	_, _, err = svc.executeKiroUpstream(ctxkey.WithNoContentPersistence(context.Background()), account, payloadBytes, "claude-sonnet-4-6", "claude-sonnet-4-6", "test-token", nil)
 	require.Error(t, err)
 
 	var failoverErr *UpstreamFailoverError
@@ -757,6 +759,8 @@ func TestExecuteKiroUpstreamMonthlyRequestCountRateLimitsUntilNextMonthAndFailov
 	require.True(t, repo.rateCalled)
 	require.Equal(t, account.ID, repo.rateID)
 	require.Equal(t, nextKiroMonthlyResetUTC(time.Now()), repo.rateLimitReset)
+	require.True(t, logs.ContainsFieldValue("reason", "MONTHLY_REQUEST_COUNT"))
+	require.False(t, logs.ContainsFieldValue("reason", "private-402-marker"))
 }
 
 func TestExecuteKiroUpstreamPlain402FailoversWithoutTempUnschedule(t *testing.T) {

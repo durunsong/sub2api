@@ -32,6 +32,7 @@ export interface PricingFormEntry {
   cache_read_price: number | string | null
   fast_multiplier?: number | string | null
   flex_multiplier?: number | string | null
+  ultrafast_multiplier?: number | string | null
   reasoning_effort_multipliers?: Record<string, number | string> | null
   image_input_price: number | string | null
   image_output_price: number | string | null
@@ -183,6 +184,18 @@ export function isValidPositiveMultiplier(val: number | string | null | undefine
   if (val === null || val === undefined || val === '') return true
   const multiplier = Number(val)
   return Number.isFinite(multiplier) && multiplier > 0
+}
+
+export function isValidChannelTierMultiplier(value: PricingFormEntry['ultrafast_multiplier']): boolean {
+  if (value == null || value === '') return true
+  const numeric = Number(value)
+  if (!(numeric >= 0.000001 && numeric <= 999999.999999)) return false
+  const parts = /^\+?(\d*)(?:\.(\d*))?(?:e([+-]?\d+))?$/i.exec(String(value))
+  if (!parts) return false
+  const fraction = parts[2] ?? ''
+  const digits = parts[1] + fraction
+  const trailingZeros = digits.length - digits.replace(/0+$/, '').length
+  return fraction.length - Number(parts[3] ?? 0) - trailingZeros <= 6
 }
 
 export function formReasoningEffortMultipliersToAPI(

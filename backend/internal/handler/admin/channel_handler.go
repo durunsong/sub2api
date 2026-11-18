@@ -12,6 +12,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/service"
 
 	"github.com/gin-gonic/gin"
+	"github.com/shopspring/decimal"
 )
 
 // ChannelHandler handles admin channel management
@@ -57,6 +58,22 @@ type updateChannelRequest struct {
 	AccountStatsPricingRules   *[]accountStatsPricingRuleRequest `json:"account_stats_pricing_rules"`
 }
 
+type channelTierMultiplier float64
+
+func (multiplier *channelTierMultiplier) UnmarshalJSON(data []byte) error {
+	raw := string(data)
+	value, err := strconv.ParseFloat(raw, 64)
+	if err != nil || value < 0.000001 || value > 999999.999999 {
+		return fmt.Errorf("channel tier multiplier must be between 0.000001 and 999999.999999")
+	}
+	exact, err := decimal.NewFromString(raw)
+	if err != nil || !exact.Equal(decimal.NewFromFloat(value).Round(6)) {
+		return fmt.Errorf("channel tier multiplier must be exactly representable with six decimal places")
+	}
+	*multiplier = channelTierMultiplier(value)
+	return nil
+}
+
 type channelModelPricingRequest struct {
 	Platform                   string                     `json:"platform" binding:"omitempty,max=50"`
 	Models                     []string                   `json:"models" binding:"required,min=1,max=100"`
@@ -67,8 +84,9 @@ type channelModelPricingRequest struct {
 	CacheWrite1hPrice          *float64                   `json:"cache_write_1h_price" binding:"omitempty,min=0"`
 	CacheWrite12hPrice         *float64                   `json:"cache_write_12h_price" binding:"omitempty,min=0"`
 	CacheReadPrice             *float64                   `json:"cache_read_price" binding:"omitempty,min=0"`
-	FastMultiplier             *float64                   `json:"fast_multiplier" binding:"omitempty,gt=0"`
-	FlexMultiplier             *float64                   `json:"flex_multiplier" binding:"omitempty,gt=0"`
+	FastMultiplier             *channelTierMultiplier     `json:"fast_multiplier"`
+	FlexMultiplier             *channelTierMultiplier     `json:"flex_multiplier"`
+	UltrafastMultiplier        *channelTierMultiplier     `json:"ultrafast_multiplier"`
 	ReasoningEffortMultipliers map[string]float64         `json:"reasoning_effort_multipliers"`
 	ImageInputPrice            *float64                   `json:"image_input_price" binding:"omitempty,min=0"`
 	ImageOutputPrice           *float64                   `json:"image_output_price" binding:"omitempty,min=0"`
@@ -145,6 +163,7 @@ type channelModelPricingResponse struct {
 	CacheReadPrice             *float64                    `json:"cache_read_price"`
 	FastMultiplier             *float64                    `json:"fast_multiplier"`
 	FlexMultiplier             *float64                    `json:"flex_multiplier"`
+	UltrafastMultiplier        *float64                    `json:"ultrafast_multiplier"`
 	ReasoningEffortMultipliers map[string]float64          `json:"reasoning_effort_multipliers"`
 	ImageInputPrice            *float64                    `json:"image_input_price"`
 	ImageOutputPrice           *float64                    `json:"image_output_price"`
@@ -277,6 +296,7 @@ func pricingToResponse(p *service.ChannelModelPricing) channelModelPricingRespon
 		CacheReadPrice:             p.CacheReadPrice,
 		FastMultiplier:             p.FastMultiplier,
 		FlexMultiplier:             p.FlexMultiplier,
+		UltrafastMultiplier:        p.UltrafastMultiplier,
 		ReasoningEffortMultipliers: p.ReasoningEffortMultipliers,
 		ImageInputPrice:            p.ImageInputPrice,
 		ImageOutputPrice:           p.ImageOutputPrice,
@@ -361,10 +381,11 @@ func pricingRequestToService(reqs []channelModelPricingRequest, allowChannelMult
 				SortOrder:            iv.SortOrder,
 			})
 		}
-		var fastMultiplier, flexMultiplier *float64
+		var fastMultiplier, flexMultiplier, ultrafastMultiplier *float64
 		if allowChannelMultipliers {
-			fastMultiplier = r.FastMultiplier
-			flexMultiplier = r.FlexMultiplier
+			fastMultiplier = (*float64)(r.FastMultiplier)
+			flexMultiplier = (*float64)(r.FlexMultiplier)
+			ultrafastMultiplier = (*float64)(r.UltrafastMultiplier)
 		}
 		result = append(result, service.ChannelModelPricing{
 			Platform:                   platform,
@@ -378,6 +399,7 @@ func pricingRequestToService(reqs []channelModelPricingRequest, allowChannelMult
 			CacheReadPrice:             r.CacheReadPrice,
 			FastMultiplier:             fastMultiplier,
 			FlexMultiplier:             flexMultiplier,
+			UltrafastMultiplier:        ultrafastMultiplier,
 			ReasoningEffortMultipliers: r.ReasoningEffortMultipliers,
 			ImageInputPrice:            r.ImageInputPrice,
 			ImageOutputPrice:           r.ImageOutputPrice,

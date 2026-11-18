@@ -1,8 +1,12 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.2.22**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.22**，并保留本 Fork
+当前整合版本为 **v0.2.23**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.23**，并保留本 Fork
 的全部定制能力。
+
+## v0.2.23 同步（2026-11-18）
+
+GPT-6.2 Sol/Astra 模型与套餐档位、渠道 Ultra Fast 倍率、缓存写入与读取分桶，以及 OpenAI 首段输出前的空闲切换预算。合并基于已有生图工作台的 Fork 提交 `39d34433c`。覆盖与验证记录见 [同步记录](openspec/changes/sync-upstream-v0-2-23/verification.md)。
 
 ## v0.2.22 同步（2026-11-17）
 
