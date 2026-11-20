@@ -1,8 +1,14 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.2.23**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.23**，并保留本 Fork
+当前整合版本为 **v0.2.24**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.24**，并保留本 Fork
 的全部定制能力。
+
+## v0.2.24 同步（2026-11-20）
+
+请求重复字段与模型白名单绕过修复、Exa 搜索及来源、Claude 压缩 5m TTL/窗口费用估算、模型 ID 复制、手动刷新风险提示，以及协议、调度、用量和 OAuth 轮换修复。基于 Fork `67bcc8889` 三方整合官方 110 commits / 190 路径，目标 `5c2982a81b46e2142d0143d2f83c1ce9c4da1d24`；官方 VERSION 仍为 0.2.23，Fork 按发布标签为 0.2.24。无新增依赖或迁移，历史 SQL 不变。
+
+保留 Kiro、XorPay、Access Ban、全期订阅额度/永久卡/重置历史、邮件券、品牌及生图工作台。公共与生图内部网关共同拒绝重复字段，生图继续不持久化内容；Kiro 会话与 credits 和新缓存/缓冲输出并存。验证见 [同步记录](openspec/changes/sync-upstream-v0-2-24/verification.md)。
 
 ## v0.2.23 同步（2026-11-18）
 

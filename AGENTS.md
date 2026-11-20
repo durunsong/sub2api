@@ -14,8 +14,8 @@ Cursor 场景下还会加载 [`.cursor/rules/sub2api-fork.mdc`](.cursor/rules/su
 | 项           | 值                                                                                                                 |
 | ------------ | ------------------------------------------------------------------------------------------------------------------ |
 | 上游官方     | https://github.com/Wei-Shaw/sub2api                                                                                |
-| 已同步基线   | tag **v0.2.23**（官方无 v0.1.174 tag）                                                                             |
-| 当前 VERSION | `backend/cmd/server/VERSION` = **0.2.23**                                                                          |
+| 已同步基线   | tag **v0.2.24**（官方无 v0.1.174 tag）                                                                             |
+| 当前 VERSION | `backend/cmd/server/VERSION` = **0.2.24**                                                                          |
 | 完整差异文档 | **`docs/FORK_VS_UPSTREAM.md`**（相对历史基线；含 Fork 扩展见文档 §8.2 / §12；快捷清单见 `FORK_CUSTOMIZATIONS.md`） |
 | 快捷索引     | `FORK_CUSTOMIZATIONS.md`                                                                                           |
 
@@ -246,9 +246,11 @@ Access Ban 迁移顺序：`159` 建表 → `160` 扩展 rule_type / ua_pattern�
 
 ## 7. 同步上游
 
+v0.2.24 已整合：重复字段/BOM/伪 multipart 准入修复、Exa 搜索、Claude 压缩 5m TTL 与窗口费用、协议/调度/Token 刷新修复。所有公共及生图内部网关复用严格字段校验，继续保留 Access Ban、Kiro credits/粘性及 NoContentPersistence。无新增迁移或依赖，历史 SQL 不改。验证见 `openspec/changes/sync-upstream-v0-2-24/`。
+
 见 `docs/FORK_VS_UPSTREAM.md` §14。原则：**Kiro + XorPay + Access Ban + 提示词审计 + 套餐续期 + Ops + UI 品牌等全部定制保留**。
 
-`upstream/main` 可能领先于 v0.2.23；同步时以 release tag 为基线，不带入 tag 后的 `main` 内容，并逐文件保留 Fork 模块。
+`upstream/main` 可能领先于 v0.2.24；同步时以 release tag 为基线，不带入 tag 后的 `main` 内容，并逐文件保留 Fork 模块。
 
 ---
 
