@@ -1,5 +1,18 @@
 # 验证记录（2026-11-21）
 
+## HTTP 请求校验遗漏修复（同日用户反馈）
+
+初次交付漏改 `RedeemEmailRecipientSearchRequest` 和 `CreateRedeemEmailBatchRequest` 的 binding 标签：旧 `oneof` 不接受新范围，旧 `max=4` 拒绝五/六项组合。此前 service/repository 和前端测试未覆盖新范围穿过真实 HTTP JSON binding，因此初次“完整链路”验证结论不充分。
+
+- 新增 `TestRedeemEmailHandlerAcceptsAdvertisedAudiences`，通过 Gin HTTP 请求检查服务公布的每个选项、两种活跃范围组合、五项及六项组合，分别覆盖搜索和建批。
+- RED：两个接口均复现 `Segments[0] ... oneof`，五/六项组合复现 `Segments ... max`。
+- 修复：两处白名单增加 `active_7d` / `active_30d`，上限改为 6，保留必填、空值和非法枚举校验；零余额互斥继续由服务层校验。
+- GREEN：上述测试通过；`TestRedeemEmailHandlerRejectsInvalidAudienceRequests` 验证空范围、非法值与超限请求在服务调用前被拒绝。
+- `go test ./internal/handler/admin -count=1`：整个管理 handler 包通过。
+- `go test ./internal/service ./internal/repository ./migrations -run 'RedeemEmail|RedeemInactiveCoupon|NormalizeRedeemEmail|NewRedeemEmail|HashRedeemEmail|FormatRedeemEmail' -count=1`：三个包通过。
+- `go build ./...`、`go vet ./...`：通过。
+- 本补丁未改前端、SQL 或数据库结构；未重跑前端全量及数据库集成测试，未部署或执行实际群发，无新增迁移。
+
 ## RED → GREEN
 
 - 新分段校验测试先因 `REDEEM_EMAIL_FILTER_INVALID` 失败，修改后通过。

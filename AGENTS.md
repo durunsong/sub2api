@@ -157,7 +157,7 @@ v0.2.17 无新增迁移。退款待确认审计新增已扣款保留及来源重
 
 `248_redeem_email_zero_balance_segment.sql` 只放宽余额券批次 `segments` 检查，允许单独的 `zero_balance`；不修改 `246`，不自动执行迁移。
 
-`253_redeem_email_active_segments.sql` 允许 `active_7d` / `active_30d`，保留零余额互斥与全部历史范围；仅新增迁移，不修改历史 SQL，不自动执行生产迁移。
+`253_redeem_email_active_segments.sql` 允许 `active_7d` / `active_30d`，保留零余额互斥与全部历史范围；仅新增迁移，不修改历史 SQL，不自动执行生产迁移。 搜索与建批请求的 binding 白名单必须同步支持全部范围，多选上限为 6；HTTP 回归须覆盖服务端公布的每个选项及六项组合，不能只测 service/repository。
 
 v0.2.20 新增 `249_mcp_oauth.sql`，仅创建 MCP OAuth 授权与凭据摘要表；MCP 默认关闭，需显式 `mcp.public_url`。新 MCP/OAuth 入口必须挂 Access Ban，普通 IPBanGuard 命中后必须 Abort 以阻止下游操作；邮箱精确黑名单不得替代 Fork 的格式校验与后缀封禁。历史 SQL 不改、不自动执行迁移。
 

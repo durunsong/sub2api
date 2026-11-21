@@ -25,7 +25,7 @@ type redeemEmailBatchService interface {
 	DeleteBatch(ctx context.Context, batchID int64) error
 }
 
-// RedeemEmailHandler 处理「未活跃用户余额券群发」管理接口。
+// RedeemEmailHandler 处理「余额券邮件群发」管理接口。
 type RedeemEmailHandler struct {
 	svc redeemEmailBatchService
 }
@@ -35,7 +35,7 @@ func NewRedeemEmailHandler(svc *service.RedeemEmailService) *RedeemEmailHandler 
 }
 
 type RedeemEmailRecipientSearchRequest struct {
-	Segments []string `json:"segments" binding:"required,min=1,max=4,dive,oneof=inactive_1_2m inactive_2_3m inactive_3m_plus never_used zero_balance"`
+	Segments []string `json:"segments" binding:"required,min=1,max=6,dive,oneof=inactive_1_2m inactive_2_3m inactive_3m_plus never_used active_7d active_30d zero_balance"`
 	Search   string   `json:"search" binding:"max=100"`
 }
 
@@ -53,7 +53,7 @@ type RedeemEmailPreviewRequest struct {
 
 type CreateRedeemEmailBatchRequest struct {
 	RedeemEmailCouponRequest
-	Segments []string `json:"segments" binding:"required,min=1,max=4,dive,oneof=inactive_1_2m inactive_2_3m inactive_3m_plus never_used zero_balance"`
+	Segments []string `json:"segments" binding:"required,min=1,max=6,dive,oneof=inactive_1_2m inactive_2_3m inactive_3m_plus never_used active_7d active_30d zero_balance"`
 	UserIDs  []int64  `json:"user_ids" binding:"required,min=1,max=1000"`
 }
 

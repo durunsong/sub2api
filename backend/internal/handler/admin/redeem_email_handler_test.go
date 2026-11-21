@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
@@ -160,6 +161,67 @@ func TestRedeemEmailHandlerSearchPassesSegments(t *testing.T) {
 	w = doRedeemEmailRequest(r, http.MethodPost, "/email-batches/recipients/search", map[string]any{"segments": []string{"zero_balance", "never_used"}}, nil)
 	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
 	require.Equal(t, []string{"zero_balance", "never_used"}, svc.searchFilter.Segments)
+}
+
+func TestRedeemEmailHandlerAcceptsAdvertisedAudiences(t *testing.T) {
+	// Exercise JSON binding as well as dispatch, so adding a service option cannot
+	// silently leave either HTTP request whitelist or its selection limit behind.
+	cases := make([][]string, 0)
+	combined := make([]string, 0)
+	for _, segment := range service.RedeemEmailSegmentOptions() {
+		cases = append(cases, []string{segment})
+		if segment != service.RedeemEmailSegmentZeroBalance {
+			combined = append(combined, segment)
+		}
+	}
+	cases = append(cases,
+		[]string{"active_7d", "active_30d"},
+		[]string{"inactive_1_2m", "inactive_2_3m", "inactive_3m_plus", "active_7d", "active_30d"},
+		combined,
+	)
+	for _, segments := range cases {
+		t.Run(strings.Join(segments, "+"), func(t *testing.T) {
+			t.Run("search", func(t *testing.T) {
+				svc := &redeemEmailHandlerSvcStub{}
+				r := newRedeemEmailTestRouter(svc)
+				w := doRedeemEmailRequest(r, http.MethodPost, "/email-batches/recipients/search",
+					map[string]any{"segments": segments}, nil)
+				require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+				require.Equal(t, segments, svc.searchFilter.Segments)
+			})
+			t.Run("create", func(t *testing.T) {
+				svc := &redeemEmailHandlerSvcStub{}
+				r := newRedeemEmailTestRouter(svc)
+				body := validRedeemEmailCreateBody()
+				body["segments"] = segments
+				w := doRedeemEmailRequest(r, http.MethodPost, "/email-batches", body,
+					map[string]string{"Idempotency-Key": "active-audience-test"})
+				require.Equal(t, http.StatusAccepted, w.Code, w.Body.String())
+				require.Equal(t, segments, svc.createIn.Filter.Segments)
+			})
+		})
+	}
+}
+
+func TestRedeemEmailHandlerRejectsInvalidAudienceRequests(t *testing.T) {
+	for _, segments := range [][]string{nil, {}, {"bogus"}, {"active_7d", "bogus"},
+		{"active_7d", "active_7d", "active_7d", "active_7d", "active_7d", "active_7d", "active_7d"}} {
+		t.Run(strings.Join(segments, "+"), func(t *testing.T) {
+			svc := &redeemEmailHandlerSvcStub{}
+			r := newRedeemEmailTestRouter(svc)
+			w := doRedeemEmailRequest(r, http.MethodPost, "/email-batches/recipients/search",
+				map[string]any{"segments": segments}, nil)
+			require.Equal(t, http.StatusBadRequest, w.Code, w.Body.String())
+			require.Nil(t, svc.searchFilter.Segments, "invalid requests must not reach the service")
+
+			body := validRedeemEmailCreateBody()
+			body["segments"] = segments
+			w = doRedeemEmailRequest(r, http.MethodPost, "/email-batches", body,
+				map[string]string{"Idempotency-Key": "active-audience-test"})
+			require.Equal(t, http.StatusBadRequest, w.Code, w.Body.String())
+			require.Zero(t, svc.createIn.CreatedBy, "invalid requests must not create batches")
+		})
+	}
 }
 
 func TestRedeemEmailHandlerPreviewPassesLocaleAndCoupon(t *testing.T) {
