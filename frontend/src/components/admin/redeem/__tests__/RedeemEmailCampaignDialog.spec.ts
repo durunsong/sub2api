@@ -270,6 +270,25 @@ describe("RedeemEmailCampaignDialog", () => {
     expect(wrapper.get('[data-test="segment-inactive_1_2m"]').attributes("aria-pressed")).toBe("false");
   });
 
+  it.each(["active_7d", "active_30d"])("searches and submits %s using fallback audience options", async (segment) => {
+    api.defaults.mockResolvedValue({ ...defaults, segment_options: undefined });
+    const wrapper = mountDialog();
+    await goToRecipients(wrapper);
+    const active = wrapper.find(`[data-test="segment-${segment}"]`);
+    expect(active.exists()).toBe(true);
+    expect(active.attributes("aria-pressed")).toBe("false");
+    await wrapper.get('[data-test="segment-zero_balance"]').trigger("click");
+    await active.trigger("click");
+    expect(wrapper.get('[data-test="segment-zero_balance"]').attributes("aria-pressed")).toBe("false");
+    await searchAndContinue(wrapper);
+    expect(api.search).toHaveBeenLastCalledWith({ segments: [segment], search: undefined });
+    await next(wrapper);
+    expect(wrapper.get('[data-test="confirm-segments"]').text()).toBe(`admin.redeemEmail.recipients.segment.${segment}`);
+    await wrapper.get('[data-test="submit-campaign"]').trigger("click");
+    await flushPromises();
+    expect(api.create.mock.calls[0][0]).toMatchObject({ segments: [segment], user_ids: [3, 7] });
+  });
+
   it("sends never_expires instead of days, warns about unsubscribed picks and uses a new key when the payload changes", async () => {
     const wrapper = mountDialog();
     await flushPromises();

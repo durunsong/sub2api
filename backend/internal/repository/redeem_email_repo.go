@@ -28,12 +28,13 @@ const redeemEmailBaseUserSQL = `u.deleted_at IS NULL
 	AND BTRIM(u.email) <> ''
 	AND LOWER(u.email) NOT LIKE '%.invalid'`
 
-// redeemEmailSegmentedUsersSQL 按最后一次 usage_logs 时间把用户归入互斥分段：
-// $1/$2/$3 为 1/2/3 个月前的边界，$4 为选中分段；%s 处拼接额外的用户过滤条件。
-// 'active'（近 1 个月有用量）不在可选分段中，因此永远不会入选。
+// $1/$2/$3 为 1/2/3 个月前的边界，$4 为选中范围，$5/$6 为 7/30 天前。
+// 先匹配选中的活跃范围，再匹配旧未活跃分段；重叠范围始终只返回一行。
 const redeemEmailSegmentedUsersSQL = `SELECT s.id, s.email, s.username, s.last_used_at, s.segment FROM (
 	SELECT r.id, r.email, r.username, r.last_used_at,
 		CASE WHEN r.last_used_at IS NULL THEN 'never_used'
+			WHEN 'active_7d' = ANY($4::text[]) AND r.last_used_at >= $5::timestamptz THEN 'active_7d'
+			WHEN 'active_30d' = ANY($4::text[]) AND r.last_used_at >= $6::timestamptz THEN 'active_30d'
 			WHEN r.last_used_at >= $1::timestamptz THEN 'active'
 			WHEN r.last_used_at >= $2::timestamptz THEN 'inactive_1_2m'
 			WHEN r.last_used_at >= $3::timestamptz THEN 'inactive_2_3m'
@@ -49,10 +50,10 @@ WHERE s.segment = ANY($4::text[])`
 
 var (
 	redeemEmailSearchSQL = strings.Replace(redeemEmailSegmentedUsersSQL, "%s",
-		`($5::text = '' OR u.email ILIKE $5::text ESCAPE '\' OR u.username ILIKE $5::text ESCAPE '\')`, 1) + `
+		`($7::text = '' OR u.email ILIKE $7::text ESCAPE '\' OR u.username ILIKE $7::text ESCAPE '\')`, 1) + `
 ORDER BY s.last_used_at ASC NULLS FIRST, s.id ASC
-LIMIT $6`
-	redeemEmailSelectedUsersSQL = strings.Replace(redeemEmailSegmentedUsersSQL, "%s", `u.id = ANY($5::bigint[])`, 1) + `
+LIMIT $8`
+	redeemEmailSelectedUsersSQL = strings.Replace(redeemEmailSegmentedUsersSQL, "%s", `u.id = ANY($7::bigint[])`, 1) + `
 ORDER BY s.id ASC`
 )
 
@@ -79,7 +80,7 @@ func redeemEmailZeroBalanceOnly(segments []string) bool {
 }
 
 func redeemEmailCutoffArgs(c service.RedeemEmailCutoffs, segments []string) []any {
-	return []any{c.OneMonth, c.TwoMonths, c.ThreeMonths, pq.Array(segments)}
+	return []any{c.OneMonth, c.TwoMonths, c.ThreeMonths, pq.Array(segments), c.SevenDays, c.ThirtyDays}
 }
 
 func scanRedeemEmailRecipients(rows *sql.Rows) ([]service.RedeemEmailRecipient, error) {

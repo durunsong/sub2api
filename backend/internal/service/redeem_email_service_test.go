@@ -41,6 +41,23 @@ func TestNormalizeRedeemEmailSegments(t *testing.T) {
 	require.Contains(t, RedeemEmailSegmentOptions(), RedeemEmailSegmentZeroBalance)
 }
 
+func TestNormalizeRedeemEmailActiveSegments(t *testing.T) {
+	for _, segments := range [][]string{{"active_7d"}, {"active_30d"}, {"active_7d", "active_30d"}} {
+		got, err := NormalizeRedeemEmailSegments(segments)
+		require.NoError(t, err)
+		require.Equal(t, segments, got)
+		for _, segment := range segments {
+			require.Contains(t, RedeemEmailSegmentOptions(), segment)
+			require.NotContains(t, RedeemEmailDefaultSegments(), segment)
+			_, err = NormalizeRedeemEmailSegments([]string{segment, "zero_balance"})
+			require.ErrorIs(t, err, ErrRedeemEmailFilterInvalid)
+		}
+	}
+	got, err := NormalizeRedeemEmailSegments([]string{" active_30d ", "never_used", "active_7d", "active_30d"})
+	require.NoError(t, err)
+	require.Equal(t, []string{"never_used", "active_7d", "active_30d"}, got)
+}
+
 func TestNormalizeRedeemEmailCouponValue(t *testing.T) {
 	for _, v := range []float64{0.01, 5, 0.12345678, 1000000} {
 		got, err := NormalizeRedeemEmailCouponValue(v)

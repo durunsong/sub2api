@@ -61,7 +61,7 @@ func TestRedeemEmailRepoSearchPassesCutoffsAndSegments(t *testing.T) {
 	p := redeemEmailCreateParams()
 	last := p.Now.AddDate(0, -1, -3)
 	mock.ExpectQuery(regexp.QuoteMeta("WHERE s.segment = ANY($4::text[])")).
-		WithArgs(p.Cutoffs.OneMonth, p.Cutoffs.TwoMonths, p.Cutoffs.ThreeMonths, sqlmock.AnyArg(), "%a\\_b%", 1001).
+		WithArgs(p.Cutoffs.OneMonth, p.Cutoffs.TwoMonths, p.Cutoffs.ThreeMonths, sqlmock.AnyArg(), p.Cutoffs.SevenDays, p.Cutoffs.ThirtyDays, "%a\\_b%", 1001).
 		WillReturnRows(sqlmock.NewRows(redeemEmailRecipientColumnNames).
 			AddRow(int64(3), "a@example.com", "a", nil, "never_used").
 			AddRow(int64(7), "b@example.com", "", last, "inactive_1_2m"))
@@ -143,8 +143,8 @@ func TestRedeemEmailRepoCreateBatchRejectsDifferentRequestForSameKey(t *testing.
 
 func expectRedeemEmailRecipientLock(mock sqlmock.Sqlmock, p service.CreateRedeemEmailBatchParams, rows *sqlmock.Rows) {
 	mock.ExpectExec("FOR SHARE OF u").WillReturnResult(sqlmock.NewResult(0, int64(len(p.UserIDs))))
-	mock.ExpectQuery(regexp.QuoteMeta("u.id = ANY($5::bigint[])")).
-		WithArgs(p.Cutoffs.OneMonth, p.Cutoffs.TwoMonths, p.Cutoffs.ThreeMonths, sqlmock.AnyArg(), sqlmock.AnyArg()).
+	mock.ExpectQuery(regexp.QuoteMeta("u.id = ANY($7::bigint[])")).
+		WithArgs(p.Cutoffs.OneMonth, p.Cutoffs.TwoMonths, p.Cutoffs.ThreeMonths, sqlmock.AnyArg(), p.Cutoffs.SevenDays, p.Cutoffs.ThirtyDays, sqlmock.AnyArg()).
 		WillReturnRows(rows)
 }
 
@@ -262,7 +262,7 @@ func TestRedeemEmailRepoSQLKeepsEligibilityAndCastContracts(t *testing.T) {
 		}
 		require.NotContains(t, sqlText, "%s")
 	}
-	require.Contains(t, redeemEmailSearchSQL, "LIMIT $6")
+	require.Contains(t, redeemEmailSearchSQL, "LIMIT $8")
 	require.Contains(t, redeemEmailZeroBalanceSearchSQL, "u.balance = 0")
 	require.Contains(t, redeemEmailZeroBalanceSearchSQL, "u.deleted_at IS NULL")
 	require.Contains(t, redeemEmailZeroBalanceSearchSQL, "LIMIT $2")

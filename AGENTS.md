@@ -66,7 +66,7 @@ Cursor 场景下还会加载 [`.cursor/rules/sub2api-fork.mdc`](.cursor/rules/su
 - **订阅可用额度筛选**：管理端订阅状态下拉默认选择 `active_available`（“生效中+没用完”）；后端按有效期及当前日/周/全期额度过滤任一额度已耗尽的订阅，无限额订阅保留；周期额度不得套用 30 天自动刷新谓词
 - **重置卡提示**：管理端分页/分组订阅列表批量加载 `reset_cards`，展示数量及期限明细；用户端页面顶部汇总永久卡数量，消费后同步更新；不得使用兼容计数代替卡明细。
 - **订阅重置记录**：管理端与用户端订阅页提供按订阅分页记录；合并已有重置卡消费和迁移 `251_subscription_quota_reset_history.sql` 新建的管理员重置明细。管理员单条/批量重置与记录写入同语句原子完成；用户只读本人记录，管理端可查已撤销订阅，API Key 需要 `subscriptions.read`。不包含自动周期刷新，不回填旧管理员操作。
-- **未活跃用户余额券群发**：`/admin/redeem` 向导按 `usage_logs` 最后 API 调用把普通用户分为 1–2 / 2–3 / 3+ 个月未用与从未使用四个互斥分段（多选取并集，默认不选从未使用，单批 ≤1000），另有互斥筛选 `zero_balance`（钱包余额恰好为 0，不限最后使用时间，不含负余额）。事务内为每人生成独立余额码，经 leader 锁 Worker 约 1 封/秒发送；邮件模板是可退订通知事件 `redeem.inactive_coupon`（`/admin/settings` 编辑，独立文件 `init` 注册），已退订收件人记为 `skipped`；迁移 `246` 新增两张表，`248` 放宽批次 `segments` 检查以容纳 `zero_balance`，原生 SQL 仓储、不改上游 Ent schema；`RedeemEmailWorkerRuntime` 须在 `provideCleanup` 中停止。详见 `docs/FORK_VS_UPSTREAM.md` §8.6。
+- **余额券邮件群发**：`/admin/redeem` 向导按 `usage_logs` 最后 API 调用把普通用户分为 1–2 / 2–3 / 3+ 个月未用与从未使用四个互斥分段（多选取并集，默认不选从未使用，单批 ≤1000），支持 `active_7d` / `active_30d`（最后 API 调用在滚动 7×24 / 30×24 小时内，含下界）；多选取并集，同人只入选一次，默认仍只选前三个未活跃段。另有互斥筛选 `zero_balance`（钱包余额恰好为 0，不限最后使用时间，不含负余额）。事务内为每人生成独立余额码，经 leader 锁 Worker 约 1 封/秒发送；邮件模板是可退订通知事件 `redeem.inactive_coupon`（`/admin/settings` 编辑，独立文件 `init` 注册），已退订收件人记为 `skipped`；迁移 `246` 新增两张表，`248` / `253` 放宽批次 `segments` 检查以容纳零余额与近期活跃范围，原生 SQL 仓储、不改上游 Ent schema；`RedeemEmailWorkerRuntime` 须在 `provideCleanup` 中停止。详见 `docs/FORK_VS_UPSTREAM.md` §8.6。
 - **用户端批量兑换**：`/redeem` 文本框可一次粘贴多条兑换码（换行、空格或逗号分隔，去重，保留大小写，单次最多 50）。仍逐条调用既有 `POST /api/v1/redeem`；成功项从输入框移除，单条业务失败继续，遇到限流、网络或 5xx 则停止并把未成功的码留在输入框。无新接口、无迁移。详见 `docs/FORK_VS_UPSTREAM.md` §8.7。
 - **UI**：首页/登录靛蓝紫罗兰主题、`logo.svg`、Select/ConfirmDialog 替换原生控件
 - **导航与订单筛选**：侧栏“文档”显示为“使用教程”，中文“充值/订阅”入口及关联标题/设置文案统一为“购买算力/订阅”；`/orders` 使用全部、待支付、已完成、失败、已退款五个横向状态按钮，切换回首页、重复点击不重复加载，加载期间禁用切换；保留原有状态值、支付与退款逻辑。
@@ -156,6 +156,8 @@ v0.2.18 新增 `246_enable_gemini_image_generation_groups.sql`，按完整文件
 v0.2.17 无新增迁移。退款待确认审计新增已扣款保留及来源重置卡字段；回退旧版本前须结清此类 pending 退款，避免旧程序误解扣减状态。
 
 `248_redeem_email_zero_balance_segment.sql` 只放宽余额券批次 `segments` 检查，允许单独的 `zero_balance`；不修改 `246`，不自动执行迁移。
+
+`253_redeem_email_active_segments.sql` 允许 `active_7d` / `active_30d`，保留零余额互斥与全部历史范围；仅新增迁移，不修改历史 SQL，不自动执行生产迁移。
 
 v0.2.20 新增 `249_mcp_oauth.sql`，仅创建 MCP OAuth 授权与凭据摘要表；MCP 默认关闭，需显式 `mcp.public_url`。新 MCP/OAuth 入口必须挂 Access Ban，普通 IPBanGuard 命中后必须 Abort 以阻止下游操作；邮箱精确黑名单不得替代 Fork 的格式校验与后缀封禁。历史 SQL 不改、不自动执行迁移。
 

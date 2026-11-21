@@ -318,7 +318,7 @@ const EmailPreview = defineComponent({
 })
 
 const stepKeys = ['coupon', 'recipients', 'template', 'confirm'] as const
-const fallbackSegments: RedeemEmailSegment[] = ['inactive_1_2m', 'inactive_2_3m', 'inactive_3m_plus', 'never_used', 'zero_balance']
+const fallbackSegments: RedeemEmailSegment[] = ['inactive_1_2m', 'inactive_2_3m', 'inactive_3m_plus', 'never_used', 'active_7d', 'active_30d', 'zero_balance']
 const previewLocales: RedeemEmailLocale[] = ['zh', 'en']
 const step = ref(0)
 const defaults = ref<RedeemEmailDefaults | null>(null)
@@ -385,7 +385,7 @@ function validateCoupon(): boolean {
 }
 
 function toggleSegment(segment: RedeemEmailSegment) {
-  // 余额为 0 与未活跃分段互斥：选中后只保留这一项，避免和“未用过 API”取并集。
+  // 余额为 0 与其他范围互斥，选中后只保留这一项。
   if (segment === 'zero_balance') {
     if (segments.value.length === 1 && segments.value[0] === 'zero_balance') return
     segments.value = ['zero_balance']

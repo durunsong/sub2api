@@ -24,10 +24,10 @@ const (
 )
 
 var (
-	ErrRedeemEmailFilterInvalid          = infraerrors.BadRequest("REDEEM_EMAIL_FILTER_INVALID", "segments must be a non-empty subset of inactive_1_2m, inactive_2_3m, inactive_3m_plus, never_used, or exactly zero_balance")
+	ErrRedeemEmailFilterInvalid          = infraerrors.BadRequest("REDEEM_EMAIL_FILTER_INVALID", "segments must be a non-empty subset of inactive_1_2m, inactive_2_3m, inactive_3m_plus, never_used, active_7d, active_30d, or exactly zero_balance")
 	ErrRedeemEmailCouponInvalid          = infraerrors.BadRequest("REDEEM_EMAIL_COUPON_INVALID", "coupon value must be positive with at most 8 decimals, and expiry must be 1-3650 days")
 	ErrRedeemEmailRecipientInvalid       = infraerrors.BadRequest("REDEEM_EMAIL_RECIPIENT_INVALID", "recipients are invalid")
-	ErrRedeemEmailRecipientIneligible    = infraerrors.BadRequest("REDEEM_EMAIL_RECIPIENT_INELIGIBLE", "some recipients no longer match the inactive filter")
+	ErrRedeemEmailRecipientIneligible    = infraerrors.BadRequest("REDEEM_EMAIL_RECIPIENT_INELIGIBLE", "some recipients no longer match the selected audience")
 	ErrRedeemEmailRecipientLimitExceeded = infraerrors.BadRequest("REDEEM_EMAIL_RECIPIENT_LIMIT_EXCEEDED", "recipient limit exceeded")
 	ErrRedeemEmailTemplateInvalid        = infraerrors.BadRequest("REDEEM_EMAIL_TEMPLATE_INVALID", "the redeem.inactive_coupon email template saved in settings is invalid")
 	ErrRedeemEmailSMTPNotConfigured      = infraerrors.ServiceUnavailable("REDEEM_EMAIL_SMTP_NOT_CONFIGURED", "SMTP is not configured")
@@ -52,13 +52,15 @@ const (
 	RedeemEmailItemStatusSkipped = "skipped"
 )
 
-// 未活跃分段按最后一次 usage_logs 时间划分为互斥区间；多选取并集。
+// 活跃范围和未活跃分段均按最后一次 usage_logs 时间筛选；多选取并集。
 const (
 	RedeemEmailSegmentInactive1To2Months  = "inactive_1_2m"
 	RedeemEmailSegmentInactive2To3Months  = "inactive_2_3m"
 	RedeemEmailSegmentInactive3MonthsPlus = "inactive_3m_plus"
 	RedeemEmailSegmentNeverUsed           = "never_used"
-	// RedeemEmailSegmentZeroBalance 与未活跃分段互斥：不看最后使用时间，只匹配钱包余额恰好为 0 的用户。
+	RedeemEmailSegmentActive7Days         = "active_7d"
+	RedeemEmailSegmentActive30Days        = "active_30d"
+	// RedeemEmailSegmentZeroBalance 与其他范围互斥：不看最后使用时间，只匹配钱包余额恰好为 0 的用户。
 	RedeemEmailSegmentZeroBalance = "zero_balance"
 )
 
@@ -67,6 +69,8 @@ var redeemEmailSegmentOrder = []string{
 	RedeemEmailSegmentInactive2To3Months,
 	RedeemEmailSegmentInactive3MonthsPlus,
 	RedeemEmailSegmentNeverUsed,
+	RedeemEmailSegmentActive7Days,
+	RedeemEmailSegmentActive30Days,
 }
 
 func RedeemEmailSegmentOptions() []string {
@@ -78,7 +82,7 @@ func RedeemEmailDefaultSegments() []string {
 }
 
 // NormalizeRedeemEmailSegments 去重并按固定顺序排列，保证哈希与存储稳定。
-// zero_balance 不能与未活跃分段取并集，只能单独选择。
+// zero_balance 不能与其他范围取并集，只能单独选择。
 func NormalizeRedeemEmailSegments(segments []string) ([]string, error) {
 	selected := make(map[string]bool, len(segments))
 	for _, s := range segments {
@@ -108,6 +112,8 @@ type RedeemEmailCutoffs struct {
 	OneMonth    time.Time
 	TwoMonths   time.Time
 	ThreeMonths time.Time
+	SevenDays   time.Time
+	ThirtyDays  time.Time
 }
 
 func NewRedeemEmailCutoffs(reference time.Time) RedeemEmailCutoffs {
@@ -116,6 +122,8 @@ func NewRedeemEmailCutoffs(reference time.Time) RedeemEmailCutoffs {
 		OneMonth:    ref.AddDate(0, -1, 0),
 		TwoMonths:   ref.AddDate(0, -2, 0),
 		ThreeMonths: ref.AddDate(0, -3, 0),
+		SevenDays:   ref.Add(-7 * 24 * time.Hour),
+		ThirtyDays:  ref.Add(-30 * 24 * time.Hour),
 	}
 }
 

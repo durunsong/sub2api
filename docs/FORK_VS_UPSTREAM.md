@@ -522,12 +522,14 @@ frontend/src/i18n/locales/en/misc.ts
 - 查询按日/周规则识别已进入新窗口的额度，周期额度不按 30 天恢复可用；在数据库查询阶段过滤，确保分页条目、总数与页数一致；无数据库迁移。
 - 关键文件：`backend/internal/repository/user_subscription_repo.go`、`backend/internal/service/domain_constants.go`、`frontend/src/views/admin/SubscriptionsView.vue`、`frontend/src/api/admin/subscriptions.ts` 与管理端中英文 i18n。
 
-### 8.6 未活跃用户余额券群发（Fork 新增，2026-10-15）
+### 8.6 余额券邮件群发（Fork 新增，2026-10-15；近期活跃扩展 2026-11-21）
 
 参考 Dowsure LLM Router 的「兑换码 + 群发邮件」链路，但改为服务端按收件人自动生成余额券；规格见 `openspec/changes/add-inactive-user-redeem-email-campaigns/`。
 
 - 入口：`/admin/redeem` 新增「群发余额券」向导（券设置 → 选择收件人 → 邮件内容 → 确认发送）与「发送记录」（批次进度轮询、明细、失败原因、重试失败项、删除已结束批次）。
 - 筛选：以 `usage_logs` 最后一次 API 调用时间划分互斥分段 `inactive_1_2m` / `inactive_2_3m` / `inactive_3m_plus` / `never_used`，边界为服务端 UTC `now.AddDate(0, -N, 0)`；向导多选 Tab 取并集，默认选前三段、不选「从未使用」。另有互斥选项 `zero_balance`：不限最后使用时间，只包含 `users.balance` 恰好为 0 的用户（负余额不包含），不能与未活跃分段同时选择。只包含未删除、`status=active`、`role=user`、邮箱有效的用户；单批最多 1000 人。搜索结果标记已退订用户并默认不勾选。
+- 近期活跃：新增 `active_7d` / `active_30d`，以最后 API 调用时间对比 UTC 基准时刻向前 7×24 / 30×24 小时（含下界）。30 天包含 7 天；可与其他时间范围多选取并集，同一用户仅返回一次。近 7 天优先标记 `active_7d`；旧未活跃范围仍按自然月，默认选项不变。`zero_balance` 仍只能单选。搜索与建批复核共享谓词，标题改为通用「群发余额券」，历史记录支持双语新范围标签。详见 `openspec/changes/add-redeem-email-active-audiences/`。
+- 迁移 `253_redeem_email_active_segments.sql` 扩展批次 CHECK 接受近期活跃范围，保留旧记录和零余额互斥；只在隔离测试库验证，不执行生产迁移。
 - 迁移 `248_redeem_email_zero_balance_segment.sql` 放宽 `redeem_email_batches.segments` 检查，允许单独的 `zero_balance`；不修改 `246`。未执行迁移。
 - 模板：注册为通知邮件事件 `redeem.inactive_coupon`（`category=marketing`、`Optional=true`，占位符 `coupon_value` / `redeem_code` / `expires_at` / `unsubscribe_url` + 通用变量），在 `/admin/settings` → 邮件 → 邮件模板中按 zh/en 编辑和恢复官方模板；批次不再保存模板，发送时按收件人语言取当前保存的版本。事件定义在独立文件 `internal/service/redeem_email_notification.go` 中由 `init` 追加，上游 `notification_email_service.go` 只在 `sampleVariables` 中加了一行 `notificationEmailForkSampleVariables` 钩子。设置页支持 `?tab=email&email_event=<event>` 深链（向导的「去设置中编辑模板」使用）。
 - 发券：建批事务内锁定用户并按同一分段谓词复核，为每位收件人生成独立 `balance` 码（`NUMERIC(20,8)`，最多 8 位小数，备注 `redeem_email_batch:<批次ID>`），有效期 1–3650 天或长期有效（默认 30 天）。`Idempotency-Key` + 请求哈希（分段、收件人、面值、有效期）按创建人隔离：同 key 同请求回放原批次，不同请求返回 409。
