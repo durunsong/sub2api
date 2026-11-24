@@ -2,10 +2,10 @@
 
 > **上游官方仓库**：[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api)
 > **本 Fork 远程**：`origin` → `durunsong/sub2api`（中转/部署用）
-> **对比基准**：官方 tag **`v0.2.24`**（同步于 2026-11-20；官方无 v0.1.174 tag）
-> **本 Fork 当前版本**：`backend/cmd/server/VERSION` = **0.2.24**
-> **最新同步统计**：`v0.2.23..v0.2.24` 共 110 个提交、190 个路径；目标 `5c2982a81b46e2142d0143d2f83c1ce9c4da1d24`。重复字段/白名单安全修复、Exa 搜索、Claude 压缩缓存与窗口费用、多协议/调度/OAuth 修复。
-> **当前工作区**：已合入官方 v0.2.24，并保留 Kiro / XorPay / Access Ban / 提示词审计 / 订阅重置卡 / Ops / UI 品牌等全部定制，含登录失败自动封禁及重置卡提示
+> **对比基准**：官方 tag **`v0.2.25`**（同步于 2026-11-24；官方无 v0.1.174 tag）
+> **本 Fork 当前版本**：`backend/cmd/server/VERSION` = **0.2.25**
+> **最新同步统计**：`v0.2.24..v0.2.25` 共 15 个提交、91 个路径；目标 `348997267d756eab5729bb6b78a275a15d18796a`。请求头身份变量及错误详情、上游分组名称/备注手动与默认关闭的自动同步、billing include=group、OpenAI 透传错误规则/结构化 400 与 compact 过载重试修复。
+> **当前工作区**：已合入官方 v0.2.25，并保留 Kiro / XorPay / Access Ban / 提示词审计 / 订阅重置卡 / Ops / UI 品牌等全部定制，含登录失败自动封禁及重置卡提示
 > **维护**：新增 Fork 定制后，请同步更新本文与根目录 `AGENTS.md` 摘要。
 
 v0.2.21 整合时另补齐目标版本的缓存 TTL 传递缺口：WS v2 逐轮/累计结果与 Messages/Chat typed usage 共同保留 30m/12h 分档，沿用上游严格校验和无明细通用价回退，不新增计价规则；Kiro credits 独立保留。实际 handler/WS adapter 到扣费、账号统计均有回归，详见 [v0.2.21 验证记录](../openspec/changes/sync-upstream-v0-2-21/verification.md)。
@@ -22,7 +22,7 @@ v0.2.21 整合时另补齐目标版本的缓存 TTL 传递缺口：WS v2 逐轮/
 | **`AGENTS.md`**（项目根）              | AI 协作**强制摘要**与禁区，改代码前必读                       |
 | **`FORK_CUSTOMIZATIONS.md`**（项目根） | 历史清单，已收敛到本文；保留作快捷索引                        |
 
-**注意**：本 Fork 已同步官方至 **v0.2.24**，但 **`upstream/main` 仍可能领先**。与官方同步时以目标 release **tag** 为准，不带入 tag 后的 `main` 内容；merge `main` 前务必先读本文 Fork 定制章节，禁止 blindly 采用上游覆盖 Kiro / XorPay / Access Ban 等模块。
+**注意**：本 Fork 已同步官方至 **v0.2.25**，但 **`upstream/main` 仍可能领先**。与官方同步时以目标 release **tag** 为准，不带入 tag 后的 `main` 内容；merge `main` 前务必先读本文 Fork 定制章节，禁止 blindly 采用上游覆盖 Kiro / XorPay / Access Ban 等模块。
 
 ---
 
@@ -117,6 +117,15 @@ v0.2.21 整合时另补齐目标版本的缓存 TTL 传递缺口：WS v2 逐轮/
 v0.1.160 同步时额外补齐 `securityaudit.ProviderSet` 中 `*PromptService` 到 `PromptAdminService` 的 Wire 接口绑定，确保当前 Fork 可重新生成 `wire_gen.go`；其余提示词审计实现保持官方版本。
 
 ---
+
+## v0.2.25 同步边界（2026-11-24）
+
+- 请求头身份变量及错误详情、上游分组名称/备注手动与默认关闭的自动同步、billing include=group、OpenAI 透传错误规则/结构化 400 与 compact 过载重试修复。
+- 36 个上游改动路径存在 Fork 差异，按 v0.2.24 三方整合；保留身份认证、访问封禁、Kiro credits/粘性、全期额度、重置卡与历史、XorPay、邮件券近期活跃范围、批量兑换及生图 NoContentPersistence。
+- 身份变量只用于已认证 API Key 请求；共享模型列表与后台请求不上报用户身份，WS 按连接身份隔离，错误详情中的模板固定文本脱敏。Kiro 专属模型抓取同步适配新请求头方法签名。
+- Kiro 保持排除通用倍率探测，创建/编辑/列表均不展示分组同步入口，创建 payload 不发送探测/自动同步开关；避免向上游添加不支持的调用或导致创建失败。
+- 无新增或修改迁移；已有 gorilla/websocket 跟随目标标签更新到 `v1.5.4-0.20240701034025-d67f41855da4`。官方 VERSION 仍为 0.2.24，Fork 标为 0.2.25。未执行部署、生产迁移或真实外部业务请求。
+- 规划、回归和审查见 [同步记录](../openspec/changes/sync-upstream-v0-2-25/verification.md)。
 
 ## v0.2.24 同步边界（2026-11-20）
 
@@ -1044,4 +1053,4 @@ deploy/docker-compose.yml
 
 ---
 
-_最后更新：2026-11-20 · 基准：官方 v0.2.24 · 增量清单见 `FORK_CUSTOMIZATIONS.md` · 工作区：`git status --short`_
+_最后更新：2026-11-24 · 基准：官方 v0.2.25 · 增量清单见 `FORK_CUSTOMIZATIONS.md` · 工作区：`git status --short`_

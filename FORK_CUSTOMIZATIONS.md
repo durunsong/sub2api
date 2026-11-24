@@ -1,8 +1,14 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.2.24**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.24**，并保留本 Fork
+当前整合版本为 **v0.2.25**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.25**，并保留本 Fork
 的全部定制能力。
+
+## v0.2.25 同步（2026-11-24）
+
+请求头身份变量及错误详情、上游分组名称/备注手动与默认关闭的自动同步、billing include=group、OpenAI 透传错误规则/结构化 400 与 compact 过载重试修复。三方整合 15 commits / 91 路径，目标 `348997267d756eab5729bb6b78a275a15d18796a`；官方 VERSION 仍为 0.2.24，Fork 按发布标签为 0.2.25。仅升级既有 gorilla/websocket 安全版本，无新增迁移，历史 SQL 保持不变。
+
+保留 Kiro、XorPay、Access Ban、全期订阅额度/永久卡/重置历史、邮件券近期活跃受众、批量兑换、品牌及生图工作台。Kiro 不展示通用分组同步入口、不发送通用探测开关；模型同步不携带入站用户身份。验证见 [同步记录](openspec/changes/sync-upstream-v0-2-25/verification.md)。
 
 ## v0.2.24 同步（2026-11-20）
 

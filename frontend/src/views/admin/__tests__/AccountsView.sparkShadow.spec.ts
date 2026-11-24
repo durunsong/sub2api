@@ -307,6 +307,17 @@ describe('admin AccountsView — 账号行展示', () => {
     wrapper.unmount()
   })
 
+  it('keeps upstream group sync unavailable for Kiro accounts', async () => {
+    listAccounts.mockResolvedValue({
+      items: [{ id: 101, name: 'kiro-relay', platform: 'kiro', type: 'apikey', credentials: {} }],
+      total: 1, page: 1, page_size: 20, pages: 1
+    })
+    const wrapper = mountViewWithRow()
+    await flushPromises()
+    expect(wrapper.find('[aria-label="admin.accounts.upstreamBilling.saveGroup"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
   it('仅将具有安全 base_url 的 API Key 账号名称链接到站点主页', async () => {
     listAccounts.mockResolvedValue({
       items: [
@@ -341,7 +352,7 @@ describe('admin AccountsView — 账号行展示', () => {
     const tooltip = wrapper.findComponent(HelpTooltip)
     expect(tooltip.props('content')).toBe('https://relay.example.com')
     expect(tooltip.props('widthClass')).toBe('w-max max-w-sm break-all')
-    expect(tooltip.classes()).toEqual(expect.arrayContaining(['self-start']))
+    expect(tooltip.element.parentElement?.classList.contains('items-center')).toBe(true)
     expect(wrapper.text()).toContain('oauth-account')
     expect(wrapper.text()).toContain('invalid-url')
 
