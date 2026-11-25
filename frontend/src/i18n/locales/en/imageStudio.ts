@@ -45,6 +45,8 @@ export default {
     "nav": "Image studio",
     "localNotice": "History, images and assets stay in this browser. Export a backup regularly.",
     "layout": "Workbench layout",
+    "enterFullscreen": "Fullscreen workspace",
+    "exitFullscreen": "Exit fullscreen",
     "side": "Side",
     "bottom": "Bottom",
     "workflows": "Workflows",

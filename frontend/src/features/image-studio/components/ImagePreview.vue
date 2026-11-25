@@ -191,51 +191,67 @@ onBeforeUnmount(() => {
         </div>
         <button type="button" class="preview-control ml-auto gap-2 px-3" :disabled="!current" @click="current && emit('download', current)"><Icon name="download" size="sm" /><span>{{ t('imageStudio.download') }}</span></button>
       </div>
-      <div class="preview-zoom">
-        <button v-tooltip type="button" class="preview-control" :disabled="!ready || zoom <= Math.min(0.1, fitScale)" :aria-label="t('imageStudio.zoomOut')" @click="zoomTo(zoom / 1.25)"><span aria-hidden="true" class="text-lg">−</span></button>
-        <input class="hidden min-w-16 flex-1 accent-primary-600 sm:block" type="range" :aria-label="t('imageStudio.zoom')" :min="Math.min(0.1, fitScale)" max="8" step="0.01" :value="zoom" :disabled="!ready" @input="zoomTo(Number(($event.target as HTMLInputElement).value))" />
-        <output class="w-12 text-center text-xs tabular-nums">{{ Math.round(zoom * 100) }}%</output>
-        <button v-tooltip type="button" class="preview-control" :disabled="!ready || zoom >= 8" :aria-label="t('imageStudio.zoomIn')" @click="zoomTo(zoom * 1.25)"><Icon name="plus" size="sm" /></button>
-        <button type="button" class="preview-control ml-auto px-3" :disabled="!ready" @click="fit">{{ t('imageStudio.fitImage') }}</button>
-        <button type="button" class="preview-control px-3" :disabled="!ready" @click="zoomTo(1)">{{ t('imageStudio.actualSize') }}</button>
+      <div class="preview-viewer">
+        <div class="preview-zoom">
+          <button v-tooltip type="button" class="preview-control" :disabled="!ready || zoom <= Math.min(0.1, fitScale)" :aria-label="t('imageStudio.zoomOut')" @click="zoomTo(zoom / 1.25)"><span aria-hidden="true" class="text-lg">−</span></button>
+          <input class="hidden min-w-16 flex-1 accent-primary-600 sm:block" type="range" :aria-label="t('imageStudio.zoom')" :min="Math.min(0.1, fitScale)" max="8" step="0.01" :value="zoom" :disabled="!ready" @input="zoomTo(Number(($event.target as HTMLInputElement).value))" />
+          <output class="w-12 text-center text-xs tabular-nums">{{ Math.round(zoom * 100) }}%</output>
+          <button v-tooltip type="button" class="preview-control" :disabled="!ready || zoom >= 8" :aria-label="t('imageStudio.zoomIn')" @click="zoomTo(zoom * 1.25)"><Icon name="plus" size="sm" /></button>
+          <button type="button" class="preview-control ml-auto px-3" :disabled="!ready" @click="fit">{{ t('imageStudio.fitImage') }}</button>
+          <button type="button" class="preview-control px-3" :disabled="!ready" @click="zoomTo(1)">{{ t('imageStudio.actualSize') }}</button>
+        </div>
+        <div ref="stage" data-preview-stage class="preview-stage" :class="{ 'is-zoomed': ready && zoom > fitScale + 0.001 }" tabindex="0" role="group" :aria-label="t('imageStudio.previewCanvas')" :aria-busy="loading" :data-zoom="zoom" :data-pan-x="pan.x" :data-pan-y="pan.y"
+          @wheel.prevent="wheel" @dblclick="zoom > fitScale + 0.001 ? fit() : zoomTo(1)" @pointerdown="pointerDown" @pointermove="pointerMove" @pointerup="pointerEnd" @pointercancel="pointerEnd" @lostpointercapture="pointerEnd">
+          <BlobImage v-if="current" :key="`${index}:${retryKey}`" :blob="current" :alt="caption || t('imageStudio.previewImage')" eager class="preview-image" :style="imageStyle" @load="loaded" @error="loadFailed" />
+          <p v-if="loading" role="status" class="preview-message">{{ t('imageStudio.loadingImage') }}</p>
+          <div v-else-if="failed" class="preview-message" role="alert"><p>{{ t('imageStudio.previewFailed') }}</p><button type="button" class="btn btn-secondary mt-3" @click="retry">{{ t('imageStudio.retryPreview') }}</button></div>
+        </div>
       </div>
-      <div ref="stage" data-preview-stage class="preview-stage" :class="{ 'is-zoomed': ready && zoom > fitScale + 0.001 }" tabindex="0" role="group" :aria-label="t('imageStudio.previewCanvas')" :aria-busy="loading" :data-zoom="zoom" :data-pan-x="pan.x" :data-pan-y="pan.y"
-        @wheel.prevent="wheel" @dblclick="zoom > fitScale + 0.001 ? fit() : zoomTo(1)" @pointerdown="pointerDown" @pointermove="pointerMove" @pointerup="pointerEnd" @pointercancel="pointerEnd" @lostpointercapture="pointerEnd">
-        <BlobImage v-if="current" :key="`${index}:${retryKey}`" :blob="current" :alt="caption || t('imageStudio.previewImage')" eager class="preview-image" :style="imageStyle" @load="loaded" @error="loadFailed" />
-        <p v-if="loading" role="status" class="preview-message">{{ t('imageStudio.loadingImage') }}</p>
-        <div v-else-if="failed" class="preview-message" role="alert"><p>{{ t('imageStudio.previewFailed') }}</p><button type="button" class="btn btn-secondary mt-3" @click="retry">{{ t('imageStudio.retryPreview') }}</button></div>
-      </div>
-      <div class="preview-info"><span class="tabular-nums">{{ ready ? `${natural.width} × ${natural.height} · ` : '' }}{{ format }} · {{ fileSize }}</span><span class="hidden md:inline">{{ t('imageStudio.previewKeyboardHint') }}</span><span class="md:hidden">{{ t('imageStudio.previewTouchHint') }}</span></div>
-      <div v-if="images.length > 1" class="preview-thumbnails" :aria-label="t('imageStudio.previewGallery')">
-        <button v-tooltip v-for="(blob, itemIndex) in images" :key="itemIndex" type="button" :aria-label="t('imageStudio.previewNumber', { number: itemIndex + 1 })" :aria-pressed="index === itemIndex" class="preview-thumbnail" :class="{ active: index === itemIndex }" @click="select(itemIndex)"><BlobImage :blob="blob" :alt="''" class="h-full w-full object-contain" /></button>
-      </div>
-      <details v-if="caption" class="preview-caption"><summary>{{ t('imageStudio.imageDescription') }}</summary><p>{{ caption }}</p></details>
+      <aside class="preview-sidebar" :aria-label="t('imageStudio.imageDescription')">
+        <div class="preview-info"><span class="tabular-nums">{{ ready ? `${natural.width} × ${natural.height} · ` : '' }}{{ format }} · {{ fileSize }}</span></div>
+        <div v-if="images.length > 1" class="preview-thumbnails" :aria-label="t('imageStudio.previewGallery')">
+          <button v-tooltip v-for="(blob, itemIndex) in images" :key="itemIndex" type="button" :aria-label="t('imageStudio.previewNumber', { number: itemIndex + 1 })" :aria-pressed="index === itemIndex" class="preview-thumbnail" :class="{ active: index === itemIndex }" @click="select(itemIndex)"><BlobImage :blob="blob" :alt="''" class="h-full w-full object-contain" /></button>
+        </div>
+        <details v-if="caption" open class="preview-caption"><summary>{{ t('imageStudio.imageDescription') }}</summary><p>{{ caption }}</p></details>
+        <p class="preview-hint"><span class="hidden md:inline">{{ t('imageStudio.previewKeyboardHint') }}</span><span class="md:hidden">{{ t('imageStudio.previewTouchHint') }}</span></p>
+      </aside>
     </div>
   </BaseDialog>
 </template>
 
 <style scoped>
-.image-preview { display: flex; flex-direction: column; gap: 8px; height: min(72dvh, 800px); min-height: 220px; }
+.image-preview { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(180px, 1fr) auto; gap: 12px; height: min(76dvh, 880px); min-height: 280px; }
+.preview-viewer { display: flex; flex-direction: column; min-width: 0; min-height: 0; gap: 8px; }
+.preview-sidebar { @apply flex min-h-0 min-w-0 flex-col gap-4 overflow-y-auto; max-height: 24dvh; }
 .preview-toolbar, .preview-zoom { @apply flex shrink-0 items-center gap-1 text-gray-700 dark:text-dark-100; }
+.preview-zoom { flex-wrap: wrap; }
 .preview-control { @apply inline-flex shrink-0 items-center justify-center rounded-lg text-xs hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-500 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-dark-700; min-height: 44px; min-width: 44px; }
 .preview-stage { @apply relative min-h-20 flex-1 overflow-hidden rounded-lg border border-gray-200 bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-500 dark:border-dark-700 dark:bg-dark-950; touch-action: none; overscroll-behavior: contain; }
 .preview-stage.is-zoomed { cursor: grab; }
 .preview-stage.is-zoomed:active { cursor: grabbing; }
 .preview-image { position: absolute; top: 50%; left: 50%; max-width: none; max-height: none; transform-origin: center; user-select: none; pointer-events: none; }
 .preview-message { @apply absolute inset-0 flex flex-col items-center justify-center p-5 text-center text-sm leading-6 text-gray-600 dark:text-dark-300; }
-.preview-info { @apply flex shrink-0 flex-wrap justify-between gap-x-3 gap-y-1 text-[11px] leading-5 text-gray-500 dark:text-dark-300; }
+.preview-info { @apply shrink-0 text-xs leading-5 text-gray-600 dark:text-dark-300; }
+.preview-hint { @apply mt-auto text-xs leading-6 text-gray-500 dark:text-dark-300; }
 .preview-thumbnails { @apply flex shrink-0 gap-2 overflow-x-auto p-1; }
 .preview-thumbnail { @apply h-12 w-12 shrink-0 overflow-hidden rounded-md border-2 border-transparent bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-500 dark:bg-dark-950; }
 .preview-thumbnail.active { @apply border-primary-500; }
 .preview-caption { @apply shrink-0 text-xs leading-5 text-gray-600 dark:text-dark-300; }
 .preview-caption summary { @apply cursor-pointer rounded py-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-500; }
-.preview-caption p { @apply mt-2 max-h-24 overflow-auto whitespace-pre-wrap break-words; }
+.preview-caption p { @apply mt-2 whitespace-pre-wrap break-words; overflow-wrap: anywhere; }
+@media (min-width: 768px) {
+  .image-preview { grid-template-columns: minmax(0, 1fr) 288px; grid-template-rows: auto minmax(0, 1fr); column-gap: 24px; }
+  .preview-viewer { grid-column: 1; grid-row: 1 / -1; }
+  .preview-toolbar { grid-column: 2; grid-row: 1; }
+  .preview-sidebar { grid-column: 2; grid-row: 2; max-height: none; }
+  .preview-thumbnails { flex-wrap: wrap; overflow-x: visible; }
+  .preview-thumbnail { width: 60px; height: 60px; }
+}
 @media (max-height: 500px) {
+  .image-preview { height: calc(100dvh - 130px); min-height: 180px; }
   .preview-thumbnails { display: none; }
 }
 @media (min-width: 768px) and (max-height: 500px) {
-  .image-preview { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); grid-template-rows: 44px minmax(80px, 1fr) auto; height: calc(100dvh - 130px); min-height: 180px; column-gap: 16px; }
   .preview-zoom input { display: none; }
-  .preview-stage, .preview-info, .preview-caption { grid-column: 1 / -1; }
 }
 </style>

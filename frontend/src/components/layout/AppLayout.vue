@@ -4,15 +4,17 @@
     <div class="pointer-events-none fixed inset-0 bg-mesh-gradient"></div>
 
     <!-- Sidebar -->
-    <AppSidebar />
+    <div v-show="!fullscreen">
+      <AppSidebar />
+    </div>
 
     <!-- Main Content Area -->
     <div
       class="relative min-h-screen transition-all duration-300"
-      :class="[sidebarCollapsed ? 'lg:ml-[72px]' : 'lg:ml-64']"
+      :class="fullscreen ? '' : sidebarCollapsed ? 'lg:ml-[72px]' : 'lg:ml-64'"
     >
       <!-- Header -->
-      <AppHeader />
+      <AppHeader v-show="!fullscreen" />
 
       <!-- Main Content -->
       <main class="p-4 md:p-6 lg:p-8">
@@ -31,6 +33,8 @@ import { useOnboardingTour } from '@/composables/useOnboardingTour'
 import { useOnboardingStore } from '@/stores/onboarding'
 import AppSidebar from './AppSidebar.vue'
 import AppHeader from './AppHeader.vue'
+
+withDefaults(defineProps<{ fullscreen?: boolean }>(), { fullscreen: false })
 
 const appStore = useAppStore()
 const authStore = useAuthStore()

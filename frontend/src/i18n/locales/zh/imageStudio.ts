@@ -45,6 +45,8 @@ export default {
     "nav": "生图工作台",
     "localNotice": "历史、图片和素材仅保存在当前浏览器。请定期导出备份。",
     "layout": "工作台布局",
+    "enterFullscreen": "全屏工作区",
+    "exitFullscreen": "退出全屏",
     "side": "侧边",
     "bottom": "底部",
     "workflows": "创作工作流",

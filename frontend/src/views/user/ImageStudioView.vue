@@ -25,6 +25,7 @@ const { t, te, locale } = useI18n()
 const studio = reactive(useImageStudio())
 const auth = useAuthStore()
 const app = useAppStore()
+const fullscreen = ref(false)
 const uploadInput = ref<HTMLInputElement>()
 const importInput = ref<HTMLInputElement>()
 const assetUploadInput = ref<HTMLInputElement>()
@@ -76,6 +77,11 @@ const submitVisible = ref(true)
 const keyboardClipsSubmit = ref(false)
 const keyboardInset = ref(0)
 const modalOpen = computed(() => Boolean(batchDownloadOpen.value || libraryOpen.value || assetsOpen.value || assignmentOpen.value || categoryDialog.value || preview.value || maskImage.value || confirmation.value || detail.value))
+function exitFullscreen(event: KeyboardEvent) {
+  if (event.key === 'Escape' && !event.isComposing && !modalOpen.value) fullscreen.value = false
+}
+onMounted(() => document.addEventListener('keydown', exitFullscreen, true))
+onBeforeUnmount(() => document.removeEventListener('keydown', exitFullscreen, true))
 const showGenerationDock = computed(() => (!submitVisible.value || keyboardClipsSubmit.value) && !modalOpen.value && !app.mobileOpen)
 const generateLabel = computed(() => studio.activeCount ? t('imageStudio.continueGenerate', { count: studio.activeCount }) : t('imageStudio.generate'))
 let submitObserver: IntersectionObserver | undefined
@@ -350,11 +356,12 @@ function previewHistory(item: ImageHistory) {
 </script>
 
 <template>
-  <AppLayout>
-    <div class="image-studio pb-28 text-gray-900 dark:text-gray-100">
+  <AppLayout :fullscreen="fullscreen">
+    <div class="image-studio pb-28 text-gray-900 dark:text-gray-100" :class="{ 'is-fullscreen': fullscreen }">
       <header class="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div><h1 class="text-2xl font-semibold tracking-tight">{{ t('imageStudio.title') }}</h1><p class="mt-1 text-xs text-gray-500 dark:text-dark-300">{{ t('imageStudio.localNotice') }}</p></div>
         <div class="flex flex-wrap items-center gap-2">
+          <button v-tooltip type="button" class="fullscreen-toggle" :class="{ active: fullscreen }" :aria-label="t(fullscreen ? 'imageStudio.exitFullscreen' : 'imageStudio.enterFullscreen')" :aria-pressed="fullscreen" @click="fullscreen = !fullscreen"><Icon :name="fullscreen ? 'minimize' : 'maximize'" size="md" /></button>
           <button class="btn btn-secondary btn-sm" @click="libraryOpen = true"><Icon name="book" size="sm" />{{ t('imageStudio.workflows') }}</button>
           <button class="btn btn-secondary btn-sm" @click="studio.exportBackup()"><Icon name="download" size="sm" />{{ t('imageStudio.exportBackup') }}</button>
           <button class="btn btn-secondary btn-sm" @click="importInput?.click()"><Icon name="upload" size="sm" />{{ t('imageStudio.importBackup') }}</button>
@@ -471,7 +478,7 @@ function previewHistory(item: ImageHistory) {
         </section>
       </div>
     </div>
-    <div v-if="showGenerationDock" ref="generationDock" data-generation-dock class="generation-dock" :class="{ 'sidebar-collapsed': app.sidebarCollapsed }" :style="{ bottom: `${keyboardInset}px` }" role="region" :aria-label="t('imageStudio.generateActions')">
+    <div v-if="showGenerationDock" ref="generationDock" data-generation-dock class="generation-dock" :class="{ 'sidebar-collapsed': app.sidebarCollapsed, 'is-fullscreen': fullscreen }" :style="{ bottom: `${keyboardInset}px` }" role="region" :aria-label="t('imageStudio.generateActions')">
       <div class="generation-dock-inner">
         <button v-tooltip type="button" class="dock-parameters" :aria-label="t('imageStudio.editParameters')" @click="editParameters">
           <span class="truncate text-sm font-semibold">{{ studio.selectedModel?.label || studio.selectedModel?.model || t('imageStudio.selectModel') }}</span>
@@ -506,6 +513,8 @@ function previewHistory(item: ImageHistory) {
 </template>
 
 <style scoped>
+.fullscreen-toggle { @apply inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-primary-700 transition-colors hover:text-primary-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 dark:text-primary-400 dark:hover:text-primary-200; }
+.fullscreen-toggle.active { @apply text-violet-600 hover:text-violet-800 dark:text-violet-400 dark:hover:text-violet-200; }
 .composer-settings { container-type: inline-size; }
 .parameter-grid > div { min-width: 0; }
 .parameter-grid > div:only-child { grid-column: 1 / -1; }
@@ -550,9 +559,12 @@ function previewHistory(item: ImageHistory) {
 @media (min-width: 1024px) {
   .generation-dock { left: 256px; }
   .generation-dock.sidebar-collapsed { left: 72px; }
+  .generation-dock.is-fullscreen { left: 0; }
   .layout-side { grid-template-columns: 340px minmax(0, 1fr); align-items: start; }
   .layout-side .studio-composer { max-height: calc(100dvh - 170px); overflow-y: auto; position: sticky; top: 90px; }
   .layout-side .studio-results { min-height: calc(100dvh - 170px); }
+  .is-fullscreen .layout-side .studio-composer { top: 24px; max-height: calc(100dvh - 48px); }
+  .is-fullscreen .layout-side .studio-results { min-height: calc(100dvh - 106px); }
   .layout-bottom .result-grid { @apply grid-cols-3 2xl:grid-cols-4; }
   .layout-bottom .studio-composer { @apply sticky bottom-3 z-20 shadow-lg; display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 160px; gap: 20px; align-items: end; }
   .layout-bottom .composer-main { display: grid; grid-template-columns: minmax(0, 1fr); }

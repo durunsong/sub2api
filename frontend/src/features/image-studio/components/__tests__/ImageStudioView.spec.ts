@@ -44,6 +44,28 @@ function render() {
 }
 
 describe('ImageStudioView', () => {
+  it('toggles workspace fullscreen without losing the draft and lets dialogs handle Escape first', async () => {
+    const wrapper = render()
+    const prompt = wrapper.get('#studio-prompt')
+    await prompt.setValue('Keep this draft')
+    await wrapper.get('[aria-label="imageStudio.enterFullscreen"]').trigger('click')
+    expect(wrapper.get('[aria-label="imageStudio.exitFullscreen"]').attributes('aria-pressed')).toBe('true')
+    expect(wrapper.get('#studio-prompt').element).toBe(prompt.element)
+    expect((prompt.element as HTMLTextAreaElement).value).toBe('Keep this draft')
+    await wrapper.findAll('button').find(button => button.text() === 'imageStudio.workflows')!.trigger('click')
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    await nextTick()
+    expect(wrapper.find('[aria-label="imageStudio.exitFullscreen"]').exists()).toBe(true)
+    wrapper.getComponent({ name: 'WorkflowLibrary' }).vm.$emit('close')
+    await nextTick()
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    await nextTick()
+    expect(wrapper.get('[aria-label="imageStudio.enterFullscreen"]').attributes('aria-pressed')).toBe('false')
+    await wrapper.get('[aria-label="imageStudio.enterFullscreen"]').trigger('click')
+    await wrapper.get('[aria-label="imageStudio.exitFullscreen"]').trigger('click')
+    expect(wrapper.find('[aria-label="imageStudio.enterFullscreen"]').exists()).toBe(true)
+  })
+
   it('requires confirmation for another generation from either entry and submits once', async () => {
     fixture.state.activeCount = 1
     fixture.state.canGenerate = true
