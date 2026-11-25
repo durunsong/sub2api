@@ -61,6 +61,7 @@ Cursor 场景下还会加载 [`.cursor/rules/sub2api-fork.mdc`](.cursor/rules/su
 - **VersionBadge**：隐藏「立即更新」，保留版本提示与 changelog 链接
 - **支付 UX**：用户端隐藏倍率；二维码 payAmount / creditedAmount 分离
 - **购买页智普筛选**：OpenAI 协议下名称、分组名或描述含 `GLM` 的套餐显示为 `智普-GLM Plan MAX`，普通 OpenAI 分类必须排除这些套餐
+- **购买页套餐标签**：普通 OpenAI 与 Gemini 的筛选 tab、套餐卡片及购买确认徽章统一显示 `OpenAI(GPT Pro 50x)`、`Gemini Ultra`；保留 GLM 特例和内部平台值，仅调整展示文案。
 - **订阅重置卡**：迁移 `224`/`225` 保存永久期限明细并按 `group.default_validity_days` 回填旧计数；有效固定期限支付/兑换/管理员分配重复获得改发 `validity_days` 快照卡且不改到期时间，过期则直接重开；消费放弃余期、清零日周月 USD/token 并从点击时重开；旧 `reset-daily` 映射 1 天卡，`manual_reset_credits` 仅保留兼容镜像
 - **订阅周期额度**：兼容字段 `monthly_*` 表示当前订阅全期额度，结束时间统一为 `expires_at`；90 天卡使用一小时后显示 89 天 23 小时，第 30/60 天不补额。管理员重置只清额度不延期，延期只改到期时间不伪造额度起点；旧 `align_monthly_reset` / `shift_monthly_reset` 参数兼容接收但不再改锚点。日/周订阅规则和钱包平台月额度不变；不恢复旧版本已清零的历史用量。
 - **订阅可用额度筛选**：管理端订阅状态下拉默认选择 `active_available`（“生效中+没用完”）；后端按有效期及当前日/周/全期额度过滤任一额度已耗尽的订阅，无限额订阅保留；周期额度不得套用 30 天自动刷新谓词

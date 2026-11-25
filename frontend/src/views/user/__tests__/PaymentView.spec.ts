@@ -324,11 +324,11 @@ describe('PaymentView subscription filters', () => {
 
     expect(wrapper.text()).toContain('智普-GLM Plan MAX')
     expect(filterLabels.indexOf('智普-GLM Plan MAX')).toBeLessThan(filterLabels.indexOf('Claude Max'))
-    expect(filterLabels.indexOf('Claude Max')).toBeLessThan(filterLabels.indexOf('OpenAI(GPT Pro 20x)'))
+    expect(filterLabels.indexOf('Claude Max')).toBeLessThan(filterLabels.indexOf('OpenAI(GPT Pro 50x)'))
     expect(filterLabels.filter(label => label === 'Claude Max')).toHaveLength(1)
     expect(wrapper.text()).toContain('Claude Max')
     expect(wrapper.text()).not.toContain('Claude(GLM coding Max)')
-    expect(wrapper.text()).toContain('OpenAI(GPT Pro 20x)')
+    expect(wrapper.text()).toContain('OpenAI(GPT Pro 50x)')
     expect(wrapper.text()).toContain('天卡')
     expect(wrapper.text()).toContain('周卡')
     expect(wrapper.text()).toContain('1月卡')
@@ -347,7 +347,7 @@ describe('PaymentView subscription filters', () => {
     expect(wrapper.text()).not.toContain('OpenAI Week')
     expect(wrapper.text()).not.toContain('Claude Day')
 
-    await wrapper.findAll('button').find(button => button.text() === 'OpenAI(GPT Pro 20x)')?.trigger('click')
+    await wrapper.findAll('button').find(button => button.text() === 'OpenAI(GPT Pro 50x)')?.trigger('click')
     expect(wrapper.text()).toContain('OpenAI Week')
     expect(wrapper.text()).not.toContain('智普套餐')
 
@@ -386,7 +386,7 @@ describe('PaymentView subscription filters', () => {
     expect(wrapper.text()).not.toContain('OpenAI One Month')
     expect(wrapper.text()).not.toContain('OpenAI Week')
 
-    await wrapper.findAll('button').find(button => button.text() === 'OpenAI(GPT Pro 20x)')?.trigger('click')
+    await wrapper.findAll('button').find(button => button.text() === 'OpenAI(GPT Pro 50x)')?.trigger('click')
     expect(wrapper.text()).toContain('OpenAI Week')
     expect(wrapper.text()).toContain('OpenAI One Month')
     expect(wrapper.text()).toContain('OpenAI Three Months')
@@ -421,7 +421,7 @@ describe('PaymentView subscription filters', () => {
       'Description match',
     ])
 
-    await wrapper.findAll('button').find(button => button.text() === 'OpenAI(GPT Pro 20x)')?.trigger('click')
+    await wrapper.findAll('button').find(button => button.text() === 'OpenAI(GPT Pro 50x)')?.trigger('click')
     expect(wrapper.findAll('.plan-card').map(card => card.text())).toEqual(['OpenAI Plan'])
   })
 })

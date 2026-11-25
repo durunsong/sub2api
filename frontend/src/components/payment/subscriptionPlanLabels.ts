@@ -9,11 +9,12 @@ export function subscriptionPlanBadgeLabel(
       .some(value => String(value || '').toLowerCase().includes('glm'))
   if (platform === 'kiro' || platform === 'anthropic') return 'Claude Max'
   if (isOpenAICompatibleGlm) return 'GLM'
-  return platformLabel(platform)
+  return subscriptionPlanFilterLabel(platform)
 }
 
 export function subscriptionPlanFilterLabel(platform: string): string {
   if (platform === 'kiro' || platform === 'anthropic' || platform === 'claude') return 'Claude Max'
-  if (platform === 'openai') return 'OpenAI(GPT Pro 20x)'
+  if (platform === 'openai') return 'OpenAI(GPT Pro 50x)'
+  if (platform === 'gemini') return 'Gemini Ultra'
   return platformLabel(platform)
 }

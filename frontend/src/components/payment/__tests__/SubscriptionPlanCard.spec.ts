@@ -87,7 +87,7 @@ describe("SubscriptionPlanCard", () => {
 
     expect(glmText).toContain("GLM");
     expect(glmText).not.toContain("OpenAI");
-    expect(openAIText).toContain("OpenAI");
+    expect(openAIText).toContain("OpenAI(GPT Pro 50x)");
   });
 
   it("does not show Antigravity model scopes for OpenAI plans", () => {
@@ -171,7 +171,7 @@ describe("SubscriptionPlanCard", () => {
       description: "Includes advanced models and priority support.",
     });
     const title = wrapper.get("h3");
-    const badge = wrapper.findAll("span").find((node) => node.text() === "OpenAI");
+    const badge = wrapper.findAll("span").find((node) => node.text() === "OpenAI(GPT Pro 50x)");
     const price = wrapper.findAll("span").find((node) => node.text() === "123.45");
 
     expect(title.classes()).toContain("min-w-0");

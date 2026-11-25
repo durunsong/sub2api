@@ -350,6 +350,7 @@ backend/internal/service/
 | XorPay 显示名      | 前端统一为 **「XorPay（支付宝）」**                                                   |
 | 二维码支付金额     | `AmountInput.vue`、`PaymentStatusPanel.vue` — `payAmount` / `creditedAmount` 分离展示 |
 | 充值订阅页优化     | 提交 `9a8786ff` 等近期支付流程调整                                                    |
+| 套餐展示标签       | `subscriptionPlanLabels.ts` 统一购买页筛选 tab、套餐卡片及购买确认徽章：普通 OpenAI 显示 `OpenAI(GPT Pro 50x)`，Gemini 显示 `Gemini Ultra`；保留 GLM 特例、内部平台值和套餐配置 |
 
 ---
 
