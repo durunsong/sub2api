@@ -5,6 +5,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -21,6 +22,7 @@ type balanceEligibilityCacheStub struct {
 	invalidated              atomic.Bool
 	deductCalls              atomic.Int64
 	invalidateCalls          atomic.Int64
+	deductedAmount           chan float64
 }
 
 func (s *balanceEligibilityCacheStub) GetUserBalance(context.Context, int64) (float64, error) {
@@ -30,8 +32,11 @@ func (s *balanceEligibilityCacheStub) GetUserBalance(context.Context, int64) (fl
 	return s.balance, nil
 }
 
-func (s *balanceEligibilityCacheStub) DeductUserBalance(context.Context, int64, float64) error {
+func (s *balanceEligibilityCacheStub) DeductUserBalance(_ context.Context, _ int64, amount float64) error {
 	s.deductCalls.Add(1)
+	if s.deductedAmount != nil {
+		s.deductedAmount <- amount
+	}
 	return nil
 }
 
@@ -235,4 +240,28 @@ func TestSyncBalanceCacheAfterDeduction_QueuesDeductWhenBalanceStillEligible(t *
 	require.Eventually(t, func() bool {
 		return cache.deductCalls.Load() == 1
 	}, 2*time.Second, 10*time.Millisecond)
+}
+
+func TestSyncBalanceCacheAfterDeduction_UsesSettledAmount(t *testing.T) {
+	for _, synchronous := range []bool{false, true} {
+		t.Run(fmt.Sprintf("synchronous=%v", synchronous), func(t *testing.T) {
+			cache := &balanceEligibilityCacheStub{balance: 1, deductedAmount: make(chan float64, 1)}
+			cfg := &config.Config{}
+			cfg.Billing.InflightReservation.Enabled = synchronous
+			svc := NewBillingCacheService(cache, nil, nil, nil, nil, nil, cfg, nil)
+			t.Cleanup(svc.Stop)
+			before, after := 1.0, 0.75
+			syncBalanceCacheAfterDeduction(context.Background(), &postUsageBillingParams{
+				Cost: &CostBreakdown{ActualCost: 0.250000004}, User: &User{ID: 1},
+			}, &billingDeps{billingCacheService: svc}, &UsageBillingApplyResult{
+				OldBalance: &before, NewBalance: &after, BalanceCharged: 0.25,
+			})
+			select {
+			case charged := <-cache.deductedAmount:
+				require.Equal(t, 0.25, charged, "cache must match the eight-decimal DB settlement")
+			case <-time.After(2 * time.Second):
+				t.Fatal("cache deduction did not run")
+			}
+		})
+	}
 }

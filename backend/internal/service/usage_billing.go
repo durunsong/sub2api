@@ -171,7 +171,10 @@ type UsageBillingApplyResult struct {
 	Applied              bool
 	APIKeyQuotaExhausted bool
 	NewBalance           *float64           // post-deduction balance (nil = no balance deduction)
-	BalanceOverdrafted   bool               // true when the sufficient-balance guard missed and debt was still recorded
+	BalanceOverdrafted   bool               // compatibility flag: excess cost was absorbed, not added to debt
+	OldBalance           *float64           // pre-deduction wallet balance
+	BalanceCharged       float64            // actual wallet deduction
+	BalanceAbsorbed      float64            // requested cost covered by the platform
 	QuotaState           *AccountQuotaState // post-increment quota state (nil = no quota increment)
 }
 
@@ -196,6 +199,9 @@ func (c *BatchImageBalanceHoldCommand) Normalize() {
 	if strings.TrimSpace(c.RequestFingerprint) == "" {
 		c.RequestFingerprint = buildBatchImageBalanceHoldFingerprint(c)
 	}
+	// Keep raw amounts in the fingerprint; settle on the wallet's eight-decimal scale.
+	c.HoldAmount = QuantizeUsageBillingAmount(c.HoldAmount)
+	c.ActualAmount = QuantizeUsageBillingAmount(c.ActualAmount)
 }
 
 func buildBatchImageBalanceHoldFingerprint(c *BatchImageBalanceHoldCommand) string {

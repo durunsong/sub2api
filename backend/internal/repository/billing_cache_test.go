@@ -156,3 +156,17 @@ func TestJitteredTTL_HasVariation(t *testing.T) {
 	// 50 次调用中应该至少有 2 个不同的值
 	require.Greater(t, len(seen), 1, "jitteredTTL() 应产生不同的 TTL 值")
 }
+
+func TestBillingCacheDeduction_FloorsAtZero(t *testing.T) {
+	cache, _ := newMiniRedisCache(t)
+	ctx := context.Background()
+	require.NoError(t, cache.SetUserBalance(ctx, 42, 1))
+	require.NoError(t, cache.DeductUserBalance(ctx, 42, 3))
+	balance, err := cache.GetUserBalance(ctx, 42)
+	require.NoError(t, err)
+	require.Zero(t, balance)
+	require.NoError(t, cache.DeductUserBalance(ctx, 42, 2))
+	balance, err = cache.GetUserBalance(ctx, 42)
+	require.NoError(t, err)
+	require.Zero(t, balance)
+}

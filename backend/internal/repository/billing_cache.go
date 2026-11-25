@@ -103,7 +103,7 @@ var (
 		if current == false then
 			return 0
 		end
-		local newVal = tonumber(current) - tonumber(ARGV[1])
+		local newVal = tonumber(current) - math.min(tonumber(ARGV[1]), math.max(tonumber(current), 0))
 		redis.call('SET', KEYS[1], newVal)
 		redis.call('EXPIRE', KEYS[1], ARGV[2])
 		return 1

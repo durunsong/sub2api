@@ -35,7 +35,7 @@ type usageBillingRequestKey struct {
 //     认领后在归档表命中的命令同样判定，并删除本事务插入的认领行。
 //   - 同一行的多次累加合并为一条语句，累加值取各命令金额之和。同一事务内 NOW() 不变，
 //     窗口重置类表达式的合并结果与逐条执行相同。
-//   - 逐条命令的扣费后余额、是否透支、Key 额度是否在该条耗尽、账号额度状态，
+//   - 逐条命令的扣费后余额、是否产生平台承担金额、Key 额度是否在该条耗尽、账号额度状态，
 //     由合并语句返回的累加后值按命令顺序推算。
 //
 // 行锁按 user_subscriptions → users → api_keys → accounts 的顺序获取，表内按主键升序，
@@ -361,37 +361,23 @@ func applyUsageBillingBatchSubscriptions(ctx context.Context, tx *sql.Tx, cmds [
 }
 
 func applyUsageBillingBatchBalance(ctx context.Context, tx *sql.Tx, userID int64, cmds []*service.UsageBillingCommand, applied []bool, outcomes []service.UsageBillingBatchOutcome) error {
-	groups, _ := groupUsageBillingAmounts(cmds, applied, func(cmd *service.UsageBillingCommand) (int64, float64, bool) {
-		return userID, cmd.BalanceCost, true
-	})
-	group := groups[userID]
-	if group == nil {
+	var charges []*service.UsageBillingCommand
+	var indexes []int
+	for i, cmd := range cmds {
+		if applied[i] && cmd.BalanceCost > 0 {
+			charges = append(charges, cmd)
+			indexes = append(indexes, i)
+		}
+	}
+	if len(charges) == 0 {
 		return nil
 	}
-
-	var newBalance decimal.Decimal
-	err := tx.QueryRowContext(ctx, `
-		UPDATE users
-		SET balance = balance - $1,
-			updated_at = NOW()
-		WHERE id = $2 AND deleted_at IS NULL
-		RETURNING balance
-	`, group.sum, userID).Scan(&newBalance)
-	if errors.Is(err, sql.ErrNoRows) {
-		return service.ErrUserNotFound
-	}
+	results, err := settleUsageBillingBalances(ctx, tx, charges)
 	if err != nil {
 		return err
 	}
-
-	running := newBalance.Add(group.sum)
-	for _, i := range group.indexes {
-		cost := usageBillingAmount(cmds[i].BalanceCost)
-		sufficient := running.GreaterThanOrEqual(cost)
-		running = running.Sub(cost)
-		balance := running.InexactFloat64()
-		outcomes[i].Result.NewBalance = &balance
-		outcomes[i].Result.BalanceOverdrafted = !sufficient
+	for i, index := range indexes {
+		outcomes[index].Result = results[i]
 	}
 	return nil
 }

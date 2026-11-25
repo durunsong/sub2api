@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 	"time"
@@ -22,7 +23,9 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/usersubscription"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	"github.com/Wei-Shaw/sub2api/internal/service"
+	"github.com/google/uuid"
 	"github.com/lib/pq"
+	"github.com/shopspring/decimal"
 
 	entsql "entgo.io/ent/dialect/sql"
 )
@@ -877,38 +880,33 @@ func (r *userRepository) ApplyRedeemBalanceAdjustment(ctx context.Context, id in
 	return nil
 }
 
-// DeductBalance 扣除用户余额
-// 透支策略：允许余额变为负数，确保当前请求能够完成
-// 中间件会阻止余额 <= 0 的用户发起后续请求
+// DeductBalance settles legacy consumption with the same floor and durable ledger.
 func (r *userRepository) DeductBalance(ctx context.Context, id int64, amount float64) error {
-	client := clientFromContext(ctx, r.client)
-	n, err := client.User.Update().
-		Where(dbuser.IDEQ(id), dbuser.BalanceGTE(amount)).
-		AddBalance(-amount).
-		Save(ctx)
-	if err != nil {
-		return err
+	if amount < 0 || math.IsNaN(amount) || math.IsInf(amount, 0) {
+		return fmt.Errorf("invalid deduction amount")
 	}
-	if n > 0 {
+	amount = service.QuantizeUsageBillingAmount(amount)
+	if amount == 0 {
 		return nil
 	}
-
-	n, err = client.User.Update().
-		Where(dbuser.IDEQ(id)).
-		AddBalance(-amount).
-		Save(ctx)
+	rows, err := clientFromContext(ctx, r.client).QueryContext(ctx, balanceSettlementSQL,
+		id, pq.Array([]string{decimal.NewFromFloat(amount).String()}),
+		pq.Array([]string{"legacy:" + uuid.NewString()}), pq.Array([]int64{0}))
 	if err != nil {
 		return err
 	}
-	if n == 0 {
+	defer rows.Close()
+	if !rows.Next() {
+		if err := rows.Err(); err != nil {
+			return err
+		}
 		return service.ErrUserNotFound
 	}
-	return nil
+	return rows.Err()
 }
 
 // DeductAvailableBalance atomically deducts min(amount, max(balance, 0)).
-// Unlike DeductBalance, this refund-specific operation never increases an
-// existing deficit or permits a concurrent deduction to cause an overdraft.
+// This refund-specific operation does not create consumption settlement records.
 func (r *userRepository) DeductAvailableBalance(ctx context.Context, id int64, amount float64) (deducted float64, err error) {
 	if amount < 0 {
 		return 0, fmt.Errorf("deduction amount must be nonnegative")

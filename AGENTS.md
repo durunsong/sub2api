@@ -60,6 +60,7 @@ Cursor 场景下还会加载 [`.cursor/rules/sub2api-fork.mdc`](.cursor/rules/su
 - **Ops**：`DELETE /ops/errors` 批量删错误日志
 - **VersionBadge**：隐藏「立即更新」，保留版本提示与 changelog 链接
 - **支付 UX**：用户端隐藏倍率；二维码 payAmount / creditedAmount 分离
+- **余额消费不透支**：普通余额消费最多扣可用余额，已放行请求超额由平台承担；单笔/批量/兼容扣费通过 `usage_balance_settlements` 原子记录实扣与承担金额。迁移 `254_usage_balance_settlements.sql` 不清理历史负余额；真实用量和配额保持完整，缓存与余额提醒使用实扣金额。
 - **购买页智普筛选**：OpenAI 协议下名称、分组名或描述含 `GLM` 的套餐显示为 `智普-GLM Plan MAX`，普通 OpenAI 分类必须排除这些套餐
 - **购买页套餐标签**：普通 OpenAI 与 Gemini 的筛选 tab、套餐卡片及购买确认徽章统一显示 `OpenAI(GPT Pro 50x)`、`Gemini Ultra`；保留 GLM 特例和内部平台值，仅调整展示文案。
 - **订阅重置卡**：迁移 `224`/`225` 保存永久期限明细并按 `group.default_validity_days` 回填旧计数；有效固定期限支付/兑换/管理员分配重复获得改发 `validity_days` 快照卡且不改到期时间，过期则直接重开；消费放弃余期、清零日周月 USD/token 并从点击时重开；旧 `reset-daily` 映射 1 天卡，`manual_reset_credits` 仅保留兼容镜像
