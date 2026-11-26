@@ -153,20 +153,20 @@ function paste(event: ClipboardEvent) { const files = Array.from(event.clipboard
 </template>
 <style scoped>
 .video-composer-wrap {
-  @apply shrink-0 px-3 pb-4 pt-4 sm:px-6}
+  @apply shrink-0 px-3 py-2 sm:px-6}
 .video-composer-wrap:not(.inline) {
   background:var(--video-background); border-top:1px solid rgba(148,163,184,.15)}
 .video-composer-wrap.inline {
-  @apply mx-auto w-full max-w-[1048px] px-4 pb-10 pt-6}
+  @apply mx-auto w-full max-w-[1048px] px-4 pb-6 pt-3}
 .video-composer {
-  @apply pointer-events-auto mx-auto max-w-[1000px] rounded-3xl border border-gray-200 bg-white px-3 pb-3 pt-3 dark:border-dark-600 dark:bg-dark-800;
+  @apply pointer-events-auto mx-auto max-w-[1000px] rounded-2xl border border-gray-200 bg-white px-3 py-2 dark:border-dark-600 dark:bg-dark-800;
   box-shadow:0 16px 50px rgba(0,0,0,.09)}
 .reference-strip {
-  @apply flex min-h-[84px] items-center gap-3 overflow-x-auto px-1 py-2}
+  @apply flex min-h-14 items-center gap-3 overflow-x-auto px-1 py-1}
 .reference-add {
-  @apply grid h-[72px] w-14 shrink-0 -rotate-6 place-items-center rounded-sm border border-dashed border-gray-300 bg-gray-50 text-gray-500 transition-transform hover:rotate-0 dark:border-dark-500 dark:bg-dark-700}
+  @apply grid h-12 w-11 shrink-0 -rotate-6 place-items-center rounded-sm border border-dashed border-gray-300 bg-gray-50 text-gray-500 transition-transform hover:rotate-0 dark:border-dark-500 dark:bg-dark-700}
 .video-reference {
-  @apply relative h-[72px] w-14 shrink-0 overflow-hidden rounded-sm border border-gray-200 dark:border-dark-600}
+  @apply relative h-12 w-11 shrink-0 overflow-hidden rounded-sm border border-gray-200 dark:border-dark-600}
 .video-reference>button:first-child {
   @apply block h-full w-full}
 .video-reference :deep(img) {
@@ -176,7 +176,7 @@ function paste(event: ClipboardEvent) { const files = Array.from(event.clipboard
 .reference-remove {
   @apply absolute right-0 top-0 rounded-full bg-white/90 p-1 text-gray-900 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100}
 .video-prompt {
-  @apply block min-h-[76px] max-h-40 w-full resize-y border-0 bg-transparent px-1 py-2 text-[15px] leading-7 outline-none placeholder:text-gray-500 dark:placeholder:text-gray-400}
+  @apply block min-h-14 max-h-40 w-full resize-y border-0 bg-transparent px-1 py-1 text-[15px] leading-6 outline-none placeholder:text-gray-500 dark:placeholder:text-gray-400}
 .video-composer-tools {
   @apply mt-1.5 flex flex-wrap items-center gap-2}
 .video-kind {
