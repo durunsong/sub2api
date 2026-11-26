@@ -545,9 +545,9 @@ func selectedInstanceSupportedTypes(sel *payment.InstanceSelection) string {
 
 func (s *PaymentService) buildPaymentSubject(plan *dbent.SubscriptionPlan, limitAmount float64, cfg *PaymentConfig, sel *payment.InstanceSelection) string {
 	if plan != nil {
-		productName := plan.ProductName
+		productName := strings.TrimSpace(plan.ProductName)
 		if productName == "" {
-			productName = "Sub2API Subscription " + plan.Name
+			productName = strings.TrimSpace(plan.Name)
 		}
 		return applyPaymentProductNameAffix(productName, cfg)
 	}

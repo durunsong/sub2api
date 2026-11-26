@@ -351,6 +351,7 @@ backend/internal/service/
 | 用户端隐藏倍率展示 | `PaymentView.vue`、`UsageView.vue` CSV 导出等                                         |
 | XorPay 显示名      | 原 `xorpay` 仍为 **「XorPay（支付宝）」**；新增微信订单使用 `wxpay`，显示微信图标与扫码提示                                                   |
 | 二维码支付金额     | `AmountInput.vue`、`PaymentStatusPanel.vue` — `payAmount` / `creditedAmount` 分离展示 |
+| 订阅支付商品标题   | `payment_order.go` 的 `buildPaymentSubject`：优先使用去首尾空白的 `product_name`，为空时回退去首尾空白的套餐名称，再应用全局前后缀；移除默认硬编码的 `Sub2API Subscription`，保留管理员显式填写的商品名。XorPay、支付宝、微信、易支付和 Stripe 共用此逻辑；余额充值标题、金额和履约不变，无迁移，已提交给支付平台的旧订单标题不回写。回归见 `payment_order_result_test.go`。 |
 | 充值订阅页优化     | 提交 `9a8786ff` 等近期支付流程调整                                                    |
 | 套餐展示标签       | `subscriptionPlanLabels.ts` 统一购买页筛选 tab、套餐卡片及购买确认徽章：普通 OpenAI 显示 `OpenAI(GPT Pro 50x)`，Gemini 显示 `Gemini Ultra`；保留 GLM 特例、内部平台值和套餐配置 |
 | 套餐卡片布局       | `SubscriptionPlanCard.vue` 与 `PaymentView.vue` 采用方案 A：平台/有效期独立首行，标题整行显示并自然换行；取消标题两行省略，窄屏标签与价格可换行。共用卡片的购买列表、续费弹窗同步生效，购买确认头部一致；保留配色、计价及选购行为。 |

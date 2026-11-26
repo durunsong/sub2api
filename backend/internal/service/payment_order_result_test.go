@@ -363,8 +363,101 @@ func TestBuildPaymentSubjectAppliesAffixToSubscriptionPlanDefaultName(t *testing
 	plan := &dbent.SubscriptionPlan{Name: "Team Monthly"}
 
 	got := svc.buildPaymentSubject(plan, 0, cfg, nil)
-	if got != "PRE Sub2API Subscription Team Monthly SUF" {
-		t.Fatalf("buildPaymentSubject() = %q, want %q", got, "PRE Sub2API Subscription Team Monthly SUF")
+	if got != "PRE Team Monthly SUF" {
+		t.Fatalf("buildPaymentSubject() = %q, want %q", got, "PRE Team Monthly SUF")
+	}
+}
+
+func TestBuildPaymentSubjectSubscriptionNameFallback(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		plan dbent.SubscriptionPlan
+		cfg  *PaymentConfig
+		want string
+	}{
+		{
+			name: "configured brand with Chinese plan name",
+			plan: dbent.SubscriptionPlan{Name: "codex--天卡-100刀"},
+			cfg:  &PaymentConfig{ProductNamePrefix: "21API", ProductNameSuffix: "元"},
+			want: "21API codex--天卡-100刀 元",
+		},
+		{
+			name: "whitespace product name falls back to plan name",
+			plan: dbent.SubscriptionPlan{Name: "智普-GLM-月卡-5.3-1亿-token", ProductName: " \t\n\u3000"},
+			cfg:  &PaymentConfig{ProductNamePrefix: " 21API ", ProductNameSuffix: " 元 "},
+			want: "21API 智普-GLM-月卡-5.3-1亿-token 元",
+		},
+		{
+			name: "custom product name takes precedence and trims whitespace",
+			plan: dbent.SubscriptionPlan{Name: "Team Monthly", ProductName: "  自定义订阅  "},
+			cfg:  &PaymentConfig{ProductNamePrefix: "21API"},
+			want: "21API 自定义订阅",
+		},
+		{
+			name: "nil config uses plan name without hardcoded brand",
+			plan: dbent.SubscriptionPlan{Name: "Team Monthly"},
+			want: "Team Monthly",
+		},
+		{
+			name: "empty affixes use trimmed plan name",
+			plan: dbent.SubscriptionPlan{Name: "  Team Monthly  "},
+			cfg:  &PaymentConfig{},
+			want: "Team Monthly",
+		},
+		{
+			name: "whitespace affixes preserve explicit product name",
+			plan: dbent.SubscriptionPlan{Name: "Team Monthly", ProductName: "Sub2API Subscription Custom"},
+			cfg:  &PaymentConfig{ProductNamePrefix: " \t", ProductNameSuffix: "\u3000"},
+			want: "Sub2API Subscription Custom",
+		},
+		{
+			name: "suffix only",
+			plan: dbent.SubscriptionPlan{Name: "Team Monthly"},
+			cfg:  &PaymentConfig{ProductNameSuffix: "订阅"},
+			want: "Team Monthly 订阅",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			svc := &PaymentService{}
+			if got := svc.buildPaymentSubject(&tt.plan, 0, tt.cfg, nil); got != tt.want {
+				t.Fatalf("buildPaymentSubject() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestBuildPaymentSubjectBalancePreservesAmountAndCurrency(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		amount   float64
+		cfg      *PaymentConfig
+		currency string
+		want     string
+	}{
+		{name: "configured brand", amount: 1, cfg: &PaymentConfig{ProductNamePrefix: "21API", ProductNameSuffix: "元"}, want: "21API 1.00 元"},
+		{name: "default currency", amount: 1, want: "Sub2API 1.00 CNY"},
+		{name: "whitespace affixes", amount: 1, cfg: &PaymentConfig{ProductNamePrefix: " \t", ProductNameSuffix: "\u3000"}, want: "Sub2API 1.00 CNY"},
+		{name: "zero decimal currency", amount: 100, currency: "JPY", want: "Sub2API 100 JPY"},
+		{name: "three decimal currency", amount: 1.234, currency: "KWD", want: "Sub2API 1.234 KWD"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			var sel *payment.InstanceSelection
+			if tt.currency != "" {
+				sel = &payment.InstanceSelection{ProviderKey: payment.TypeStripe, Config: map[string]string{"currency": tt.currency}}
+			}
+			svc := &PaymentService{}
+			if got := svc.buildPaymentSubject(nil, tt.amount, tt.cfg, sel); got != tt.want {
+				t.Fatalf("buildPaymentSubject() = %q, want %q", got, tt.want)
+			}
+		})
 	}
 }
 
