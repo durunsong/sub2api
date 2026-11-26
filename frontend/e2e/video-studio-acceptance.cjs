@@ -81,7 +81,7 @@ const imageModel={id:'7:gpt-image-2',group_id:7,group_name:'Images',model:'gpt-i
   await click('全能参考模式')
   await shot('08-reference-mode','全能参考模式与 1080p / 10 秒参数')
   await click('首尾帧模式');await click('720p');await close()
-  await click('提示词库');await dialog().waitFor()
+  await click('提示词库');await dialog().waitFor();await page.getByRole('tab',{name:'我的自定义',exact:true}).click()
   await shot('09-prompts-empty','本地提示词库空状态')
   await page.getByRole('textbox',{name:'提示词名称',exact:true}).fill('山湖航拍')
   await click('使用当前提示词');await dialog().getByRole('button',{name:'保存',exact:true}).click()

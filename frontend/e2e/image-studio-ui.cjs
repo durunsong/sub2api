@@ -66,7 +66,7 @@ const model = { id: '7:gpt-image-2', group_id: 7, group_name: '图像创作', mo
     const errors = []
     page.on('pageerror', error => errors.push(error.message))
     await page.goto(`${base}/image-studio`)
-    await page.getByRole('main').getByRole('heading',{name:'生图工作台',exact:true}).waitFor()
+    await page.getByRole('main').getByRole('tab',{name:'图片创作',exact:true}).waitFor()
     fixture = await page.evaluate(() => { const canvas=document.createElement('canvas');canvas.width=600;canvas.height=400;const ctx=canvas.getContext('2d');ctx.fillStyle='#e8dfd0';ctx.fillRect(0,0,600,400);ctx.fillStyle='#4b5e45';ctx.beginPath();ctx.moveTo(0,350);ctx.lineTo(240,80);ctx.lineTo(400,300);ctx.lineTo(500,140);ctx.lineTo(600,400);ctx.fill();return canvas.toDataURL('image/png').split(',')[1] })
     // Exercise clipboard/drag payloads without touching the host clipboard.
     await page.locator('[data-reference-dropzone]').focus()
@@ -188,7 +188,7 @@ const model = { id: '7:gpt-image-2', group_id: 7, group_name: '图像创作', mo
     await page.getByRole('button',{name:'底部',exact:true}).click()
     await page.waitForTimeout(500)
     await page.reload()
-    await page.getByRole('main').getByRole('heading',{name:'生图工作台',exact:true}).waitFor()
+    await page.getByRole('main').getByRole('tab',{name:'图片创作',exact:true}).waitFor()
     await page.locator('.layout-bottom').waitFor()
     await page.locator('[data-result-batch]').first().waitFor()
     await expandBatches()
@@ -211,7 +211,7 @@ const model = { id: '7:gpt-image-2', group_id: 7, group_name: '图像创作', mo
     await page.getByRole('dialog').getByRole('button',{name:'确认',exact:true}).click()
     await page.waitForFunction(() => document.querySelectorAll('.result-card').length === 0)
     await page.reload()
-    await page.getByRole('main').getByRole('heading',{name:'生图工作台',exact:true}).waitFor()
+    await page.getByRole('main').getByRole('tab',{name:'图片创作',exact:true}).waitFor()
     assert.equal(await page.locator('.result-card').count(),0)
     // Admin settings use fixture-backed configuration only.
     const admin = { ...user, role: 'admin' }

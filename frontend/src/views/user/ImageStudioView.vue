@@ -31,6 +31,7 @@ const uploadInput = ref<HTMLInputElement>()
 const importInput = ref<HTMLInputElement>()
 const assetUploadInput = ref<HTMLInputElement>()
 const libraryOpen = ref(false)
+const libraryTab = ref<'upstream' | 'custom'>('upstream')
 const assetsOpen = ref(false)
 const batchDownloadOpen = ref(false)
 const assetSearch = ref('')
@@ -360,16 +361,15 @@ function previewHistory(item: ImageHistory) {
 
 <template>
   <AppLayout :fullscreen="inactive ? workspaceFullscreen : fullscreen">
-    <slot name="workspace-tabs" />
-    <div id="studio-panel-image" role="tabpanel" aria-labelledby="studio-tab-image" v-show="!inactive" class="image-studio pb-28 text-gray-900 dark:text-gray-100" :class="{ 'is-fullscreen': fullscreen }">
-      <header class="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div><h1 class="text-2xl font-semibold tracking-tight">{{ t('imageStudio.title') }}</h1><p class="mt-1 text-xs text-gray-500 dark:text-dark-300">{{ t('imageStudio.localNotice') }}</p></div>
-        <div class="flex flex-wrap items-center gap-2">
+    <header class="studio-toolbar -mt-2 mb-3 flex flex-wrap items-center gap-3 md:-mt-3 lg:-mt-4">
+      <slot name="workspace-tabs" />
+      <p class="min-w-32 flex-1 text-xs leading-5 text-gray-500 dark:text-dark-300">{{ t(inactive ? 'videoStudio.localOnly' : 'imageStudio.localNotice') }}</p>
+        <div v-show="!inactive" class="studio-header-actions flex flex-wrap items-center gap-2">
           <button type="button" class="fullscreen-toggle" :class="{ active: fullscreen }" :aria-label="t(fullscreen ? 'imageStudio.exitFullscreen' : 'imageStudio.enterFullscreen')" :aria-pressed="fullscreen" @click="fullscreen = !fullscreen">
             <Icon :name="fullscreen ? 'minimize' : 'maximize'" size="md" />
             <span>{{ t(fullscreen ? 'imageStudio.exitFullscreen' : 'imageStudio.enterFullscreen') }}</span>
           </button>
-          <button class="btn btn-secondary btn-sm" @click="libraryOpen = true"><Icon name="book" size="sm" />{{ t('imageStudio.workflows') }}</button>
+          <button class="btn btn-secondary btn-sm" @click="libraryTab = 'custom'; libraryOpen = true"><Icon name="book" size="sm" />{{ t('imageStudio.workflows') }}</button>
           <button class="btn btn-secondary btn-sm" @click="studio.exportBackup()"><Icon name="download" size="sm" />{{ t('imageStudio.exportBackup') }}</button>
           <button class="btn btn-secondary btn-sm" @click="importInput?.click()"><Icon name="upload" size="sm" />{{ t('imageStudio.importBackup') }}</button>
           <div class="flex rounded-lg border border-gray-200 p-0.5 dark:border-dark-700" :aria-label="t('imageStudio.layout')">
@@ -377,7 +377,9 @@ function previewHistory(item: ImageHistory) {
             <button class="layout-button" :class="{ active: studio.layout === 'bottom' }" :aria-pressed="studio.layout === 'bottom'" @click="studio.layout = 'bottom'">{{ t('imageStudio.bottom') }}</button>
           </div>
         </div>
-      </header>
+      <slot name="workspace-actions" />
+    </header>
+    <div id="studio-panel-image" role="tabpanel" aria-labelledby="studio-tab-image" v-show="!inactive" class="image-studio pb-28 text-gray-900 dark:text-gray-100" :class="{ 'is-fullscreen': fullscreen }">
       <div v-if="studio.error || studio.storageError" role="alert" class="mb-4 flex items-start justify-between gap-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
         <div><p v-if="studio.error">{{ formatError(studio.error) }}</p><p v-if="studio.storageError" class="mt-1">{{ formatError(studio.storageError) }}</p></div>
         <button class="shrink-0 underline" @click="studio.refresh()">{{ t('imageStudio.refresh') }}</button>
@@ -392,7 +394,7 @@ function previewHistory(item: ImageHistory) {
               <textarea id="studio-prompt" v-model="studio.prompt" rows="6" maxlength="32000" class="input resize-y leading-6" :placeholder="t('imageStudio.promptPlaceholder')" @keydown="enterPrompt" />
               <div class="mt-2 flex flex-wrap gap-2">
                 <button type="button" class="text-button" @click="pastePrompt"><Icon name="clipboard" size="sm" />{{ t('imageStudio.paste') }}</button>
-                <button type="button" class="text-button" @click="libraryOpen = true"><Icon name="book" size="sm" />{{ t('imageStudio.promptLibrary') }}</button>
+                <button type="button" class="text-button" @click="libraryTab = 'upstream'; libraryOpen = true"><Icon name="book" size="sm" />{{ t('imageStudio.promptLibrary') }}</button>
                 <button type="button" class="text-button" @click="assetsOpen = true"><Icon name="grid" size="sm" />{{ t('imageStudio.assets') }}</button>
               </div>
             </div>
@@ -497,7 +499,7 @@ function previewHistory(item: ImageHistory) {
     <input ref="uploadInput" type="file" accept="image/png,image/jpeg,image/webp" multiple class="hidden" @change="upload($event)" />
     <input ref="importInput" type="file" accept="application/json,.json" class="hidden" @change="importBackup" />
     <input ref="assetUploadInput" type="file" accept="image/png,image/jpeg,image/webp" multiple class="hidden" @change="upload($event, true)" />
-    <WorkflowLibrary :key="auth.user?.id" :show="libraryOpen" :prompts="studio.prompts" :initial-prompt="studio.prompt" :references="studio.references" :can-run="studio.enabled && Boolean(studio.selectedModel) && !customSizeError" @close="libraryOpen = false" @save="studio.savePrompt" @delete="studio.deletePrompt" @use="studio.prompt = $event" @run="generate" />
+    <WorkflowLibrary :key="auth.user?.id" :show="libraryOpen" :initial-tab="libraryTab" :prompts="studio.prompts" :initial-prompt="studio.prompt" :references="studio.references" :can-run="studio.enabled && Boolean(studio.selectedModel) && !customSizeError" @close="libraryOpen = false" @save="studio.savePrompt" @delete="studio.deletePrompt" @use="studio.prompt = $event" @run="generate" />
     <MaskEditor v-if="maskImage" :show="Boolean(maskImage)" :blob="maskImage" :native-mask="maskNative" @close="maskImage = null" @confirm="submitEdit" />
     <BaseDialog close-tooltip :show="assetsOpen" :title="t('imageStudio.assets')" width="wide" @close="assetsOpen = false">
       <div class="mb-4 flex flex-wrap gap-3"><input v-model="assetSearch" class="input min-w-0 flex-1" :aria-label="t('imageStudio.searchAssets')" :placeholder="t('imageStudio.searchAssets')" /><button class="btn btn-primary" @click="assetUploadInput?.click()">{{ t('imageStudio.uploadAsset') }}</button></div>
@@ -521,6 +523,9 @@ function previewHistory(item: ImageHistory) {
 </template>
 
 <style scoped>
+.studio-header-actions :deep(button) { font-size:12px; min-height:32px; padding-top:6px; padding-bottom:6px }
+.studio-header-actions { gap:6px }
+
 .fullscreen-toggle { @apply inline-flex h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md px-3 text-sm font-medium text-primary-700 transition-colors hover:text-primary-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 dark:text-primary-400 dark:hover:text-primary-200; }
 .fullscreen-toggle.active { @apply text-violet-600 hover:text-violet-800 dark:text-violet-400 dark:hover:text-violet-200; }
 .composer-settings { container-type: inline-size; }

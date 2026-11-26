@@ -5,7 +5,7 @@
 - 用户入口仍为 `/image-studio`，管理员仍为 `/admin/image-studio`。菜单均为“AI图片/视频工作台”，用“图片创作 / 视频创作”Tab 切换；`?tab=video` 可直达视频页。
 - 视频采用用户确认的 **新版 v1.0.0 统一创作页的视频模式**：空白会话居中输入、点阵背景；生成后对话结果与底部输入框；模型选择、参数浮层、首尾帧/全能参考、引用图片、创作记录、提示词、资产、预览及下载。
 - 参数包含 480p/720p/1080p/自定义、宽高、七种比例（含自动）、4–30 秒。首尾帧最多 2 图，全能参考最多 9 图；单图 10 MiB、总参考图 30 MiB。这些是工作台输入范围，最终支持的组合以所选上游为准。
-- 图片与视频组件分别保留草稿。原图片 API、生成控制器、存储、遮罩、工作流均不变；图片视图只增加插槽、隐藏和全局快捷键激活状态。
+- 图片与视频组件分别保留草稿。原图片 API、生成控制器、存储、遮罩、工作流执行逻辑均不变；图片视图使用合并工具栏，提示词弹窗新增精选/自定义 Tab。
 
 ## 配置与实际支持边界
 
@@ -68,6 +68,16 @@
 `ffmpeg -f lavfi -i color=c=teal:s=320x180:d=1 -c:v libx264 -pix_fmt yuv420p /tmp/sub2api-video-fixture.mp4`。
 
 本次验收结果与审查修复记录见 `openspec/changes/add-video-studio/verification.md`。
+
+## 2026-11-26 交互整改
+
+- 图片/视频 Tab、本地存储说明、原有图片操作合并为紧凑工具栏，删除重复标题；移动端换行。
+- 视频提交与进度查询连续交接，旧 IndexedDB 读取不能覆盖新状态；暂停交接不会自动重启。只在新增记录/切换会话时滚动结果面板，不随进度更新滚动，不移动外层页面。结果区标题和操作固定，单一输入组件保留焦点和输入状态。
+- 统一提示词、元信息、进度/失败卡片。参数弹层仅排除触发器和面板本身，点击输入区/页面其他位置、Escape、切换 Tab 均关闭。
+- `frontend/src/features/prompt-library` 对应上游 `workbench/src/services/api/prompt-source-presets.ts`、`prompt-source-runtime.ts`、`prompts.ts` 和 `components/prompts/prompt-select-dialog.tsx`。沿用同一固定上游提交和本文 MIT 许可。
+- 默认精选提示词包含上游七类来源，直接读取 `yukkcat/image-prompts` 的公开 JSON。分类、搜索、标签 OR 筛选、缩略图、详情和一键回填；一键使用只填提示词，不自动生成、改变模型或附加参考图片。自定义 Tab 沿用用户原有库；“创作工作流”按钮直接进入自定义。
+- 公开提示词使用独立 `sub2api-public-prompt-library` IndexedDB 缓存，一小时过期，可手动刷新；失败保留缓存并显示失败来源。公开数据可以跨本机账户复用，私有提示词、草稿和媒体仍在原有按用户隔离的数据库里。请求不带面板 JWT/cookie；只呈现 HTTPS 图片和来源链接，不执行远程脚本/HTML。封面仍依赖原来源网络，失败显示占位卡，不影响使用文本。
+- 测试 `node frontend/e2e/studio-polish.cjs`（使用宿主已有 Playwright）覆盖 20 个截图场景、轮询不跳动、精确文本回填、原有自定义、参数点击关闭、暗色/手机和缓存离线。可设置 `STUDIO_PROMPT_FIXTURE_DIR` 为公开 JSON 快照目录、`STUDIO_SCREENSHOT_DIR` 为截图目录；提供快照目录时缺失来源按网络失败模拟，绝不以自造提示词冒充上游数据。未提供时仅使用明确的测试 fixture。
 
 ## MIT 许可
 

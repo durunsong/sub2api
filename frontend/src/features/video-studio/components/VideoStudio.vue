@@ -2,6 +2,7 @@
 import { computed, nextTick, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Icon from '@/components/icons/Icon.vue';
+import PromptLibraryDialog from '@/features/prompt-library/PromptLibraryDialog.vue';
 import BaseDialog from '@/components/common/BaseDialog.vue';
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue';
 import ImagePreview from '@/features/image-studio/components/ImagePreview.vue';
@@ -33,11 +34,17 @@ const confirmation = ref<{
     action: () => void | Promise<void>;
 } | null>(null);
 const blank = computed(() => !studio.entries.length);
-const session = computed(() => studio.sessions.find(s => s.id === studio.sessionID));
 const filteredSessions = computed(() => studio.sessions.filter(s => s.title.toLowerCase().includes(search.value.toLowerCase())));
 const presets = ['product', 'landscape', 'story'];
-watch(() => [studio.sessionID, studio.entries.length], async () => { await nextTick(); if (feed.value)
-    feed.value.scrollTop = feed.value.scrollHeight; });
+watch([() => studio.sessionID, () => studio.entries.length], async () => {
+    await nextTick();
+    const list = feed.value, last = list?.querySelector<HTMLElement>('.video-entry:last-child');
+    if (!props.active || !list || !last) return;
+    const bounds = list.getBoundingClientRect(), row = last.getBoundingClientRect();
+    // Scroll only the result pane; scrollIntoView also moves the page on narrow screens.
+    if (row.height > bounds.height || row.top < bounds.top) list.scrollTop += row.top - bounds.top;
+    else if (row.bottom > bounds.bottom) list.scrollTop += row.bottom - bounds.bottom;
+});
 watch(() => auth.user?.id, () => { imageAssets.value = []; preview.value = null; videoPreview.value = null; confirmation.value = null; historyOpen.value = false; promptsOpen.value = false; assetsOpen.value = false; });
 function showReferences(refs: VideoReference[], index: number) { preview.value = { images: refs.map(r => r.blob), index, captions: refs.map(r => r.name) }; }
 function download(blob: Blob, name: string) { const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
@@ -78,7 +85,7 @@ function pause() { for (const row of studio.entries)
 </div>
    <div v-if="studio.notice" role="status" class="px-5 py-2 text-sm text-green-700 dark:text-green-300">{{t(studio.notice)}}</div>
    <div v-if="!studio.enabled || !studio.models.length" class="px-5 py-3 text-sm text-gray-600 dark:text-gray-400">{{t(!studio.enabled?'videoStudio.disabled':'videoStudio.noModels')}}</div>
-   <div class="video-workspace">
+   <div class="video-workspace" :class="{'is-empty':blank}">
     <div v-if="blank" class="video-empty">
      <button type="button" class="history-trigger" @click="historyOpen=true">
 <Icon name="clock" size="sm" />{{t('videoStudio.history')}}</button>
@@ -86,15 +93,10 @@ function pause() { for (const row of studio.entries)
      <div class="video-presets">
 <button v-for="preset in presets" :key="preset" type="button" @click="studio.prompt=t(`videoStudio.preset_${preset}`)">{{t(`videoStudio.preset_${preset}`)}}</button>
 </div>
-     <div class="mt-8 w-full max-w-[1000px]">
-<VideoComposer v-model:prompt="studio.prompt" v-model:model-i-d="studio.modelID" v-model:parameters="studio.parameters" :models="studio.models" :references="studio.references" :can-generate="studio.canGenerate" :running="studio.currentRunning" inline @generate="studio.submit" @files="studio.addReferences" @remove="studio.removeReference" @preview="showReferences(studio.references,$event)" @prompts="promptsOpen=true" @assets="openAssets" @stop="pause" />
-</div>
     </div>
     <template v-else>
-     <div ref="feed" class="video-feed">
-<div class="mx-auto w-full max-w-[1000px]">
-<header class="mb-10 flex flex-wrap items-center justify-between gap-3">
-<h2 class="min-w-0 max-w-full truncate text-[26px] font-semibold tracking-tight">{{session?.title || t('videoStudio.newSession')}}</h2>
+<header class="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-gray-100 bg-white px-4 py-3 sm:px-6 dark:border-dark-700 dark:bg-dark-900">
+<h2 class="text-sm font-medium text-gray-500">{{t('videoStudio.history')}} <span class="ml-1 tabular-nums">{{studio.entries.length}}</span></h2>
 <div class="flex gap-2">
 <button type="button" class="session-action" @click="studio.newSession">
 <Icon name="plus" size="sm" />{{t('videoStudio.newSession')}}</button>
@@ -102,13 +104,16 @@ function pause() { for (const row of studio.entries)
 <Icon name="clock" size="sm" />{{t('videoStudio.history')}}</button>
 </div>
 </header>
-<div class="flex flex-col gap-10">
+     <div ref="feed" class="video-feed">
+<div class="mx-auto w-full max-w-[1000px]">
+
+<div class="flex flex-col gap-4">
 <VideoEntry v-for="row in studio.entries" :key="row.id" :record="row" :running="studio.active.includes(row.id)" :unsaved="!!studio.unsaved[row.id]" @reuse="studio.reuse(row)" @retry="retry(row)" @resume="studio.resume(row)" @pause="studio.stop(row.id)" @download="row.video && download(row.video,videoFilename(row.id,row.video))" @asset="studio.saveAsset(row)" @save="studio.saveUnsaved(row)" @preview="showReferences(row.references,$event)" />
 </div>
 </div>
 </div>
-     <VideoComposer v-model:prompt="studio.prompt" v-model:model-i-d="studio.modelID" v-model:parameters="studio.parameters" :models="studio.models" :references="studio.references" :can-generate="studio.canGenerate" :running="studio.currentRunning" :inline="false" @generate="studio.submit" @files="studio.addReferences" @remove="studio.removeReference" @preview="showReferences(studio.references,$event)" @prompts="promptsOpen=true" @assets="openAssets" @stop="pause" />
     </template>
+     <VideoComposer v-model:prompt="studio.prompt" v-model:model-i-d="studio.modelID" v-model:parameters="studio.parameters" :models="studio.models" :references="studio.references" :can-generate="studio.canGenerate" :running="studio.currentRunning" :inline="blank" :active="active" @generate="studio.submit" @files="studio.addReferences" @remove="studio.removeReference" @preview="showReferences(studio.references,$event)" @prompts="promptsOpen=true" @assets="openAssets" @stop="pause" />
    </div>
   </template>
   <BaseDialog :show="historyOpen" :title="t('videoStudio.history')" @close="historyOpen=false">
@@ -128,7 +133,8 @@ function pause() { for (const row of studio.entries)
 </div>
 </div>
 </BaseDialog>
-  <BaseDialog :show="promptsOpen" :title="t('videoStudio.prompts')" @close="promptsOpen=false">
+  <PromptLibraryDialog :show="promptsOpen" @close="promptsOpen=false" @use="studio.prompt=$event">
+<template #custom>
 <div class="space-y-4">
 <div v-for="p in studio.prompts" :key="p.id" class="flex items-start gap-3 border-b py-3 dark:border-dark-700">
 <button type="button" class="min-w-0 flex-1 text-left" @click="studio.prompt=p.prompt;promptsOpen=false">
@@ -152,7 +158,8 @@ function pause() { for (const row of studio.entries)
 </div>
 </form>
 </div>
-</BaseDialog>
+</template>
+</PromptLibraryDialog>
   <BaseDialog :show="assetsOpen" :title="t('videoStudio.assets')" @close="assetsOpen=false">
 <div class="space-y-4">
 <button type="button" class="btn btn-secondary" @click="libraryUpload?.click()">
@@ -195,8 +202,9 @@ function pause() { for (const row of studio.entries)
   background-size:16px 16px}
 :global(.dark .video-workspace) {
   background-image:radial-gradient(rgba(245,245,244,.16) 1px,transparent 1px)}
+.video-workspace.is-empty { justify-content:center; overflow-y:auto }
 .video-empty {
-  @apply relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-4 pb-10 pt-16 sm:px-6}
+  @apply relative flex min-h-0 flex-col items-center justify-center px-4 pt-16 sm:px-6}
 .video-empty h2 {
   @apply text-center text-3xl font-semibold tracking-tight sm:text-[38px]}
 .video-presets {
@@ -206,7 +214,8 @@ function pause() { for (const row of studio.entries)
 .history-trigger {
   @apply absolute right-4 top-4 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-dark-800}
 .video-feed {
-  @apply min-h-0 flex-1 overflow-y-auto px-4 pb-80 pt-8 sm:px-6 lg:px-10 lg:pt-10}
+  @apply min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6;
+  overflow-anchor:none}
 .session-action {
   @apply inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-sm hover:bg-gray-100 dark:border-dark-600 dark:bg-dark-800 dark:hover:bg-dark-700}
 .video-alert {

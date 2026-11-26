@@ -33,7 +33,7 @@ const model = { id: '7:gpt-image-2', group_id: 7, group_name: '图像创作', mo
     const page = await context.newPage()
     page.on('pageerror', error => errors.push(error.message))
     await page.goto(`${base}/image-studio`)
-    await page.getByRole('main').getByRole('heading', { name: '生图工作台', exact: true }).waitFor()
+    await page.getByRole('main').getByRole('tab', { name: '图片创作', exact: true }).waitFor()
     fixtures = await page.evaluate(() => [[1800,1200],[600,1200]].map(([width,height]) => {
       const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height
       const ctx = canvas.getContext('2d'); ctx.fillStyle = '#e8dfd0'; ctx.fillRect(0,0,width,height)
@@ -102,6 +102,8 @@ const model = { id: '7:gpt-image-2', group_id: 7, group_name: '图像创作', mo
     await page.locator('#studio-prompt').fill('完整图片预览：保留四周边框和原始比例')
     await page.locator('#studio-count').fill('2')
     await page.getByRole('button', { name: '开始生成', exact: true }).click()
+    await page.getByRole('heading', { name: /全部结果\s*2/ }).waitFor()
+    await page.locator('.studio-results > [role="status"]').waitFor({ state: 'hidden' })
     await page.getByRole('button', { name: '展开这一组', exact: true }).first().click()
     await page.waitForFunction(() => document.querySelectorAll('.result-card .preview-trigger').length === 2)
     await page.locator('.result-card .preview-trigger').first().click(); await ready()

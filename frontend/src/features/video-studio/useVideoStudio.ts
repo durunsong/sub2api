@@ -13,6 +13,7 @@ export function useVideoStudio() {
     const active = ref<string[]>([]), unsaved = shallowRef<Record<string, VideoRecord>>({});
     let db: VideoStudioDB | undefined, epoch = 0, ready = false, closed = false, saveTimer: ReturnType<typeof setTimeout> | undefined, noticeTimer: ReturnType<typeof setTimeout> | undefined;
     let loadedUserID: number | undefined;
+    let refreshVersion = 0;
     let channel: BroadcastChannel | undefined, loadAbort = new AbortController();
     let saveQueue: Promise<unknown> = Promise.resolve();
     const controllers = new Map<string, AbortController>();
@@ -25,12 +26,12 @@ export function useVideoStudio() {
     function notify(message: string) { notice.value = message; clearTimeout(noticeTimer); noticeTimer = setTimeout(() => { notice.value = ''; }, 5000); }
     function announce() { channel?.postMessage('refresh'); }
     async function refresh() {
-        const local = db, version = epoch;
+        const local = db, version = epoch, request = ++refreshVersion;
         if (!local)
             return;
         try {
             const [rows, a, p] = await Promise.all([local.list('records'), local.list('assets'), local.list('prompts')]);
-            if (version !== epoch)
+            if (version !== epoch || request !== refreshVersion)
                 return;
             records.value = rows.map(row => unsaved.value[row.id] || row);
             assets.value = a;
@@ -87,10 +88,12 @@ export function useVideoStudio() {
         }
         finally {
             if (version === epoch) {
-                controllers.delete(row.id);
-                active.value = [...controllers.keys()];
                 await refresh();
-                announce();
+                if (version === epoch) {
+                    controllers.delete(row.id);
+                    active.value = [...controllers.keys()];
+                    announce();
+                }
             }
         }
     }
@@ -101,6 +104,7 @@ export function useVideoStudio() {
         const row: VideoRecord = { id: crypto.randomUUID(), generationId: crypto.randomUUID(), sessionId: sessionID.value, createdAt: Date.now(), prompt: prompt.value, model: { ...selectedModel.value }, parameters: { ...parameters.value }, references: rawReferences(), status: 'pending' };
         controllers.set(row.id, abort);
         active.value = [...controllers.keys()];
+        refreshVersion++;
         records.value = [...records.value, row];
         error.value = '';
         let created = false, submitted = false, saved = false;
@@ -120,10 +124,12 @@ export function useVideoStudio() {
             if (!await local.updateRecord(row.id, row.generationId, { taskID: task.id })) {
                 return;
             }
-            controllers.delete(row.id);
-            active.value = [...controllers.keys()];
             await refresh();
+            if (version !== epoch || abort.signal.aborted)
+                return;
             announce();
+            // Hand off synchronously: never render a paused state between submit and polling.
+            controllers.delete(row.id);
             void resume(row);
         }
         catch {
@@ -150,10 +156,12 @@ export function useVideoStudio() {
         }
         finally {
             if (version === epoch && controllers.get(row.id) === abort) {
-                controllers.delete(row.id);
-                active.value = [...controllers.keys()];
                 await refresh();
-                announce();
+                if (version === epoch) {
+                    controllers.delete(row.id);
+                    active.value = [...controllers.keys()];
+                    announce();
+                }
             }
         }
     }

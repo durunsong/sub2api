@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Select from '@/components/common/Select.vue';
 import Icon from '@/components/icons/Icon.vue';
@@ -17,6 +17,7 @@ const props = defineProps<{
     canGenerate: boolean;
     running: boolean;
     inline: boolean;
+    active?: boolean;
 }>();
 const emit = defineEmits<{
     'update:prompt': [
@@ -75,13 +76,14 @@ function escape(event: KeyboardEvent) { if (settings.value || mention.value) {
     mention.value = false;
 } }
 function closeSettings() { settings.value = false; settingsTrigger.value?.focus(); }
-function outside(event: PointerEvent) { if (settings.value && event.target instanceof Node && !root.value?.contains(event.target) && !settingsPanel.value?.contains(event.target))
+function outside(event: PointerEvent) { if (settings.value && event.target instanceof Node && !settingsTrigger.value?.contains(event.target) && !settingsPanel.value?.contains(event.target))
     settings.value = false; }
-document.addEventListener('pointerdown', outside);
+watch(() => props.active, active => { if (active === false) { settings.value = false; mention.value = false; } });
+document.addEventListener('pointerdown', outside, true);
 window.addEventListener('resize', positionSettings);
 window.addEventListener('scroll', positionSettings, true);
 onBeforeUnmount(() => {
-    document.removeEventListener('pointerdown', outside);
+    document.removeEventListener('pointerdown', outside, true);
     window.removeEventListener('resize', positionSettings);
     window.removeEventListener('scroll', positionSettings, true);
 });
@@ -151,11 +153,11 @@ function paste(event: ClipboardEvent) { const files = Array.from(event.clipboard
 </template>
 <style scoped>
 .video-composer-wrap {
-  @apply pointer-events-none absolute inset-x-0 bottom-0 px-3 pb-4 pt-8 sm:px-6}
+  @apply shrink-0 px-3 pb-4 pt-4 sm:px-6}
 .video-composer-wrap:not(.inline) {
-  background:linear-gradient(to top,var(--video-background) 70%,transparent)}
+  background:var(--video-background); border-top:1px solid rgba(148,163,184,.15)}
 .video-composer-wrap.inline {
-  @apply static w-full p-0}
+  @apply mx-auto w-full max-w-[1048px] px-4 pb-10 pt-6}
 .video-composer {
   @apply pointer-events-auto mx-auto max-w-[1000px] rounded-3xl border border-gray-200 bg-white px-3 pb-3 pt-3 dark:border-dark-600 dark:bg-dark-800;
   box-shadow:0 16px 50px rgba(0,0,0,.09)}

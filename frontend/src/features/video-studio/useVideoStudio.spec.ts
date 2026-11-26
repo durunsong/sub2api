@@ -1,15 +1,16 @@
 import { mount, flushPromises } from '@vue/test-utils';
-import { defineComponent, reactive } from 'vue';
+import { defineComponent, reactive, watch } from 'vue';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { useVideoStudio } from './useVideoStudio';
 import type { VideoRecord } from './types';
 const mocks = vi.hoisted(() => ({
     auth: { user: { id: 7 } },
     catalog: vi.fn(), generate: vi.fn(), put: vi.fn(), updateRecord: vi.fn(),
-    list: vi.fn(), close: vi.fn()
+    list: vi.fn(), close: vi.fn(), follow: vi.fn()
 }));
 vi.mock('@/stores/auth', () => ({ useAuthStore: () => mocks.auth }));
 vi.mock('./api', () => ({ videoStudioAPI: { catalog: mocks.catalog, generate: mocks.generate } }));
+vi.mock('./tasks', () => ({ followVideo: mocks.follow }));
 vi.mock('./storage', () => ({ createVideoStudioDB: () => mocks }));
 vi.mock('@/features/image-studio/api', () => ({ imageToDataURL: vi.fn() }));
 beforeEach(() => {
@@ -92,5 +93,54 @@ it('does not mutate the new account when an old unsaved result finishes saving',
     await saving;
     expect(studio.storageError.value).toBe('new-account-error');
     expect(studio.unsaved.value).toEqual({});
+    wrapper.unmount();
+});
+
+it('keeps a running task active continuously while submission hands off to polling', async () => {
+    const { studio, wrapper } = start();
+    await flushPromises();
+    const states: number[] = [];
+    watch(studio.active, value => states.push(value.length), { flush: 'sync' });
+    mocks.updateRecord.mockResolvedValue(true);
+    mocks.generate.mockResolvedValue({ id: 'paid-task' });
+    mocks.follow.mockImplementation(() => new Promise(() => {}));
+    studio.prompt.value = 'A steady shot';
+    await studio.submit();
+    expect(mocks.follow).toHaveBeenCalledOnce();
+    expect(states).not.toContain(0);
+    expect(mocks.generate).toHaveBeenCalledOnce();
+    wrapper.unmount();
+});
+
+it('ignores an older IndexedDB read that finishes after the newest snapshot', async () => {
+    const { studio, wrapper } = start();
+    await flushPromises();
+    let finishOld!: (rows: VideoRecord[]) => void;
+    mocks.list.mockImplementationOnce(() => new Promise<VideoRecord[]>(resolve => { finishOld = resolve; }));
+    const old = studio.refresh();
+    const newest = { id: 'latest', sessionId: 's', createdAt: 2 } as VideoRecord;
+    mocks.list.mockImplementation(async (name: string) => name === 'records' ? [newest] : []);
+    await studio.refresh();
+    finishOld([{ id: 'outdated' } as VideoRecord]);
+    await old;
+    expect(studio.records.value).toEqual([newest]);
+    wrapper.unmount();
+});
+
+it('does not restart polling when paused while the submitted task ID is being saved', async () => {
+    const { studio, wrapper } = start();
+    await flushPromises();
+    let finishSave!: (saved: boolean) => void;
+    mocks.generate.mockResolvedValue({ id: 'paid-task' });
+    mocks.updateRecord.mockImplementation(() => new Promise<boolean>(resolve => { finishSave = resolve; }));
+    studio.prompt.value = 'One request only';
+    const submission = studio.submit();
+    await flushPromises();
+    studio.stop(studio.active.value[0]);
+    finishSave(true);
+    await submission;
+    expect(mocks.follow).not.toHaveBeenCalled();
+    expect(mocks.generate).toHaveBeenCalledOnce();
+    expect(studio.active.value).toEqual([]);
     wrapper.unmount();
 });

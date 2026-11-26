@@ -12,7 +12,7 @@ describe('WorkflowLibrary', () => {
     transport.get.mockResolvedValue({ data: { enabled: true, models: [{ id: 'text-model', group_id: 7, group_name: 'Text', model: 'gpt-4', label: 'GPT', supports_references: false }] } })
     transport.post.mockResolvedValue({ data: { prompts: ['AI front view', 'AI detail view'] } })
     const wrapper = mount(WorkflowLibrary, {
-      props: { show: true, canRun: true, prompts: [{ id: 'one', title: 'Series', prompt: 'A tea cup', createdAt: 1 }] },
+      props: { show: true, initialTab: 'custom', canRun: true, prompts: [{ id: 'one', title: 'Series', prompt: 'A tea cup', createdAt: 1 }] },
       global: { stubs: { BaseDialog: { template: '<div><slot /></div>' }, ConfirmDialog: true, Select: true, Icon: true } }
     })
     const button = (label: string) => wrapper.findAll('button').find(item => item.text() === label)!
@@ -33,7 +33,7 @@ describe('WorkflowLibrary', () => {
     transport.get.mockResolvedValue({ data: { enabled: true, models: [{ id: 'text-model', group_id: 7, group_name: 'Text', model: 'gpt-4', label: 'GPT', supports_references: false }] } })
     transport.post.mockResolvedValue({ data: { draft: { title: 'AI product shoot', prompt: '{{product}} in daylight', category: 'Product', tags: ['photo'], seriesPrompts: ['Front', 'Side'] } } })
     const wrapper = mount(WorkflowLibrary, {
-      props: { show: true, canRun: true, prompts: [] },
+      props: { show: true, initialTab: 'custom', canRun: true, prompts: [] },
       global: { stubs: { BaseDialog: { template: '<div><slot /></div>' }, ConfirmDialog: true, Select: true, Icon: true } }
     })
     const button = (label: string) => wrapper.findAll('button').find(item => item.text() === label)!
@@ -54,7 +54,7 @@ describe('WorkflowLibrary', () => {
   })
   it('requires variables and lets the user review a series before requesting generation', async () => {
     const wrapper = mount(WorkflowLibrary, {
-      props: { show: true, canRun: true, prompts: [{ id: 'template', title: 'Product photos', prompt: '{{product}} on a table', seriesPrompts: ['Warm daylight', 'Cool moonlight'], createdAt: 1 }] },
+      props: { show: true, initialTab: 'custom', canRun: true, prompts: [{ id: 'template', title: 'Product photos', prompt: '{{product}} on a table', seriesPrompts: ['Warm daylight', 'Cool moonlight'], createdAt: 1 }] },
       global: { stubs: { BaseDialog: { template: '<div><slot /></div>' }, ConfirmDialog: true, Select: true, Icon: true } }
     })
     const button = (label: string) => wrapper.findAll('button').find(item => item.text() === label)!

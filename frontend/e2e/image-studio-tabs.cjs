@@ -34,7 +34,7 @@ const model = { id: '7:gpt-image-2', group_id: 7, group_name: 'Images', model: '
     })
     const first = await context.newPage()
     await first.goto(`${base}/image-studio`)
-    await first.getByRole('main').getByRole('heading',{name:'生图工作台',exact:true}).waitFor()
+    await first.getByRole('main').getByRole('tab',{name:'图片创作',exact:true}).waitFor()
     image = await first.evaluate(() => {const canvas=document.createElement('canvas');canvas.width=16;canvas.height=16;canvas.getContext('2d').fillRect(0,0,16,16);return canvas.toDataURL('image/png').split(',')[1]})
     await first.locator('#studio-prompt').fill('Shared task')
     await first.getByRole('button',{name:'开始生成',exact:true}).last().click()

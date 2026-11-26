@@ -1,3 +1,4 @@
+import promptLibrary from './promptLibrary'
 import imageStudio from './imageStudio'
 import studioAdmin from './studioAdmin'
 import adminAccessKeys from './adminAccessKeys'
@@ -29,6 +30,7 @@ const mergeMessages = <T extends Record<string, unknown>>(base: T, override: Rec
 import videoStudio from './videoStudio'
 export default mergeMessages({
   ...videoStudio,
+  ...promptLibrary,
   ...imageStudio,
   ...studioAdmin,
   adminAccessKeys,

@@ -2,7 +2,7 @@
 import { vTooltip } from '@/components/common/tooltip'
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import BaseDialog from '@/components/common/BaseDialog.vue'
+import PromptLibraryDialog from '@/features/prompt-library/PromptLibraryDialog.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import Select from '@/components/common/Select.vue'
 import Icon from '@/components/icons/Icon.vue'
@@ -11,7 +11,7 @@ import type { WorkflowDraft } from '../api'
 import WorkflowAssistant from './WorkflowAssistant.vue'
 import { extractVariables, renderTemplate, splitSeries } from './workflow'
 
-const props = defineProps<{ show: boolean; prompts: ImagePrompt[]; initialPrompt?: string; references?: Blob[]; canRun: boolean }>()
+const props = defineProps<{ show: boolean; initialTab?: 'upstream' | 'custom'; prompts: ImagePrompt[]; initialPrompt?: string; references?: Blob[]; canRun: boolean }>()
 const emit = defineEmits<{ close: []; save: [prompt: ImagePrompt]; delete: [id: string]; use: [prompt: string]; run: [prompts: string[]] }>()
 const { t } = useI18n()
 const search = ref('')
@@ -80,7 +80,8 @@ function run(items: string[]) {
 </script>
 
 <template>
-  <BaseDialog close-tooltip :show="show" :title="t('imageStudio.workflowTitle')" width="extra-wide" @close="emit('close')">
+  <PromptLibraryDialog :show="show" :initial-tab="initialTab" @close="emit('close')" @use="emit('use', $event)">
+    <template #custom>
     <div v-if="show && creating" class="mx-auto max-w-2xl space-y-5">
       <div class="flex items-center justify-between gap-3"><h3 class="text-lg font-semibold">{{ t('imageStudio.aiCreate') }}</h3><button class="btn btn-secondary" @click="creating = false">{{ t('imageStudio.back') }}</button></div>
       <WorkflowAssistant mode="workflow" :initial-prompt="initialPrompt" :references="references" @workflow="applyWorkflow" />
@@ -158,6 +159,7 @@ function run(items: string[]) {
       </div>
       <div v-else class="py-16 text-center text-gray-500 dark:text-dark-300">{{ search || category || tag ? t('imageStudio.noMatches') : t('imageStudio.noTemplates') }}</div>
     </div>
-  </BaseDialog>
+    </template>
+  </PromptLibraryDialog>
   <ConfirmDialog :show="Boolean(deleteTarget)" :title="t('imageStudio.deleteTemplate')" :message="t('imageStudio.deleteTemplateConfirm')" danger @cancel="deleteTarget = null" @confirm="deleteTarget && emit('delete', deleteTarget.id); deleteTarget = null" />
 </template>

@@ -45,7 +45,7 @@ const textModel = { id: 'text', group_id: 8, group_name: '创作文本分组', m
     const page = await context.newPage()
     page.on('pageerror', error => errors.push(error.message))
     await page.goto(`${base}/image-studio`)
-    await page.getByRole('main').getByRole('heading', { name: '生图工作台', exact: true }).waitFor()
+    await page.getByRole('main').getByRole('tab', { name: '图片创作', exact: true }).waitFor()
     image = await page.evaluate(() => { const c = document.createElement('canvas'); c.width = 80; c.height = 80; const x = c.getContext('2d'); x.fillStyle = '#8fa59a'; x.fillRect(0,0,80,80); return c.toDataURL('image/png').split(',')[1] })
     await page.locator('input[type="file"][accept^="image"]').first().setInputFiles({ name: 'reference.png', mimeType: 'image/png', buffer: Buffer.from(image, 'base64') })
     await page.getByRole('button', { name: '移除参考图 1', exact: true }).waitFor()

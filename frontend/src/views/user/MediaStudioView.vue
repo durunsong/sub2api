@@ -19,10 +19,12 @@ onBeforeUnmount(() => document.removeEventListener('keydown', escape));
 <template>
 <ImageStudioView :inactive="tab==='video'" :workspace-fullscreen="fullscreen">
 <template #workspace-tabs>
-<StudioTabs v-model="tab">
+<StudioTabs v-model="tab" compact />
+</template>
+<template #workspace-actions>
 <button v-if="tab==='video'" type="button" class="inline-flex min-h-11 items-center gap-2 px-3 text-sm text-primary-700 dark:text-primary-400" :aria-pressed="fullscreen" @click="fullscreen=!fullscreen">
 <Icon :name="fullscreen?'minimize':'maximize'" size="md" />{{t(fullscreen?'videoStudio.exitFullscreen':'videoStudio.fullscreen')}}</button>
-</StudioTabs>
+
 </template>
 <template #video-workspace>
 <div v-if="visitedVideo" v-show="tab==='video'" id="studio-panel-video" role="tabpanel" aria-labelledby="studio-tab-video" :class="{'video-fullscreen':fullscreen}">
