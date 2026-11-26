@@ -75,7 +75,7 @@ const model = { id: '7:gpt-image-2', group_id: 7, group_name: '图像创作', mo
     await page.keyboard.press('Escape'); await preview.waitFor({state:'hidden'})
     assert.equal(await reference.evaluate(el => document.activeElement === el),true)
     assert.equal(generations,0)
-    const enterFullscreen = page.getByRole('button', { name: '全屏工作区', exact: true })
+    const enterFullscreen = page.getByRole('button', { name: '全屏工作台', exact: true })
     const exitFullscreen = page.getByRole('button', { name: '退出全屏', exact: true })
     const normalColor = await enterFullscreen.evaluate(el => getComputedStyle(el).color)
     await page.locator('#studio-prompt').fill('保留全屏切换前的草稿')

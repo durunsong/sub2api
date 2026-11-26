@@ -361,7 +361,10 @@ function previewHistory(item: ImageHistory) {
       <header class="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div><h1 class="text-2xl font-semibold tracking-tight">{{ t('imageStudio.title') }}</h1><p class="mt-1 text-xs text-gray-500 dark:text-dark-300">{{ t('imageStudio.localNotice') }}</p></div>
         <div class="flex flex-wrap items-center gap-2">
-          <button v-tooltip type="button" class="fullscreen-toggle" :class="{ active: fullscreen }" :aria-label="t(fullscreen ? 'imageStudio.exitFullscreen' : 'imageStudio.enterFullscreen')" :aria-pressed="fullscreen" @click="fullscreen = !fullscreen"><Icon :name="fullscreen ? 'minimize' : 'maximize'" size="md" /></button>
+          <button type="button" class="fullscreen-toggle" :class="{ active: fullscreen }" :aria-label="t(fullscreen ? 'imageStudio.exitFullscreen' : 'imageStudio.enterFullscreen')" :aria-pressed="fullscreen" @click="fullscreen = !fullscreen">
+            <Icon :name="fullscreen ? 'minimize' : 'maximize'" size="md" />
+            <span>{{ t(fullscreen ? 'imageStudio.exitFullscreen' : 'imageStudio.enterFullscreen') }}</span>
+          </button>
           <button class="btn btn-secondary btn-sm" @click="libraryOpen = true"><Icon name="book" size="sm" />{{ t('imageStudio.workflows') }}</button>
           <button class="btn btn-secondary btn-sm" @click="studio.exportBackup()"><Icon name="download" size="sm" />{{ t('imageStudio.exportBackup') }}</button>
           <button class="btn btn-secondary btn-sm" @click="importInput?.click()"><Icon name="upload" size="sm" />{{ t('imageStudio.importBackup') }}</button>
@@ -513,7 +516,7 @@ function previewHistory(item: ImageHistory) {
 </template>
 
 <style scoped>
-.fullscreen-toggle { @apply inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-primary-700 transition-colors hover:text-primary-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 dark:text-primary-400 dark:hover:text-primary-200; }
+.fullscreen-toggle { @apply inline-flex h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md px-3 text-sm font-medium text-primary-700 transition-colors hover:text-primary-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 dark:text-primary-400 dark:hover:text-primary-200; }
 .fullscreen-toggle.active { @apply text-violet-600 hover:text-violet-800 dark:text-violet-400 dark:hover:text-violet-200; }
 .composer-settings { container-type: inline-size; }
 .parameter-grid > div { min-width: 0; }
