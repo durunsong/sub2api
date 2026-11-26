@@ -25,9 +25,15 @@ func NewRegistry() *Registry {
 // Register adds a provider for each of its supported payment types.
 // If a type was previously registered, it is overwritten.
 func (r *Registry) Register(p Provider) {
+	r.RegisterForTypes(p, p.SupportedTypes()...)
+}
+
+// RegisterForTypes registers only the specified legacy routing aliases.
+// A provider's other capabilities remain available through pinned instances.
+func (r *Registry) RegisterForTypes(p Provider, types ...PaymentType) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	for _, t := range p.SupportedTypes() {
+	for _, t := range types {
 		r.providers[t] = p
 	}
 }

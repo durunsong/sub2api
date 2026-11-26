@@ -268,7 +268,12 @@ func (s *PaymentService) loadProviders(ctx context.Context) {
 			slog.Warn("[PaymentService] failed to create provider for instance", "instanceID", inst.ID, "key", inst.ProviderKey, "error", err)
 			continue
 		}
-		s.registry.Register(p)
+		if inst.ProviderKey == payment.TypeXorPay {
+			// XorPay WeChat orders pin their instance; never take over legacy wxpay orders.
+			s.registry.RegisterForTypes(p, payment.TypeXorPay)
+		} else {
+			s.registry.Register(p)
+		}
 	}
 }
 

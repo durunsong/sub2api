@@ -1385,6 +1385,43 @@ describe("admin SettingsView payment visible method controls", () => {
     expect(getProviders).toHaveBeenCalledTimes(2);
   });
 
+  it.each([false, true])("handles XorPay WeChat enablement with conflicting provider: %s", async (conflicting) => {
+    const provider = {
+      id: 7, provider_key: "xorpay", name: "XorPay", config: {},
+      supported_types: ["xorpay"], enabled: true, payment_mode: "",
+      refund_enabled: false, allow_user_refund: false, limits: "", sort_order: 0,
+    };
+    getProviders.mockResolvedValue({ data: [provider, ...(conflicting ? [{
+      ...provider, id: 8, provider_key: "wxpay", name: "Official WeChat", supported_types: ["wxpay"],
+    }] : [])] });
+    const PaymentProviderListStub = defineComponent({
+      emits: ["toggleType"],
+      setup(_, { emit }) {
+        return () => h("button", {
+          class: "xorpay-wechat-toggle", onClick: () => emit("toggleType", provider, "wxpay"),
+        }, "enable WeChat");
+      },
+    });
+    const wrapper = mount(SettingsView, { global: { stubs: {
+      AppLayout: AppLayoutStub, RouterLink: RouterLinkStub, "router-link": RouterLinkStub,
+      Select: SelectStub, Toggle: ToggleStub, Icon: true, ConfirmDialog: true,
+      PaymentProviderList: PaymentProviderListStub, PaymentProviderDialog: true,
+      GroupBadge: true, GroupOptionItem: true, ProxySelector: true,
+      ImageUpload: ImageUploadStub, BackupSettings: true,
+    } } });
+    await flushPromises();
+    await openPaymentTab(wrapper);
+    await wrapper.get(".xorpay-wechat-toggle").trigger("click");
+    await flushPromises();
+    if (conflicting) {
+      expect(updateProvider).not.toHaveBeenCalled();
+      expect(showError).toHaveBeenCalled();
+    } else {
+      expect(updateProvider).toHaveBeenCalledWith(7, { supported_types: ["xorpay", "wxpay"] });
+    }
+    wrapper.unmount();
+  });
+
   it("renders advanced scheduler copy as local experimental gateway policy", async () => {
     const wrapper = mountView();
 

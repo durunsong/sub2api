@@ -39,7 +39,9 @@ Cursor 场景下还会加载 [`.cursor/rules/sub2api-fork.mdc`](.cursor/rules/su
 
 - `backend/internal/payment/provider/xorpay.go`、`TypeXorPay`
 - Webhook：`/api/v1/payment/webhook/xorpay`
-- 前端展示名：**XorPay（支付宝）**
+- 原支付类型 `xorpay` 继续表示支付宝，展示名 **XorPay（支付宝）**；同一实例可显式启用 `wxpay`，发送 XorPay `pay_type=native`，用户端复用微信二维码提示。
+- 管理端沿用实例支付类型开关与微信通道冲突检查；服务端兼容 `xorpay_wxpay` 来源，不触发官方微信 OAuth。回调仍走 XorPay 路由，按订单实例验签与幂等到账。配置见 `docs/XORPAY_WECHAT_SETUP.md`。
+- XorPay 微信订单固定实例；全局 registry 只注册其历史 `xorpay` 别名，禁止接管无实例快照的旧官方微信订单回退。
 
 ### 全局访问封禁 Access Ban（官方 v0.1.164 无）
 

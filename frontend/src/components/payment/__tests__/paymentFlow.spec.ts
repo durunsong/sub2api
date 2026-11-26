@@ -74,6 +74,16 @@ describe('getVisibleMethods', () => {
 })
 
 describe('decidePaymentLaunch', () => {
+  it.each([false, true])('keeps XorPay native QR payments in the WeChat scan flow (mobile: %s)', (isMobile) => {
+    const decision = decidePaymentLaunch(createOrderResult({
+      qr_code: 'weixin://wxpay/bizpayurl?pr=test',
+      payment_type: 'wxpay',
+    }), { visibleMethod: 'wxpay', orderType: 'balance', isMobile, isWechatBrowser: isMobile })
+    expect(decision.kind).toBe('qr_waiting')
+    expect(decision.paymentState.paymentType).toBe('wxpay')
+    expect(decision.paymentState.qrCode).toBe('weixin://wxpay/bizpayurl?pr=test')
+  })
+
   it('uses Stripe popup waiting flow for desktop Alipay client secret', () => {
     const decision = decidePaymentLaunch(createOrderResult({
       client_secret: 'cs_test',

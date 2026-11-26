@@ -42,7 +42,7 @@ export const PROVIDER_SUPPORTED_TYPES: Record<string, string[]> = {
   wxpay: ['wxpay'],
   stripe: ['card', 'alipay', 'wxpay', 'link'],
   airwallex: ['airwallex'],
-  xorpay: ['xorpay'],
+  xorpay: ['xorpay', 'wxpay'],
 }
 
 /** Available payment modes for EasyPay providers. */

@@ -33,7 +33,7 @@ v0.2.21 整合时另补齐目标版本的缓存 TTL 传递缺口：WS v2 逐轮/
 | #   | 模块                           | 类型      | 一句话                                                                                               |
 | --- | ------------------------------ | --------- | ---------------------------------------------------------------------------------------------------- |
 | 1   | **Kiro 平台**                  | 新增      | AWS Kiro 全链路：OAuth、翻译、缓存模拟、粘性会话、计费 credits、429 冷却                             |
-| 2   | **XorPay 支付**                | 新增      | 支付宝扫码聚合支付，含 webhook、管理端配置、用户端 QR 流程                                           |
+| 2   | **XorPay 支付**                | 新增      | 支付宝及微信 Native 扫码聚合支付，含 webhook、管理端配置、用户端 QR 流程                                           |
 | 3   | **Grok + Kiro 配额口径**       | 修改      | 平台常量、默认配额、`157` 迁移 CHECK 约束同时含 `kiro` + `grok`                                      |
 | 4   | **UI / 品牌**                  | 修改      | 首页/登录注册靛蓝紫罗兰主题、`logo.svg`、Kiro 紫色平台图标                                           |
 | 5   | **组件规范化**                 | 修改      | 原生 `<select>` → `Select.vue`；原生 `confirm/alert` → `ConfirmDialog`                               |
@@ -315,9 +315,11 @@ backend/internal/service/
 
 ### 4.1 功能
 
-- 支付类型：`payment.TypeXorPay` = `"xorpay"`
-- 支付宝扫码（当面付），异步 notify + 订单查询
+- Provider key：`payment.TypeXorPay` = `"xorpay"`；原 `xorpay` 支付类型表示支付宝，新增支持 `wxpay` 微信扫码。
+- 下单分别发送 `pay_type=alipay` / `native`，两位小数字符串金额参与签名；异步 notify、订单查询和退款共用既有 XorPay 协议。
 - Webhook：`POST /api/v1/payment/webhook/xorpay`
+- 微信支付复用现有通道筛选、限额、订单实例快照、金额一致性和履约幂等；不走官方微信 OpenID/JSAPI 流程。
+- 管理端通过 XorPay 实例的微信支付开关启用，保留微信通道冲突检查。服务端和配置 helper 兼容 `xorpay_wxpay` 来源，当前设置页不新增来源下拉框。原实例不自动启用微信，无迁移。操作见 [XorPay 微信配置](XORPAY_WECHAT_SETUP.md)。
 
 ### 4.2 关键文件
 
@@ -347,7 +349,7 @@ backend/internal/service/
 | 改动               | 文件/说明                                                                             |
 | ------------------ | ------------------------------------------------------------------------------------- |
 | 用户端隐藏倍率展示 | `PaymentView.vue`、`UsageView.vue` CSV 导出等                                         |
-| XorPay 显示名      | 前端统一为 **「XorPay（支付宝）」**                                                   |
+| XorPay 显示名      | 原 `xorpay` 仍为 **「XorPay（支付宝）」**；新增微信订单使用 `wxpay`，显示微信图标与扫码提示                                                   |
 | 二维码支付金额     | `AmountInput.vue`、`PaymentStatusPanel.vue` — `payAmount` / `creditedAmount` 分离展示 |
 | 充值订阅页优化     | 提交 `9a8786ff` 等近期支付流程调整                                                    |
 | 套餐展示标签       | `subscriptionPlanLabels.ts` 统一购买页筛选 tab、套餐卡片及购买确认徽章：普通 OpenAI 显示 `OpenAI(GPT Pro 50x)`，Gemini 显示 `Gemini Ultra`；保留 GLM 特例、内部平台值和套餐配置 |

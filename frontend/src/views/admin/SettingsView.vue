@@ -12764,6 +12764,8 @@ function getProviderVisibleMethods(
     }
   } else if (provider.provider_key === "easypay") {
     supportedTypes.forEach(addMethod);
+  } else if (provider.provider_key === "xorpay" && supportedTypes.includes("wxpay")) {
+    methods.add("wxpay");
   }
 
   return Array.from(methods);

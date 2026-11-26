@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   PAYMENT_CURRENCY_OPTIONS,
   PROVIDER_CONFIG_FIELDS,
+  PROVIDER_SUPPORTED_TYPES,
+  getAvailableTypes,
   isBuiltInAlipayMethod,
   isBuiltInWxpayMethod,
   parseEasyPayCustomMethods,
@@ -12,6 +14,19 @@ function findField(providerKey: string, key: string) {
   const fields = PROVIDER_CONFIG_FIELDS[providerKey] || []
   return fields.find(field => field.key === key)
 }
+
+describe('XorPay supported methods', () => {
+  it('lets administrators enable WeChat alongside the existing Alipay method', () => {
+    expect(PROVIDER_SUPPORTED_TYPES.xorpay).toEqual(['xorpay', 'wxpay'])
+    expect(getAvailableTypes('xorpay', [
+      { value: 'xorpay', label: 'XorPay（支付宝）' },
+      { value: 'wxpay', label: '微信支付' },
+    ], '')).toEqual([
+      { value: 'xorpay', label: 'XorPay（支付宝）' },
+      { value: 'wxpay', label: '微信支付' },
+    ])
+  })
+})
 
 describe('PROVIDER_CONFIG_FIELDS.wxpay', () => {
   it('keeps admin form validation aligned with backend-required credentials', () => {

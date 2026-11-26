@@ -48,6 +48,13 @@ func enabledVisibleMethodsForProvider(providerKey, supportedTypes string) []stri
 		for _, supportedType := range splitTypes(supportedTypes) {
 			addMethod(supportedType)
 		}
+	case payment.TypeXorPay:
+		for _, supportedType := range splitTypes(supportedTypes) {
+			if supportedType == payment.TypeWxpay {
+				addMethod(payment.TypeWxpay)
+				break
+			}
+		}
 	}
 
 	methods := make([]string, 0, len(methodSet))

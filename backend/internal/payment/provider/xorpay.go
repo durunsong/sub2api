@@ -26,6 +26,7 @@ const (
 	xorpayMaxErrorSummary = 512
 	xorpayStatusOK        = "ok"
 	xorpayPayTypeAlipay   = "alipay"
+	xorpayPayTypeNative   = "native"
 
 	// Order query (GET /api/query2/{aid}) status values.
 	xorpayQueryStatusNotExist = "not_exist"
@@ -37,8 +38,8 @@ const (
 )
 
 // XorPay implements payment.Provider for the XorPay aggregation platform.
-// It currently supports Alipay face-to-face (扫码) payments: the create call
-// returns an Alipay QR URL that the frontend renders for the user to scan.
+// It supports Alipay face-to-face and WeChat Native payments, returning QR
+// content that the frontend renders for the corresponding payment method.
 type XorPay struct {
 	instanceID string
 	config     map[string]string // aid, appSecret, notifyUrl, returnUrl, apiBase
@@ -81,7 +82,7 @@ func (x *XorPay) apiBase() string {
 func (x *XorPay) Name() string        { return "XorPay" }
 func (x *XorPay) ProviderKey() string { return payment.TypeXorPay }
 func (x *XorPay) SupportedTypes() []payment.PaymentType {
-	return []payment.PaymentType{payment.TypeXorPay}
+	return []payment.PaymentType{payment.TypeXorPay, payment.TypeWxpay}
 }
 
 // MerchantIdentityMetadata exposes the non-sensitive aid for snapshot/audit use.
@@ -97,12 +98,21 @@ func (x *XorPay) MerchantIdentityMetadata() map[string]string {
 	return map[string]string{"aid": aid}
 }
 
-// CreatePayment creates an Alipay scan-to-pay order via XorPay and returns the
-// Alipay QR URL for the frontend to render.
+// CreatePayment creates an Alipay or WeChat scan-to-pay order via XorPay.
 //
 // Endpoint: POST {apiBase}/api/pay/{aid}
 // Sign:     MD5(name + pay_type + price + order_id + notify_url + app_secret)
 func (x *XorPay) CreatePayment(ctx context.Context, req payment.CreatePaymentRequest) (*payment.CreatePaymentResponse, error) {
+	var payType string
+	switch req.PaymentType {
+	case payment.TypeXorPay:
+		payType = xorpayPayTypeAlipay
+	case payment.TypeWxpay:
+		payType = xorpayPayTypeNative
+	default:
+		return nil, fmt.Errorf("xorpay create: unsupported payment type %q", req.PaymentType)
+	}
+
 	notifyURL := strings.TrimSpace(x.config["notifyUrl"])
 	if req.NotifyURL != "" {
 		notifyURL = req.NotifyURL
@@ -118,7 +128,6 @@ func (x *XorPay) CreatePayment(ctx context.Context, req payment.CreatePaymentReq
 		price = d.StringFixed(2)
 	}
 
-	payType := xorpayPayTypeAlipay
 	params := map[string]string{
 		"name":       req.Subject,
 		"pay_type":   payType,

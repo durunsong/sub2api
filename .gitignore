@@ -142,6 +142,7 @@ docs/*
 !docs/mcp.md
 !docs/PAYMENT.md
 !docs/PAYMENT_CN.md
+!docs/XORPAY_WECHAT_SETUP.md
 !docs/ADMIN_PAYMENT_INTEGRATION_API.md
 !docs/ASYNC_IMAGE_TASKS.md
 !docs/OPENAI_IMAGES_CODEX.md

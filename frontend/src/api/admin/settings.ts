@@ -132,7 +132,8 @@ export type PaymentVisibleMethodSource =
   | "official_alipay"
   | "easypay_alipay"
   | "official_wxpay"
-  | "easypay_wxpay";
+  | "easypay_wxpay"
+  | "xorpay_wxpay";
 export type WeChatConnectMode = "open" | "mp" | "mobile";
 
 export interface PaymentVisibleMethodSourceOption {
@@ -187,6 +188,11 @@ const PAYMENT_VISIBLE_METHOD_SOURCE_OPTIONS: Record<
       labelZh: "易支付微信",
       labelEn: "EasyPay WeChat Pay",
     },
+    {
+      value: "xorpay_wxpay",
+      labelZh: "XorPay 微信",
+      labelEn: "XorPay WeChat Pay",
+    },
   ],
 };
 const PAYMENT_VISIBLE_METHOD_SOURCE_ALIASES: Record<
@@ -209,6 +215,8 @@ const PAYMENT_VISIBLE_METHOD_SOURCE_ALIASES: Record<
     official: "official_wxpay",
     easypay_wxpay: "easypay_wxpay",
     easypay: "easypay_wxpay",
+    xorpay_wxpay: "xorpay_wxpay",
+    xorpay: "xorpay_wxpay",
   },
 };
 const WECHAT_CONNECT_MODE_OPTIONS: WeChatConnectModeOption[] = [

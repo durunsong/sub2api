@@ -71,6 +71,22 @@ describe('PaymentQRDialog currency display', () => {
 
   afterEach(() => {
     vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
+
+  it('renders XorPay native QR content with the WeChat scan hint', async () => {
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null)
+    pollOrderStatus.mockResolvedValue({ ...paidOrder, status: 'PENDING', payment_type: 'wxpay' })
+    const wrapper = mount(PaymentQRDialog, {
+      props: { show: false, orderId: 42, qrCode: 'weixin://wxpay/bizpayurl?pr=test', expiresAt: '2099-01-01T10:30:00Z', paymentType: 'wxpay' },
+      global: { stubs: { BaseDialog: { props: ['show'], template: '<div v-if="show"><slot /></div>' }, Icon: true } },
+    })
+    await wrapper.setProps({ show: true })
+    await flushPromises()
+    expect(wrapper.text()).toContain('payment.qr.scanWxpayHint')
+    expect(wrapper.text()).not.toContain('payment.qr.scanAlipay')
+    expect(toCanvas).toHaveBeenCalledWith(expect.anything(), 'weixin://wxpay/bizpayurl?pr=test', expect.anything())
+    wrapper.unmount()
   })
 
   it('uses order currency for pay_amount and USD for credited amount', async () => {

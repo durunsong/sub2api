@@ -14,12 +14,15 @@ describe('admin settings payment visible method helpers', () => {
     expect(normalizePaymentVisibleMethodSource('wxpay', 'official')).toBe('official_wxpay')
     expect(normalizePaymentVisibleMethodSource('wxpay', 'wechat')).toBe('official_wxpay')
     expect(normalizePaymentVisibleMethodSource('wxpay', 'easypay')).toBe('easypay_wxpay')
+    expect(normalizePaymentVisibleMethodSource('wxpay', 'xorpay')).toBe('xorpay_wxpay')
+    expect(normalizePaymentVisibleMethodSource('wxpay', 'xorpay_wxpay')).toBe('xorpay_wxpay')
   })
 
   it('rejects unknown or cross-method source values', () => {
     expect(normalizePaymentVisibleMethodSource('alipay', 'official_wxpay')).toBe('')
     expect(normalizePaymentVisibleMethodSource('wxpay', 'official_alipay')).toBe('')
     expect(normalizePaymentVisibleMethodSource('alipay', 'unknown')).toBe('')
+    expect(normalizePaymentVisibleMethodSource('alipay', 'xorpay_wxpay')).toBe('')
     expect(normalizePaymentVisibleMethodSource('wxpay', null)).toBe('')
   })
 
@@ -57,6 +60,11 @@ describe('admin settings payment visible method helpers', () => {
         value: 'easypay_wxpay',
         labelZh: '易支付微信',
         labelEn: 'EasyPay WeChat Pay',
+      },
+      {
+        value: 'xorpay_wxpay',
+        labelZh: 'XorPay 微信',
+        labelEn: 'XorPay WeChat Pay',
       },
     ])
   })
