@@ -351,6 +351,7 @@ backend/internal/service/
 | 二维码支付金额     | `AmountInput.vue`、`PaymentStatusPanel.vue` — `payAmount` / `creditedAmount` 分离展示 |
 | 充值订阅页优化     | 提交 `9a8786ff` 等近期支付流程调整                                                    |
 | 套餐展示标签       | `subscriptionPlanLabels.ts` 统一购买页筛选 tab、套餐卡片及购买确认徽章：普通 OpenAI 显示 `OpenAI(GPT Pro 50x)`，Gemini 显示 `Gemini Ultra`；保留 GLM 特例、内部平台值和套餐配置 |
+| 套餐卡片布局       | `SubscriptionPlanCard.vue` 与 `PaymentView.vue` 采用方案 A：平台/有效期独立首行，标题整行显示并自然换行；取消标题两行省略，窄屏标签与价格可换行。共用卡片的购买列表、续费弹窗同步生效，购买确认头部一致；保留配色、计价及选购行为。 |
 
 ---
 

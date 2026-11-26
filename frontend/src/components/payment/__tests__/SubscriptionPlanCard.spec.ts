@@ -146,7 +146,7 @@ describe("SubscriptionPlanCard", () => {
     ["long Chinese", "企业全球加速专业订阅套餐（含高级模型与优先支持）"],
     ["long English", "Enterprise Global Acceleration Subscription with Priority Support"],
     ["unbroken token", "EnterpriseGlobalAccelerationSubscriptionWithPrioritySupport1234567890"],
-  ])("keeps the full %s plan title accessible in a bounded two-line area", (_label, name) => {
+  ])("shows the full %s plan title on its own wrapping row", (_label, name) => {
     const wrapper = mountPlanCard("openai", { name });
     const title = wrapper.get("h3");
 
@@ -154,13 +154,12 @@ describe("SubscriptionPlanCard", () => {
     expect(title.attributes("title")).toBe(name);
     expect(title.classes()).toEqual(expect.arrayContaining([
       "min-w-0",
-      "flex-1",
       "break-words",
-      "line-clamp-2",
       "[overflow-wrap:anywhere]",
       "text-xl",
     ]));
     expect(title.classes()).not.toContain("truncate");
+    expect(title.classes()).not.toContain("line-clamp-2");
   });
 
   it("keeps title, badge, price, description, and purchase action readable", () => {
@@ -175,9 +174,9 @@ describe("SubscriptionPlanCard", () => {
     const price = wrapper.findAll("span").find((node) => node.text() === "123.45");
 
     expect(title.classes()).toContain("min-w-0");
-    expect(title.classes()).toContain("flex-1");
-    expect(badge?.classes()).toContain("shrink-0");
-    expect(title.element.parentElement?.classList).toContain("min-w-0");
+    expect(badge?.element.parentElement).not.toBe(title.element.parentElement);
+    expect(badge?.element.parentElement?.nextElementSibling).toBe(title.element);
+    expect(badge?.element.parentElement?.classList).toContain("flex-wrap");
     expect(price?.text()).toBe("123.45");
     expect(wrapper.get("p").text()).toBe("Includes advanced models and priority support.");
     expect(wrapper.get("button").text().toLowerCase()).toMatch(/subscribe|payment\.subscribenow/);
@@ -189,6 +188,6 @@ describe("SubscriptionPlanCard", () => {
 
     expect(title.text()).toBe("Pro");
     expect(title.attributes("title")).toBe("Pro");
-    expect(title.classes()).toEqual(expect.arrayContaining(["text-xl", "font-bold", "line-clamp-2"]));
+    expect(title.classes()).toEqual(expect.arrayContaining(["text-xl", "font-bold"]));
   });
 });

@@ -172,15 +172,18 @@
             <!-- Subscription confirm (inline, replaces plan list) -->
             <template v-if="selectedPlan">
               <div class="card p-5">
-                <!-- Header: platform badge + plan name -->
-                <div class="mb-3 flex flex-wrap items-center gap-2">
-                  <span :class="['rounded-md border px-2 py-0.5 text-xs font-medium', planBadgeClass]">
-                    {{ subscriptionPlanBadgeLabel(selectedPlan.group_platform || '', selectedPlan) }}
-                  </span>
-                  <h3 class="text-lg font-bold text-gray-900 dark:text-white">{{ userFacingPlatformText(selectedPlan.name) }}</h3>
+                <!-- Match the plan card's metadata row and full-width title. -->
+                <div class="mb-3">
+                  <div class="mb-3 flex min-w-0 flex-wrap items-start justify-between gap-2">
+                    <span :class="['min-w-0 max-w-full break-words [overflow-wrap:anywhere] rounded-md border px-2 py-0.5 text-xs font-medium', planBadgeClass]">
+                      {{ subscriptionPlanBadgeLabel(selectedPlan.group_platform || '', selectedPlan) }}
+                    </span>
+                    <span :class="['shrink-0 rounded-full px-2 py-0.5 text-xs font-medium', planBadgeClass]">{{ planValiditySuffix }}</span>
+                  </div>
+                  <h3 class="min-w-0 break-words [overflow-wrap:anywhere] text-lg font-bold text-gray-900 dark:text-white">{{ userFacingPlatformText(selectedPlan.name) }}</h3>
                 </div>
                 <!-- Price -->
-                <div class="flex items-baseline gap-2">
+                <div class="flex flex-wrap items-baseline gap-2">
                   <span v-if="selectedPlan.original_price" class="text-sm text-gray-400 line-through dark:text-gray-500">
                     {{ formatSelectedSubscriptionPaymentAmount(selectedPlan.original_price) }}
                   </span>

@@ -11,29 +11,29 @@
     <div :class="['h-1', accentClass]" />
 
     <div class="flex flex-1 flex-col p-6">
-      <!-- Header: badge + readable name + validity -->
+      <!-- Keep metadata above the title so long platform names cannot squeeze it. -->
       <div class="mb-4">
-        <div class="mb-3 flex min-w-0 items-start gap-2">
-          <span :class="['mt-0.5 shrink-0 rounded-md border px-2 py-0.5 text-xs font-medium', badgeLightClass, borderClass]">
+        <div class="mb-3 flex min-w-0 flex-wrap items-start justify-between gap-2">
+          <span :class="['min-w-0 max-w-full break-words [overflow-wrap:anywhere] rounded-md border px-2 py-0.5 text-xs font-medium', badgeLightClass, borderClass]">
             {{ pLabel }}
           </span>
-          <h3
-            :title="userFacingPlatformText(plan.name)"
-            class="min-w-0 flex-1 break-words [overflow-wrap:anywhere] text-xl font-bold leading-tight text-gray-900 line-clamp-2 dark:text-white"
-          >
-            {{ userFacingPlatformText(plan.name) }}
-          </h3>
-          <span :class="['mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-xs font-medium', badgeLightClass]">
+          <span :class="['shrink-0 rounded-full px-2 py-0.5 text-xs font-medium', badgeLightClass]">
             {{ validitySuffix }}
           </span>
         </div>
-        <p v-if="plan.description" class="text-sm leading-relaxed text-gray-500 line-clamp-2 dark:text-dark-400">
+        <h3
+          :title="userFacingPlatformText(plan.name)"
+          class="min-w-0 break-words [overflow-wrap:anywhere] text-xl font-bold leading-tight text-gray-900 dark:text-white"
+        >
+          {{ userFacingPlatformText(plan.name) }}
+        </h3>
+        <p v-if="plan.description" class="mt-3 text-sm leading-relaxed text-gray-500 line-clamp-2 dark:text-dark-400">
           {{ userFacingPlatformText(plan.description) }}
         </p>
       </div>
 
       <!-- Price -->
-      <div class="mb-5 flex items-end gap-2">
+      <div class="mb-5 flex flex-wrap items-end gap-2">
         <span v-if="plan.original_price" class="pb-1 text-sm text-gray-400 line-through dark:text-dark-500">{{ planCurrencySymbol }}{{ plan.original_price }}<template v-if="plan.currency"> {{ plan.currency }}</template></span>
         <div class="flex items-baseline gap-1">
           <span class="text-xl font-semibold text-gray-400 dark:text-dark-500">{{ planCurrencySymbol }}</span>
