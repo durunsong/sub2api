@@ -26,6 +26,10 @@ func RegisterUserRoutes(
 	// 用户管理面变更类操作入审计（含 TOTP 启用/禁用、step-up 验证、密码修改等安全事件）
 	authenticated.Use(gin.HandlerFunc(auditLog))
 	if h.ImageStudio != nil {
+		authenticated.GET("/image-studio/videos/catalog", mcpAccessBan, h.ImageStudio.VideoCatalog)
+		authenticated.POST("/image-studio/videos/generate", mcpAccessBan, h.ImageStudio.RequestBodyLimit(), h.ImageStudio.GenerateVideo)
+		authenticated.GET("/image-studio/videos/status", mcpAccessBan, h.ImageStudio.VideoStatus)
+		authenticated.GET("/image-studio/videos/content", mcpAccessBan, h.ImageStudio.VideoContent)
 		authenticated.GET("/image-studio/catalog", mcpAccessBan, h.ImageStudio.Catalog)
 		authenticated.GET("/image-studio/workflow-models", mcpAccessBan, h.ImageStudio.WorkflowModels)
 		authenticated.POST("/image-studio/workflow", mcpAccessBan, h.ImageStudio.RequestBodyLimit(), h.ImageStudio.Workflow)

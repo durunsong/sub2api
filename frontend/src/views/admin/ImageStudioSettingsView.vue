@@ -1,6 +1,7 @@
 <template>
   <AppLayout>
-    <div class="mx-auto max-w-6xl space-y-6">
+    <slot name="workspace-tabs" />
+    <div id="studio-panel-image" role="tabpanel" aria-labelledby="studio-tab-image" v-show="!inactive" class="mx-auto max-w-6xl space-y-6">
       <header class="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-100">{{ t('studioAdmin.title') }}</h1>
@@ -61,6 +62,7 @@
         <template #footer><button type="submit" form="studio-add-model" class="btn btn-primary" :disabled="!draft.group_id || !draft.model.trim()">{{ t('studioAdmin.add') }}</button></template>
       </BaseDialog>
     </div>
+    <slot name="video-workspace" />
   </AppLayout>
 </template>
 
@@ -76,6 +78,7 @@ import { imageStudioAPI, type StudioConfig, type StudioModel, type StudioModelSe
 import { mergeModelSettings, updateModelSetting } from '@/features/image-studio/adminConfig'
 import { extractApiErrorMessage } from '@/utils/apiError'
 const { t } = useI18n()
+withDefaults(defineProps<{ inactive?: boolean }>(), { inactive: false })
 const config = ref<StudioConfig>({ enabled: true, models: [] })
 const candidates = ref<StudioModel[]>([])
 const textModels = ref<WorkflowModel[]>([])

@@ -22,6 +22,7 @@ import { normalizeDimensions, isValidCustomSize } from '@/features/image-studio/
 import type { ImageCategory, ImageEdit, ImageHistory, MaskEditResult } from '@/features/image-studio/types'
 
 const { t, te, locale } = useI18n()
+const props = withDefaults(defineProps<{ inactive?: boolean; workspaceFullscreen?: boolean }>(), { inactive: false, workspaceFullscreen: false })
 const studio = reactive(useImageStudio())
 const auth = useAuthStore()
 const app = useAppStore()
@@ -78,6 +79,7 @@ const keyboardClipsSubmit = ref(false)
 const keyboardInset = ref(0)
 const modalOpen = computed(() => Boolean(batchDownloadOpen.value || libraryOpen.value || assetsOpen.value || assignmentOpen.value || categoryDialog.value || preview.value || maskImage.value || confirmation.value || detail.value))
 function exitFullscreen(event: KeyboardEvent) {
+  if (props.inactive) return
   if (event.key === 'Escape' && !event.isComposing && !modalOpen.value) fullscreen.value = false
 }
 onMounted(() => document.addEventListener('keydown', exitFullscreen, true))
@@ -253,6 +255,7 @@ function transferImages(data: DataTransfer | null): File[] {
   return images.length ? images : Array.from(data.files || []).filter(file => file.type.startsWith('image/'))
 }
 function pasteReference(event: ClipboardEvent) {
+  if (props.inactive) return
   if (libraryOpen.value || assetsOpen.value || assignmentOpen.value || categoryDialog.value || preview.value || maskImage.value || confirmation.value) return
   const target = event.target instanceof Element ? event.target : null
   if (target?.closest('[role="dialog"], input, [contenteditable="true"]') || (target?.closest('textarea') && target.id !== 'studio-prompt')) return
@@ -356,8 +359,9 @@ function previewHistory(item: ImageHistory) {
 </script>
 
 <template>
-  <AppLayout :fullscreen="fullscreen">
-    <div class="image-studio pb-28 text-gray-900 dark:text-gray-100" :class="{ 'is-fullscreen': fullscreen }">
+  <AppLayout :fullscreen="inactive ? workspaceFullscreen : fullscreen">
+    <slot name="workspace-tabs" />
+    <div id="studio-panel-image" role="tabpanel" aria-labelledby="studio-tab-image" v-show="!inactive" class="image-studio pb-28 text-gray-900 dark:text-gray-100" :class="{ 'is-fullscreen': fullscreen }">
       <header class="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div><h1 class="text-2xl font-semibold tracking-tight">{{ t('imageStudio.title') }}</h1><p class="mt-1 text-xs text-gray-500 dark:text-dark-300">{{ t('imageStudio.localNotice') }}</p></div>
         <div class="flex flex-wrap items-center gap-2">
@@ -481,7 +485,7 @@ function previewHistory(item: ImageHistory) {
         </section>
       </div>
     </div>
-    <div v-if="showGenerationDock" ref="generationDock" data-generation-dock class="generation-dock" :class="{ 'sidebar-collapsed': app.sidebarCollapsed, 'is-fullscreen': fullscreen }" :style="{ bottom: `${keyboardInset}px` }" role="region" :aria-label="t('imageStudio.generateActions')">
+    <div v-if="showGenerationDock && !inactive" ref="generationDock" data-generation-dock class="generation-dock" :class="{ 'sidebar-collapsed': app.sidebarCollapsed, 'is-fullscreen': fullscreen }" :style="{ bottom: `${keyboardInset}px` }" role="region" :aria-label="t('imageStudio.generateActions')">
       <div class="generation-dock-inner">
         <button v-tooltip type="button" class="dock-parameters" :aria-label="t('imageStudio.editParameters')" @click="editParameters">
           <span class="truncate text-sm font-semibold">{{ studio.selectedModel?.label || studio.selectedModel?.model || t('imageStudio.selectModel') }}</span>
@@ -512,6 +516,7 @@ function previewHistory(item: ImageHistory) {
     </BaseDialog>
     <BaseDialog close-tooltip :show="Boolean(detail)" :title="t('imageStudio.details')" width="wide" @close="detail = ''"><p class="whitespace-pre-wrap break-words text-sm leading-6">{{ detail }}</p></BaseDialog>
     <ConfirmDialog :show="Boolean(confirmation)" :title="confirmation?.title || ''" :message="confirmation?.message || ''" :danger="confirmation?.danger" @cancel="confirmation = null" @confirm="acceptConfirmation" />
+    <slot name="video-workspace" />
   </AppLayout>
 </template>
 

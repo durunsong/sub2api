@@ -17,7 +17,7 @@ import (
 )
 
 func TestImageStudioAuditPreservesMetadataWithoutCreativeBody(t *testing.T) {
-	for _, path := range []string{"/api/v1/image-studio/generate", "/api/v1/image-studio/workflow"} {
+	for _, path := range []string{"/api/v1/image-studio/generate", "/api/v1/image-studio/workflow", "/api/v1/image-studio/videos/generate"} {
 		for _, status := range []int{http.StatusOK, http.StatusForbidden} {
 			t.Run(fmt.Sprintf("%s/status=%d", path, status), func(t *testing.T) {
 				repo := &auditCaptureRepository{}

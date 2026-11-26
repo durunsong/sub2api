@@ -151,6 +151,18 @@ func ParseGrokMediaRequest(contentType string, body []byte) GrokMediaRequestInfo
 	return info
 }
 
+// ParseGrokVideoRequest adds the video-only last frame to safety inputs without
+// changing image request parsing or image edit forwarding.
+func ParseGrokVideoRequest(contentType string, body []byte) GrokMediaRequestInfo {
+	info := ParseGrokMediaRequest(contentType, body)
+	if gjson.ValidBytes(body) {
+		if last := extractGrokMediaImageURL(gjson.GetBytes(body, "last_frame")); last != "" {
+			info.InputImageURLs = append(info.InputImageURLs, last)
+		}
+	}
+	return info
+}
+
 func parseGrokMediaJSONRequest(body []byte, info *GrokMediaRequestInfo) {
 	if info == nil {
 		return
@@ -1102,7 +1114,7 @@ func normalizeGrokMediaForwardBody(endpoint GrokMediaEndpoint, body []byte, cont
 	case GrokMediaEndpointImagesEdits:
 		imageFields = []string{"image", "images", "mask"}
 	case GrokMediaEndpointVideosGenerations:
-		imageFields = []string{"image", "images", "reference_images"}
+		imageFields = []string{"image", "images", "reference_images", "last_frame"}
 	}
 	var err error
 	body, err = canonicalizeGrokMediaImageURLFields(body, imageFields...)
@@ -1443,6 +1455,11 @@ func writeGrokMediaContentResponse(c *gin.Context, resp *http.Response) error {
 	c.Status(resp.StatusCode)
 	MarkResponseCommitted(c)
 	_, err := io.Copy(c.Writer, resp.Body)
+	// The private studio relay buffers this response. Signal read failures even
+	// after status was committed, so truncated chunked transfers cannot look valid.
+	if err != nil && ctxkey.NoContentPersistence(c.Request.Context()) {
+		c.Header("X-Sub2API-Content-Read-Error", "true")
+	}
 	return err
 }
 

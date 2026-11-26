@@ -134,6 +134,7 @@ deploy/docker-compose.override.yml
 vite.config.js
 docs/*
 !docs/IMAGE_STUDIO_SETUP.md
+!docs/VIDEO_STUDIO_UPSTREAM.md
 !docs/ANTIGRAVITY_ATTRIBUTION_429.md
 !docs/seedance-api.md
 !docs/agent-resource-safety.md

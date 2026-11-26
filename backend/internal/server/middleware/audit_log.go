@@ -150,6 +150,7 @@ var auditActionOverrides = map[string]string{
 // auditBodyOmittedRoutes 请求体几乎整体由凭证构成的路由（如整块粘贴 auth JSON 的导入接口）。
 // 这类 body 的凭证内嵌在普通字符串值里，键级脱敏无法覆盖，整体不入库。
 var auditBodyOmittedRoutes = map[string]struct{}{
+	"POST /api/v1/image-studio/videos/generate":                 {},
 	"POST /api/v1/image-studio/generate":                        {},
 	"POST /api/v1/image-studio/workflow":                        {},
 	"POST /api/v1/auth/passkey/login/finish":                    {},
@@ -296,7 +297,7 @@ func NewAuditLogMiddleware(auditService *service.AuditLogService) AuditLogMiddle
 			}
 			extra["params"] = params
 		}
-		if q := service.RedactAuditQuery(c.Request.URL.RawQuery); q != "" && routeKey != "POST /api/v1/image-studio/generate" && routeKey != "POST /api/v1/image-studio/workflow" && !ctxkey.NoContentPersistence(c.Request.Context()) {
+		if q := service.RedactAuditQuery(c.Request.URL.RawQuery); q != "" && routeKey != "POST /api/v1/image-studio/generate" && routeKey != "POST /api/v1/image-studio/workflow" && routeKey != "POST /api/v1/image-studio/videos/generate" && !ctxkey.NoContentPersistence(c.Request.Context()) {
 			extra["query"] = q
 		}
 		if len(extra) > 0 {

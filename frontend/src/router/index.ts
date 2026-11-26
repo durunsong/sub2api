@@ -20,13 +20,13 @@ import { resolveRouteDocumentTitle } from './title'
 const routes: RouteRecordRaw[] = [
   {
     path: '/image-studio', name: 'ImageStudio',
-    component: () => import('@/views/user/ImageStudioView.vue'),
-    meta: { requiresAuth: true, requiresAdmin: false, title: 'Image Studio', titleKey: 'imageStudio.title' }
+    component: () => import('@/views/user/MediaStudioView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: false, title: 'AI Image / Video Studio', titleKey: 'videoStudio.title' }
   },
   {
     path: '/admin/image-studio', name: 'ImageStudioSettings',
-    component: () => import('@/views/admin/ImageStudioSettingsView.vue'),
-    meta: { requiresAuth: true, requiresAdmin: true, title: 'Image Studio Settings', titleKey: 'studioAdmin.title' }
+    component: () => import('@/views/admin/MediaStudioSettingsView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true, title: 'AI Image / Video Studio', titleKey: 'videoStudio.adminTitle' }
   },
   // ==================== Setup Routes ====================
   {

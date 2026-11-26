@@ -26,7 +26,9 @@ const mergeMessages = <T extends Record<string, unknown>>(base: T, override: Rec
   return base
 }
 
+import videoStudio from './videoStudio'
 export default mergeMessages({
+  ...videoStudio,
   ...imageStudio,
   ...studioAdmin,
   adminAccessKeys,
