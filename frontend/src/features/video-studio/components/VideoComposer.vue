@@ -182,7 +182,7 @@ function paste(event: ClipboardEvent) { const files = Array.from(event.clipboard
 .video-kind {
   @apply shrink-0 rounded-full bg-gray-100 px-3 py-1.5 text-sm dark:bg-dark-700}
 .video-model-select {
-  @apply min-w-0 flex-1 sm:max-w-[220px] sm:min-w-[9rem]}
+  @apply min-w-0 flex-1 sm:max-w-[340px] sm:min-w-[9rem]}
 .video-tool {
   @apply inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-full border border-gray-200 px-2.5 text-xs hover:bg-gray-100 focus-visible:outline-primary-500 dark:border-dark-600 dark:hover:bg-dark-700}
 .video-send {
