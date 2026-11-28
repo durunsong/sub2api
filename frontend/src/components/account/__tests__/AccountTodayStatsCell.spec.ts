@@ -118,3 +118,35 @@ describe('AccountTodayStatsCell', () => {
     expect(wrapper.text()).not.toContain('消费Credits')
   })
 })
+
+const baseStats = {
+  requests: 10,
+  tokens: 1000,
+  cost: 1,
+  standard_cost: 1,
+  user_cost: 1
+}
+
+const mountCell = (stats: import('@/types').WindowStats) => mount(AccountTodayStatsCell, { props: { stats } })
+
+describe('AccountTodayStatsCell upstream errors', () => {
+  it('highlights a non-zero upstream error count', () => {
+    const row = mountCell({ ...baseStats, upstream_errors: 12 }).get('[data-testid="today-upstream-errors"]')
+    expect(row.text()).toContain('admin.accounts.stats.upstreamErrors')
+    expect(row.text()).toContain('12')
+    expect(row.find('.text-red-600').exists()).toBe(true)
+  })
+
+  it('shows zero without highlighting', () => {
+    const row = mountCell({ ...baseStats, upstream_errors: 0 }).get('[data-testid="today-upstream-errors"]')
+    expect(row.text()).toContain('0')
+    expect(row.find('.text-red-600').exists()).toBe(false)
+  })
+
+  it('hides the row when the backend omits the count', () => {
+    expect(mountCell(baseStats).find('[data-testid="today-upstream-errors"]').exists()).toBe(false)
+    expect(
+      mountCell({ ...baseStats, upstream_errors: null }).find('[data-testid="today-upstream-errors"]').exists()
+    ).toBe(false)
+  })
+})

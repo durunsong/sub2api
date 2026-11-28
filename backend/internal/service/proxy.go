@@ -88,6 +88,7 @@ type ProxyWithAccountCount struct {
 	QualityGrade   string
 	QualitySummary string
 	QualityChecked *int64
+	LatencyChecked *time.Time
 }
 
 type ProxyAccountSummary struct {

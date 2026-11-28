@@ -14,8 +14,8 @@ Cursor 场景下还会加载 [`.cursor/rules/sub2api-fork.mdc`](.cursor/rules/su
 | 项           | 值                                                                                                                 |
 | ------------ | ------------------------------------------------------------------------------------------------------------------ |
 | 上游官方     | https://github.com/Wei-Shaw/sub2api                                                                                |
-| 已同步基线   | tag **v0.2.25**（官方无 v0.1.174 tag）                                                                             |
-| 当前 VERSION | `backend/cmd/server/VERSION` = **0.2.25**                                                                          |
+| 已同步基线   | tag **v0.2.26**（官方无 v0.1.174 tag）                                                                             |
+| 当前 VERSION | `backend/cmd/server/VERSION` = **0.2.26**                                                                          |
 | 完整差异文档 | **`docs/FORK_VS_UPSTREAM.md`**（相对历史基线；含 Fork 扩展见文档 §8.2 / §12；快捷清单见 `FORK_CUSTOMIZATIONS.md`） |
 | 快捷索引     | `FORK_CUSTOMIZATIONS.md`                                                                                           |
 
@@ -256,11 +256,13 @@ Access Ban 迁移顺序：`159` 建表 → `160` 扩展 rule_type / ua_pattern�
 
 ## 7. 同步上游
 
+v0.2.26 已整合：Kimi K3.1、Codex 图片输入声明/提示词、Chat reasoning_content、可选上游响应模型、账号上游错误/代理统计、图片安全风控与协议/重试/内存修复。三方整合保留 Kiro credits 和分组粘性 TTL；图片安全事件只记录安全元数据，工作台提示词与上游回显不得进入异步队列/日志。无新增依赖或 SQL；历史迁移与部署示例不改。验证见 `openspec/changes/sync-upstream-v0-2-26/`。
+
 v0.2.25 已整合：请求头身份变量及错误详情、上游分组名称/备注手动与默认关闭的自动同步、billing include=group、OpenAI 透传错误规则/结构化 400 与 compact 过载重试修复。Kiro 保留专属 credits/用量流程，不展示通用分组同步入口，创建时不发送通用探测开关；共享模型列表抓取不携带用户身份。全部 Fork 定制与生图 NoContentPersistence 保留。仅升级既有 gorilla/websocket 安全版本，无新增迁移，历史 SQL 不改。验证见 `openspec/changes/sync-upstream-v0-2-25/`。
 
 见 `docs/FORK_VS_UPSTREAM.md` §14。原则：**Kiro + XorPay + Access Ban + 提示词审计 + 套餐续期 + Ops + UI 品牌等全部定制保留**。
 
-`upstream/main` 可能领先于 v0.2.25；同步时以 release tag 为基线，不带入 tag 后的 `main` 内容，并逐文件保留 Fork 模块。
+`upstream/main` 可能领先于 v0.2.26；同步时以 release tag 为基线，不带入 tag 后的 `main` 内容，并逐文件保留 Fork 模块。
 
 ---
 

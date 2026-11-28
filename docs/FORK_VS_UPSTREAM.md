@@ -2,10 +2,10 @@
 
 > **上游官方仓库**：[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api)
 > **本 Fork 远程**：`origin` → `durunsong/sub2api`（中转/部署用）
-> **对比基准**：官方 tag **`v0.2.25`**（同步于 2026-11-24；官方无 v0.1.174 tag）
-> **本 Fork 当前版本**：`backend/cmd/server/VERSION` = **0.2.25**
-> **最新同步统计**：`v0.2.24..v0.2.25` 共 15 个提交、91 个路径；目标 `348997267d756eab5729bb6b78a275a15d18796a`。请求头身份变量及错误详情、上游分组名称/备注手动与默认关闭的自动同步、billing include=group、OpenAI 透传错误规则/结构化 400 与 compact 过载重试修复。
-> **当前工作区**：已合入官方 v0.2.25，并保留 Kiro / XorPay / Access Ban / 提示词审计 / 订阅重置卡 / Ops / UI 品牌等全部定制，含登录失败自动封禁及重置卡提示
+> **对比基准**：官方 tag **`v0.2.26`**（同步于 2026-11-29；官方无 v0.1.174 tag）
+> **本 Fork 当前版本**：`backend/cmd/server/VERSION` = **0.2.26**
+> **最新同步统计**：`v0.2.25..v0.2.26` 共 152 个提交、201 个路径；目标 `9494105c7e350937a61bd78b3f913a5a10867f58`。整合 199 个源码路径，保留两份部署示例。新增模型/协议能力、图片安全风控、账号与代理统计和网关修复，无新增依赖或 SQL。
+> **当前工作区**：已合入官方 v0.2.26，并保留 Kiro / XorPay / Access Ban / 提示词审计 / 订阅重置卡 / Ops / UI 品牌等全部定制，含余额不透支及图片/视频工作台
 > **维护**：新增 Fork 定制后，请同步更新本文与根目录 `AGENTS.md` 摘要。
 
 v0.2.21 整合时另补齐目标版本的缓存 TTL 传递缺口：WS v2 逐轮/累计结果与 Messages/Chat typed usage 共同保留 30m/12h 分档，沿用上游严格校验和无明细通用价回退，不新增计价规则；Kiro credits 独立保留。实际 handler/WS adapter 到扣费、账号统计均有回归，详见 [v0.2.21 验证记录](../openspec/changes/sync-upstream-v0-2-21/verification.md)。
@@ -22,7 +22,9 @@ v0.2.21 整合时另补齐目标版本的缓存 TTL 传递缺口：WS v2 逐轮/
 | **`AGENTS.md`**（项目根）              | AI 协作**强制摘要**与禁区，改代码前必读                       |
 | **`FORK_CUSTOMIZATIONS.md`**（项目根） | 历史清单，已收敛到本文；保留作快捷索引                        |
 
-**注意**：本 Fork 已同步官方至 **v0.2.25**，但 **`upstream/main` 仍可能领先**。与官方同步时以目标 release **tag** 为准，不带入 tag 后的 `main` 内容；merge `main` 前务必先读本文 Fork 定制章节，禁止 blindly 采用上游覆盖 Kiro / XorPay / Access Ban 等模块。
+**注意**：本 Fork 已同步官方至 **v0.2.26**，但 **`upstream/main` 仍可能领先**。与官方同步时以目标 release **tag** 为准，不带入 tag 后的 `main` 内容；merge `main` 前务必先读本文 Fork 定制章节，禁止 blindly 采用上游覆盖 Kiro / XorPay / Access Ban 等模块。
+
+v0.2.26 同步保留 Kiro credits 与上游错误统计、流式计量，粘性 CAS 使用原分组 TTL。新增图片安全事件在工作台隐私请求下仅保存安全元数据，异步前清除创作内容；审核惰性队列保留同步隐私路径，Antigravity 新增配额耗尽日志遵守 NoContentPersistence。验证见 [v0.2.26 同步记录](../openspec/changes/sync-upstream-v0-2-26/verification.md)。
 
 ---
 
@@ -1078,4 +1080,4 @@ deploy/docker-compose.yml
 
 ---
 
-_最后更新：2026-11-24 · 基准：官方 v0.2.25 · 增量清单见 `FORK_CUSTOMIZATIONS.md` · 工作区：`git status --short`_
+_最后更新：2026-11-29 · 基准：官方 v0.2.26 · 增量清单见 `FORK_CUSTOMIZATIONS.md` · 工作区：`git status --short`_

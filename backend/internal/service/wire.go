@@ -243,6 +243,7 @@ func ProvideAccountUsageService(
 	tlsFPProfileService *TLSFingerprintProfileService,
 	kiroTokenProvider *KiroTokenProvider,
 	openAIGatewayService *OpenAIGatewayService,
+	opsService *OpsService,
 ) *AccountUsageService {
 	service := NewAccountUsageService(
 		accountRepo,
@@ -258,6 +259,9 @@ func ProvideAccountUsageService(
 	)
 	service.SetGrokQuotaService(grokQuotaService).SetKiroTokenProvider(kiroTokenProvider)
 	service.agentIdentityWS = openAIGatewayService
+	if opsService != nil {
+		service.opsMonitoring = opsService
+	}
 	return service
 }
 

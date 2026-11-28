@@ -1,8 +1,14 @@
 # sub2api Fork 自定义功能清单
 
-当前整合版本为 **v0.2.25**，基于官方
-[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.25**，并保留本 Fork
+当前整合版本为 **v0.2.26**，基于官方
+[Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) **v0.2.26**，并保留本 Fork
 的全部定制能力。
+
+## v0.2.26 同步（2026-11-29）
+
+整合 Kimi K3.1、Codex 图片输入模型声明和基础提示词、可选 Chat reasoning_content 与上游响应模型展示、账号上游错误和代理统计、图片安全事件，以及协议转换、限流切号、粘性并发、工具流、内存和提示框修复。目标 `9494105c7e350937a61bd78b3f913a5a10867f58`；152 commits / 201 路径，整合 199 个源码路径，两份部署示例保持 Fork 现状。无新增依赖或 SQL。
+
+保留所有既有定制，尤其余额不透支、全期订阅额度/永久重置卡、XorPay 微信、图片/视频工作台。Kiro credits 与错误统计并存，粘性 CAS 保留分组 TTL；图片安全事件仅保留隐私请求的安全元数据，Antigravity 配额日志不保存工作台正文。验证见 [同步记录](openspec/changes/sync-upstream-v0-2-26/verification.md)。
 
 ## v0.2.25 同步（2026-11-24）
 
