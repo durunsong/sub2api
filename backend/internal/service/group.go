@@ -410,6 +410,9 @@ func (g *Group) GetVideoPriceForModel(model, resolution string) *float64 {
 	if price := LookupVideoModelPrice(g.VideoModelPrices, model, resolution); price != nil {
 		return price
 	}
+	if strings.HasPrefix(strings.ToLower(strings.TrimSpace(model)), "muse-video") {
+		return nil
+	}
 	return g.GetVideoPrice(resolution)
 }
 

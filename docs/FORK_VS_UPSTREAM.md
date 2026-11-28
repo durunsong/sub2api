@@ -1080,4 +1080,8 @@ deploy/docker-compose.yml
 
 ---
 
+## Muse 媒体兼容
+
+通过 OpenAI API-key 自定义网关、显式模型映射和管理员媒体价格接入 Muse2API 图片及异步视频。双工作台沿用现有授权、审核、任务归属和结算；不新增原生 Muse 账号平台，不整体合入未完成媒体支持的上游 PR。接口、配置和上游存储边界见 [Muse 媒体配置](MUSE_MEDIA_SETUP.md)。
+
 _最后更新：2026-11-29 · 基准：官方 v0.2.26 · 增量清单见 `FORK_CUSTOMIZATIONS.md` · 工作区：`git status --short`_

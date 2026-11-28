@@ -189,6 +189,21 @@ func (s *OpenAIGatewayService) RecordUsage(ctx context.Context, input *OpenAIRec
 	user := input.User
 	account := input.Account
 	subscription := input.Subscription
+	if result.BillingModel == VideoPriceFamilyMuseVideo && result.VideoCount > 0 {
+		if apiKey == nil || apiKey.GroupID == nil || s.channelService == nil || s.channelService.groupRepo == nil {
+			return fmt.Errorf("Muse video settlement requires current group pricing")
+		}
+		group, priceErr := s.channelService.groupRepo.GetByIDLite(ctx, *apiKey.GroupID)
+		if priceErr != nil {
+			return fmt.Errorf("load Muse video settlement pricing: %w", priceErr)
+		}
+		if group == nil || LookupVideoModelPrice(group.VideoModelPrices, VideoPriceFamilyMuseVideo, result.VideoResolution) == nil {
+			return fmt.Errorf("Muse video settlement price is not configured")
+		}
+		pricedKey := *apiKey
+		pricedKey.Group = group
+		apiKey = &pricedKey
+	}
 	billingAccount, err := resolveCredentialAccount(ctx, s.accountRepo, account)
 	if err != nil {
 		return err
@@ -607,6 +622,19 @@ func (s *OpenAIGatewayService) calculateOpenAIRecordUsageCost(
 	pricingAt time.Time,
 ) (*CostBreakdown, error) {
 	billingModel := firstUsageBillingModel(billingModels)
+	if result != nil && result.BillingModel == VideoPriceFamilyMuseVideo && result.VideoCount > 0 {
+		price := LookupVideoModelPrice(apiKey.Group.VideoModelPrices, VideoPriceFamilyMuseVideo, result.VideoResolution)
+		if price == nil {
+			return nil, fmt.Errorf("Muse video settlement price is not configured")
+		}
+		count := result.VideoCount
+		duration := NormalizeVideoBillingDurationSecondsOrDefault(result.VideoDurationSeconds)
+		amount := *price * float64(count*duration)
+		if videoMultiplier < 0 {
+			videoMultiplier = 0
+		}
+		return &CostBreakdown{TotalCost: amount, ActualCost: amount * videoMultiplier, BillingMode: string(BillingModeVideo)}, nil
+	}
 	if result != nil && result.WebSearchCalls > 0 {
 		// Codex alpha/search 网页搜索按次计费：上游不返回 usage/token 字段，单价只取
 		// 分组覆盖价（nil 时默认 0.01 = 官方 $10/1000 次），不参与渠道级模型定价。

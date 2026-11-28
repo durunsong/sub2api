@@ -12,6 +12,7 @@ import (
 const (
 	VideoPriceFamilyGrokImagineVideo   = "grok-imagine-video"
 	VideoPriceFamilyGrokImagineVideo15 = "grok-imagine-video-1.5"
+	VideoPriceFamilyMuseVideo          = "muse-video"
 )
 
 // CanonicalGrokImagineVideoPriceFamily normalizes model aliases / preview / legacy

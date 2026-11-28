@@ -40,7 +40,7 @@ func (s *SettingService) SetVideoStudioConfig(ctx context.Context, cfg VideoStud
 		m := &cfg.Models[i]
 		m.Model = strings.TrimSpace(m.Model)
 		m.Label = strings.TrimSpace(m.Label)
-		if m.GroupID <= 0 || m.Model == "" || len(m.Model) > 200 || len(m.Label) > 100 || strings.ContainsAny(m.Model, "\\?#\r\n\x00*") || m.Protocol != "" && m.Protocol != "grok" {
+		if m.GroupID <= 0 || m.Model == "" || len(m.Model) > 200 || len(m.Label) > 100 || strings.ContainsAny(m.Model, "\\?#\r\n\x00*") || m.Protocol != "" && m.Protocol != "grok" && m.Protocol != "muse" {
 			return fmt.Errorf("invalid video model")
 		}
 		id := fmt.Sprintf("%d:%s", m.GroupID, m.Model)

@@ -52,6 +52,8 @@ Cursor 场景下还会加载 [`.cursor/rules/sub2api-fork.mdc`](.cursor/rules/su
 
 ### 其他 Fork 定制
 
+- **Muse 媒体兼容**：通过显式模型映射的 OpenAI API-key 自定义网关接入 Muse2API，支持图片生成/参考图编辑及视频创建/状态/内容与双工作台。Muse 不得进入 GPT Responses 图片工具转换；图片必须配置三档按张价格，视频必须配置显式每秒价格。保留任务归属、成功后一次结算、不自动重发付费创建、审核及 `NoContentPersistence`；上游 Muse2API 自身存储不属于本地隐私承诺。配置见 `docs/MUSE_MEDIA_SETUP.md`。
+
 - **AI图片/视频工作台**：`/image-studio` 与 `/admin/image-studio` 保持原路由并用 Tab 切换。视频移植 basketikun/infinite-canvas 新版统一创作页，代码在独立 `features/video-studio`，数据按用户保存在独立 IndexedDB；管理员使用独立 `video_studio_config`。只接通已有 Grok/聚合视频网关，分组媒体开关、审核（含尾帧）、任务归属及结算不可绕过；刷新只查原任务，不自动重发付费生成。不得为视频更新改动图片生成/存储/遮罩/工作流逻辑。上游基线与维护映射见 `docs/VIDEO_STUDIO_UPSTREAM.md`。
 
 - **生图参数排版**：简短参数优先两列（分辨率/宽高比、尺寸/质量），单项填满、窄容器单列；不得为排版改变模型能力或请求参数。

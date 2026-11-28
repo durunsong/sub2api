@@ -57,12 +57,30 @@ var videoOutputBudget = pkghttputil.NewBodyMemoryBudget(512 << 20)
 var videoTaskID = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_-]{0,199}$`)
 
 func buildVideoStudioRequest(model string, v videoStudioRequest) ([]byte, error) {
+	return buildVideoStudioProtocolRequest(model, videoStudioProtocol(model), v)
+}
+
+func videoStudioProtocol(model string) string {
+	m := strings.ToLower(strings.TrimSpace(model))
+	if m == "muse-video" {
+		return "muse"
+	}
+	if strings.HasPrefix(m, "grok-") && strings.Contains(m, "video") {
+		return "grok"
+	}
+	return ""
+}
+
+func buildVideoStudioProtocolRequest(model, protocol string, v videoStudioRequest) ([]byte, error) {
 	if strings.TrimSpace(v.Prompt) == "" || len(v.Prompt) > 32000 || v.Seconds < 4 || v.Seconds > 30 || v.Mode != "frames" && v.Mode != "reference" || len(v.References) > 9 || v.Mode == "frames" && len(v.References) > 2 {
 		return nil, errors.New("invalid video parameters")
 	}
 	resolution, err := strconv.Atoi(strings.TrimSuffix(v.Resolution, "p"))
 	if err != nil || resolution < 1 || resolution > 4320 {
 		return nil, errors.New("invalid video resolution")
+	}
+	if protocol == "muse" && (v.Mode != "reference" || v.Seconds > 15 || resolution != 480 && resolution != 720 && resolution != 1080) {
+		return nil, errors.New("Muse requires reference mode, 4-15 seconds and 480p, 720p or 1080p resolution")
 	}
 	ratio := "16:9"
 	if v.Size != "auto" {
@@ -84,6 +102,9 @@ func buildVideoStudioRequest(model string, v videoStudioRequest) ([]byte, error)
 		}
 	}
 	body := map[string]any{"model": model, "prompt": v.Prompt, "duration": v.Seconds, "resolution": fmt.Sprintf("%dp", resolution), "aspect_ratio": ratio, "generate_audio": true}
+	if protocol == "muse" && ratio != "16:9" && ratio != "9:16" {
+		return nil, errors.New("Muse supports 16:9 or 9:16 video aspect ratios")
+	}
 	refs := []map[string]string{}
 	total := 0
 	for _, raw := range v.References {
@@ -97,7 +118,14 @@ func buildVideoStudioRequest(model string, v videoStudioRequest) ([]byte, error)
 		}
 		refs = append(refs, map[string]string{"url": raw})
 	}
-	if v.Mode == "reference" && len(refs) > 0 {
+	if protocol == "muse" {
+		delete(body, "generate_audio")
+		delete(body, "aspect_ratio")
+		body["size"] = ratio
+		if len(refs) > 0 {
+			body["images"] = refs
+		}
+	} else if v.Mode == "reference" && len(refs) > 0 {
 		body["reference_images"] = refs
 	} else if len(refs) > 0 {
 		body["image"] = refs[0]
@@ -166,7 +194,7 @@ func (h *ImageStudioHandler) videoCatalog(ctx context.Context, userID int64, adm
 		overrides[studioModelID(m.GroupID, m.Model)] = m
 	}
 	for _, g := range groups {
-		if !service.GroupAllowsImageGeneration(&g) || g.Platform != service.PlatformGrok && g.Platform != service.PlatformComposite {
+		if !service.GroupAllowsImageGeneration(&g) || g.Platform != service.PlatformGrok && g.Platform != service.PlatformComposite && g.Platform != service.PlatformOpenAI {
 			continue
 		}
 		models := h.gateway.gatewayService.GetAvailableModels(ctx, &g.ID, g.Platform)
@@ -181,7 +209,11 @@ func (h *ImageStudioHandler) videoCatalog(ctx context.Context, userID int64, adm
 			}
 			id := studioModelID(g.ID, name)
 			setting, configured := overrides[id]
-			if !(strings.HasPrefix(strings.ToLower(name), "grok-") && strings.Contains(strings.ToLower(name), "video")) && !(configured && setting.Protocol == "grok") {
+			protocol := videoStudioProtocol(name)
+			if configured && setting.Protocol != "" {
+				protocol = setting.Protocol
+			}
+			if protocol == "" || protocol == "muse" && g.Platform == service.PlatformGrok || protocol == "grok" && g.Platform == service.PlatformOpenAI {
 				continue
 			}
 			if configured && !setting.Enabled && !admin {
@@ -191,7 +223,7 @@ func (h *ImageStudioHandler) videoCatalog(ctx context.Context, userID int64, adm
 			if configured && setting.Label != "" {
 				label = setting.Label
 			}
-			out.Models = append(out.Models, videoStudioModel{ID: id, GroupID: g.ID, GroupName: g.Name, Model: name, Label: label, Protocol: "grok"})
+			out.Models = append(out.Models, videoStudioModel{ID: id, GroupID: g.ID, GroupName: g.Name, Model: name, Label: label, Protocol: protocol})
 		}
 	}
 	sort.Slice(out.Models, func(i, j int) bool { return out.Models[i].ID < out.Models[j].ID })
@@ -244,7 +276,7 @@ func (h *ImageStudioHandler) SetVideoConfig(c *gin.Context) {
 	}
 	allowed := map[int64]bool{}
 	for _, g := range groups {
-		allowed[g.ID] = g.Platform == service.PlatformGrok || g.Platform == service.PlatformComposite
+		allowed[g.ID] = g.Platform == service.PlatformGrok || g.Platform == service.PlatformComposite || g.Platform == service.PlatformOpenAI
 	}
 	unchanged := map[service.ImageStudioModelConfig]bool{}
 	for _, m := range previous.Models {
@@ -297,7 +329,7 @@ func (h *ImageStudioHandler) GenerateVideo(c *gin.Context) {
 		response.Forbidden(c, "This video model is unavailable")
 		return
 	}
-	body, err := buildVideoStudioRequest(model.Model, input)
+	body, err := buildVideoStudioProtocolRequest(model.Model, model.Protocol, input)
 	if err != nil {
 		response.BadRequest(c, err.Error())
 		return
@@ -307,7 +339,11 @@ func (h *ImageStudioHandler) GenerateVideo(c *gin.Context) {
 		response.Forbidden(c, "Video generation is not authorized")
 		return
 	}
-	captured := h.relayVideo(c.Request, key, "/v1/videos/generations", body, 1<<20)
+	path := "/v1/videos/generations"
+	if model.Protocol == "muse" {
+		path = "/v1/videos"
+	}
+	captured := h.relayVideo(c.Request, key, path, body, 1<<20)
 	defer captured.release()
 	h.respondVideo(c, captured, "")
 }

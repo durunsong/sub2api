@@ -38,7 +38,7 @@ async function load() { loading.value = true; error.value = ''; saved.value = fa
         return;
     config.value = settings;
     models.value = catalog.models;
-    groups.value = allGroups.filter(g => ['grok', 'composite'].includes(g.platform));
+    groups.value = allGroups.filter(g => ['grok', 'composite', 'openai'].includes(g.platform));
     loaded.value = true;
 }
 catch (err) {
@@ -120,7 +120,7 @@ onMounted(load);
 <td class="p-4">
 <input :value="r.label" class="input min-w-36" maxlength="100" :disabled="saving||!groups.some(g=>g.id===r.group_id)" :aria-label="`${t('studioAdmin.label')} ${r.model}`" @input="update({...r,label:($event.target as HTMLInputElement).value})" />
 </td>
-<td class="p-4 text-xs">{{t('videoStudio.adminProtocol')}}</td>
+<td class="p-4 text-xs">{{r.protocol==='muse'?'Muse':t('videoStudio.adminProtocol')}}</td>
 <td class="p-4">
 <button v-if="overridden(r)" type="button" class="text-primary-600 hover:underline" :disabled="saving" @click="reset(r)">{{t('studioAdmin.reset')}}</button>
 <span v-else class="text-gray-500">{{t('studioAdmin.automatic')}}</span>
@@ -143,6 +143,7 @@ onMounted(load);
 </label>
 <label class="block text-sm">{{t('studioAdmin.label')}}<input v-model="draft.label" class="input mt-2" maxlength="100" />
 </label>
+<label class="block text-sm">{{t('studioAdmin.protocol')}}<Select v-model="draft.protocol" class="mt-2" :options="[{value:'grok',label:'Grok'},{value:'muse',label:'Muse'}]" /></label>
 <p class="text-sm text-gray-500">{{t('videoStudio.adminHint')}}</p>
 </form>
 <template #footer>

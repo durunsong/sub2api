@@ -12,10 +12,12 @@ describe('Grok video model pricing form', () => {
 
     expect(videoModelPriceFamilyRows(form).map(({ key }) => key)).toEqual([
       'grok-imagine-video',
-      'grok-imagine-video-1.5'
+      'grok-imagine-video-1.5',
+      'muse-video'
     ])
     expect(form['grok-imagine-video']['480p']).toBeNull()
     expect(form['grok-imagine-video-1.5']['1080p']).toBeNull()
+    expect(form['muse-video']['720p']).toBeNull()
   })
 
   it('serializes only finite non-negative prices and preserves future families', () => {

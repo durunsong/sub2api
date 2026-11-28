@@ -4,14 +4,14 @@ export interface VideoModel {
     group_name: string;
     model: string;
     label: string;
-    protocol: 'grok';
+    protocol: 'grok' | 'muse';
 }
 export interface VideoModelSetting {
     group_id: number;
     model: string;
     label: string;
     enabled: boolean;
-    protocol?: 'grok';
+    protocol?: 'grok' | 'muse';
 }
 export interface VideoConfig {
     enabled: boolean;

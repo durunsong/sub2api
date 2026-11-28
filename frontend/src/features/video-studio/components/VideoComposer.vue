@@ -131,7 +131,7 @@ function paste(event: ClipboardEvent) { const files = Array.from(event.clipboard
 </button>
 <Teleport to="body">
 <div v-if="settings" ref="settingsPanel" class="video-settings-popover" :style="settingsPosition" role="region" :aria-label="t('videoStudio.parameters')" @keydown.esc="escape">
-<VideoSettings :model-value="parameters" @update:model-value="emit('update:parameters',$event)" />
+<VideoSettings :model-value="parameters" :protocol="models.find(m=>m.id===modelID)?.protocol" @update:model-value="emit('update:parameters',$event)" />
 </div>
 </Teleport>
 </div>

@@ -1,10 +1,28 @@
 package service
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
+
+func TestMuseVideoSettlementRequiresCurrentExplicitPrice(t *testing.T) {
+	groupID := int64(130)
+	group := &Group{ID: groupID, Platform: PlatformOpenAI, RateMultiplier: 1}
+	repo := &openAIMediaPriceGroupRepoStub{group: group}
+	usageRepo := &openAIRecordUsageLogRepoStub{inserted: true}
+	svc := newOpenAIRecordUsageServiceForTest(usageRepo, &openAIRecordUsageUserRepoStub{}, &openAIRecordUsageSubRepoStub{}, nil)
+	svc.channelService = NewChannelService(nil, repo, nil, nil, nil)
+	result := &OpenAIForwardResult{ResponseID: "muse_task_123", BillingModel: VideoPriceFamilyMuseVideo, VideoCount: 1, VideoDurationSeconds: 6, VideoResolution: VideoBillingResolution720P}
+	input := &OpenAIRecordUsageInput{Result: result, APIKey: &APIKey{ID: 10, GroupID: &groupID, Group: &Group{ID: groupID, VideoModelPrices: map[string]map[string]float64{VideoPriceFamilyMuseVideo: {VideoBillingResolution720P: 0.02}}}}, User: &User{ID: 20}, Account: &Account{ID: 30, Platform: PlatformOpenAI, Type: AccountTypeAPIKey}}
+	require.Error(t, svc.RecordUsage(context.Background(), input))
+	require.Zero(t, usageRepo.calls)
+	group.VideoModelPrices = map[string]map[string]float64{VideoPriceFamilyMuseVideo: {VideoBillingResolution720P: 0.03}}
+	require.NoError(t, svc.RecordUsage(context.Background(), input))
+	require.Equal(t, 1, usageRepo.calls)
+	require.InDelta(t, 0.18, usageRepo.lastLog.TotalCost, 1e-9)
+}
 
 func TestCanonicalGrokImagineVideoPriceFamily(t *testing.T) {
 	t.Parallel()
@@ -14,6 +32,16 @@ func TestCanonicalGrokImagineVideoPriceFamily(t *testing.T) {
 	require.Equal(t, VideoPriceFamilyGrokImagineVideo15, CanonicalGrokImagineVideoPriceFamily("xai/grok-video-1.5"))
 	require.Equal(t, "grok-imagine-video-2", CanonicalGrokImagineVideoPriceFamily("grok-imagine-video-2"))
 	require.Equal(t, "grok-imagine-video-2", CanonicalGrokImagineVideoPriceFamily("xai/grok-imagine-video-2"))
+}
+
+func TestMuseVideoRequiresModelPrice(t *testing.T) {
+	flat := 0.01
+	group := &Group{VideoPrice720P: &flat}
+	require.Nil(t, group.GetVideoPriceForModel("muse-video", "720p"))
+	group.VideoModelPrices = map[string]map[string]float64{VideoPriceFamilyMuseVideo: {VideoBillingResolution720P: 0.02}}
+	price := group.GetVideoPriceForModel("muse-video", "720p")
+	require.NotNil(t, price)
+	require.Equal(t, 0.02, *price)
 }
 
 func TestNormalizeAndLookupVideoModelPrices(t *testing.T) {

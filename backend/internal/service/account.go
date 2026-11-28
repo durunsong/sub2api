@@ -111,6 +111,7 @@ const (
 	// entitlement probe was forbidden. Video status lookups intentionally do not
 	// require this capability so already-submitted requests remain queryable.
 	OpenAIEndpointCapabilityGrokMediaGeneration OpenAIEndpointCapability = "grok_media_generation"
+	OpenAIEndpointCapabilityMuseVideo           OpenAIEndpointCapability = "muse_video"
 	// OpenAIEndpointCapabilityResponses 表示上游确实提供 /v1/responses 端点。
 	// 与其他能力不同：支持状态来自 accounts.extra 的自动探测标记
 	// （openai_responses_supported / openai_responses_mode），而非
@@ -1979,6 +1980,17 @@ func (a *Account) SupportsOpenAIEndpointCapability(capability OpenAIEndpointCapa
 		configured, _ := a.openAIEndpointCapabilitySet()
 		return configured["seedance"] && a.Platform == PlatformOpenAI && a.Type == AccountTypeAPIKey &&
 			strings.TrimSpace(a.GetCredential("base_url")) != ""
+	}
+	if capability == OpenAIEndpointCapabilityMuseVideo {
+		if a.Platform != PlatformOpenAI || a.Type != AccountTypeAPIKey || strings.TrimSpace(a.GetCredential("base_url")) == "" || strings.TrimSpace(a.GetCredential("api_key")) == "" {
+			return false
+		}
+		for _, mapped := range a.GetModelMapping() {
+			if mapped == "muse-video" {
+				return true
+			}
+		}
+		return false
 	}
 	if capability == "" {
 		return true

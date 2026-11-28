@@ -6,7 +6,8 @@ export const grokVideoPriceResolutions = [
 
 export const grokVideoPriceFamilies = [
   { key: 'grok-imagine-video', label: 'grok-imagine-video' },
-  { key: 'grok-imagine-video-1.5', label: 'grok-imagine-video-1.5' }
+  { key: 'grok-imagine-video-1.5', label: 'grok-imagine-video-1.5' },
+  { key: 'muse-video', label: 'muse-video' }
 ] as const
 
 export type VideoModelPrices = Record<string, Record<string, number>>

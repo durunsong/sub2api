@@ -264,8 +264,13 @@ func (s *OpenAIGatewayService) ParseOpenAIImagesRequest(c *gin.Context, body []b
 	}
 	req.SizeTier = normalizeOpenAIImageSizeTier(req.Size)
 	req.RequiredCapability = classifyOpenAIImagesCapability(req)
-	if isGeminiCompatibleImageModel(capabilityModel) {
+	if isGeminiCompatibleImageModel(capabilityModel) || IsMuseImageModel(capabilityModel) {
 		req.RequiredCapability = OpenAIImagesCapabilityAPIKey
+	}
+	if IsMuseImageModel(capabilityModel) {
+		if err := validateMuseImagesRequest(req); err != nil {
+			return nil, err
+		}
 	}
 	return req, nil
 }
@@ -419,6 +424,11 @@ func parseOpenAIImagesMultipartRequest(body []byte, contentType string, req *Ope
 		fileName := strings.TrimSpace(part.FileName())
 		if fileName != "" {
 			partContentType := strings.TrimSpace(part.Header.Get("Content-Type"))
+			// Normalize image bytes before moderation, including account aliases
+			// whose provider is only resolved later during scheduling.
+			if detected := http.DetectContentType(data); strings.HasPrefix(detected, "image/") {
+				partContentType = detected
+			}
 			if (name == "mask" || name == "markup") && len(data) > 0 {
 				width, height := parseOpenAIImageDimensions(part.Header)
 				upload := OpenAIImagesUpload{
@@ -594,7 +604,7 @@ func isGeminiCompatibleImageModel(model string) bool {
 }
 
 func validateCompatibleImagesModel(model string) error {
-	if isGeminiCompatibleImageModel(model) {
+	if isGeminiCompatibleImageModel(model) || IsMuseImageModel(model) {
 		return nil
 	}
 	return validateOpenAIImagesModel(model)
@@ -603,7 +613,7 @@ func validateCompatibleImagesModel(model string) error {
 // RequiredCapabilityForModel also applies the API-key-only fence when channel
 // mapping introduces a compatible provider model after request parsing.
 func (req *OpenAIImagesRequest) RequiredCapabilityForModel(model string) OpenAIImagesCapability {
-	if isGeminiCompatibleImageModel(model) {
+	if isGeminiCompatibleImageModel(model) || IsMuseImageModel(model) {
 		return OpenAIImagesCapabilityAPIKey
 	}
 	return req.RequiredCapability
@@ -625,7 +635,7 @@ func classifyOpenAIImagesCapability(req *OpenAIImagesRequest) OpenAIImagesCapabi
 	if req == nil {
 		return OpenAIImagesCapabilityNative
 	}
-	if isGeminiCompatibleImageModel(req.Model) {
+	if isGeminiCompatibleImageModel(req.Model) || IsMuseImageModel(req.Model) {
 		return OpenAIImagesCapabilityAPIKey
 	}
 	if req.ExplicitModel || req.ExplicitSize {
@@ -724,6 +734,24 @@ func (s *OpenAIGatewayService) forwardOpenAIImagesAPIKey(
 	if err := validateCompatibleImagesModel(upstreamModel); err != nil {
 		return nil, err
 	}
+	if IsMuseImageModel(upstreamModel) {
+		if _, matched := account.ResolveMappedModel(requestModel); !matched {
+			return nil, fmt.Errorf("Muse images require an explicit account model mapping")
+		}
+		if err := validateMuseImagesRequest(parsed); err != nil {
+			return nil, err
+		}
+		key := getAPIKeyFromContext(c)
+		if key == nil {
+			return nil, fmt.Errorf("Muse image price requires an authorized group")
+		}
+		if err := ValidateMuseImagePricing(key.Group); err != nil {
+			return nil, err
+		}
+		if account.Platform != PlatformOpenAI || strings.TrimSpace(account.GetCredential("base_url")) == "" {
+			return nil, fmt.Errorf("Muse images require a custom OpenAI API-key base URL")
+		}
+	}
 	SetOpsUpstreamModel(c, upstreamModel)
 	logger.LegacyPrintf(
 		"service.openai_gateway",
@@ -753,6 +781,9 @@ func (s *OpenAIGatewayService) forwardOpenAIImagesAPIKey(
 	if err != nil {
 		return nil, err
 	}
+	if IsMuseImageModel(upstreamModel) {
+		upstreamReq = upstreamReq.WithContext(WithHTTPUpstreamRedirectsDisabled(upstreamReq.Context()))
+	}
 
 	proxyURL := ""
 	if account.ProxyID != nil && account.Proxy != nil {
@@ -763,6 +794,9 @@ func (s *OpenAIGatewayService) forwardOpenAIImagesAPIKey(
 	SetOpsLatencyMs(c, OpsUpstreamLatencyMsKey, time.Since(upstreamStart).Milliseconds())
 	if err != nil {
 		safeErr := sanitizeUpstreamErrorMessage(err.Error())
+		if IsMuseImageModel(upstreamModel) {
+			safeErr = "Muse image upstream request failed; request was not retried"
+		}
 		setOpsUpstreamError(c, 0, safeErr, "")
 		appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
 			ProxyID:            opsUpstreamProxyID(account),
@@ -776,6 +810,11 @@ func (s *OpenAIGatewayService) forwardOpenAIImagesAPIKey(
 			Message:            safeErr,
 		})
 		return nil, fmt.Errorf("upstream request failed: %s", safeErr)
+	}
+	if resp.StatusCode >= 300 && IsMuseImageModel(upstreamModel) {
+		_ = resp.Body.Close()
+		c.JSON(http.StatusBadGateway, gin.H{"error": gin.H{"type": "upstream_error", "message": "Muse image generation failed; request was not retried"}})
+		return nil, fmt.Errorf("Muse images upstream status %d", resp.StatusCode)
 	}
 	if resp.StatusCode >= 400 {
 		respBody := s.readUpstreamErrorBody(resp)
@@ -874,7 +913,7 @@ func (s *OpenAIGatewayService) forwardOpenAIImagesAPIKey(
 			ImageOutputSizes: imageOutputSizes,
 		}, nil
 	} else {
-		nonStreamUsage, nonStreamCount, nonStreamSizes, err := s.handleOpenAIImagesNonStreamingResponse(upstreamCtx, resp, c, account, parsed)
+		nonStreamUsage, nonStreamCount, nonStreamSizes, err := s.handleOpenAIImagesNonStreamingResponse(upstreamCtx, resp, c, account, parsed, upstreamModel)
 		if err != nil {
 			return nil, err
 		}
@@ -1051,12 +1090,20 @@ func (s *OpenAIGatewayService) handleOpenAIImagesNonStreamingResponse(
 	c *gin.Context,
 	account *Account,
 	parsed *OpenAIImagesRequest,
+	upstreamModel string,
 ) (OpenAIUsage, int, []string, error) {
 	body, err := ReadUpstreamResponseBody(resp.Body, s.cfg, c, openAITooLargeError)
 	if err != nil {
 		return OpenAIUsage{}, 0, nil, err
 	}
-	body = s.backfillOpenAIImagesB64JSON(ctx, account, parsed, body)
+	if IsMuseImageModel(upstreamModel) {
+		body, err = s.normalizeMuseImageResponse(ctx, account, body)
+		if err != nil {
+			return OpenAIUsage{}, 0, nil, err
+		}
+	} else {
+		body = s.backfillOpenAIImagesB64JSON(ctx, account, parsed, body)
+	}
 	responseheaders.WriteFilteredHeaders(c.Writer.Header(), resp.Header, s.responseHeaderFilter)
 	contentType := "application/json"
 	if s.cfg != nil && !s.cfg.Security.ResponseHeaders.Enabled {

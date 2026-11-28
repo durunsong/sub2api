@@ -139,38 +139,59 @@ func WithImageStudioModel(ctx context.Context, public, canonical string) context
 // imageStudioValidationModel resolves only server-selected studio aliases.
 // Forwarding must still validate the account's actual mapped target separately.
 func imageStudioValidationModel(ctx context.Context, model string) string {
-	if resolved, ok := ctx.Value(imageStudioModelContextKey{}).(imageStudioModelResolution); ok && resolved.Public == model && resolved.Canonical != "" {
-		return resolved.Canonical
+	if resolved, ok := ctx.Value(imageStudioModelContextKey{}).(imageStudioModelResolution); ok && resolved.Canonical != "" {
+		if resolved.Public == model {
+			return resolved.Canonical
+		}
+		// Composite middleware can rewrite the same authorized studio selection.
+		public, _ := RequestedPublicModelFromContext(ctx)
+		upstream, _ := ResolvedUpstreamModelFromContext(ctx)
+		if public == resolved.Public && upstream == model {
+			return resolved.Canonical
+		}
 	}
 	return model
 }
 
 // ImageStudioMappedModel exposes an alias only when every eligible account maps
 // it to the same image family. Text mappings and ambiguous aliases stay hidden.
-func (s *GatewayService) ImageStudioMappedModel(ctx context.Context, groupID int64, platform, model string) string {
+func (s *GatewayService) ImageStudioMappedModel(ctx context.Context, groupID int64, platform, model string) (string, bool) {
 	if s == nil || s.accountRepo == nil {
-		return ""
+		return "", true
+	}
+	if platform == PlatformComposite {
+		decision, matched, err := s.resolveCompositeRouteDecision(ctx, &Group{ID: groupID, Platform: platform}, model, CompositeRouteEndpointImages)
+		if err != nil || !matched {
+			return "", false
+		}
+		platform, model = decision.TargetPlatform, decision.UpstreamModel
 	}
 	accounts, err := s.accountRepo.ListSchedulableByGroupID(ctx, groupID)
 	if err != nil {
-		return ""
+		return "", false
 	}
 	canonical := ""
+	ambiguous, hasMuse := false, IsMuseImageModel(model)
 	for i := range accounts {
 		account := &accounts[i]
 		if account.Platform != platform || !account.IsModelSupported(model) {
 			continue
 		}
 		mapped, matched := account.ResolveMappedModel(model)
-		if !matched || (!IsGPTImageGenerationModel(mapped) && !isGeminiCompatibleImageModel(mapped) && !isGrokImageGenerationModel(mapped)) {
-			return ""
+		hasMuse = hasMuse || IsMuseImageModel(mapped)
+		if !matched || (!IsGPTImageGenerationModel(mapped) && !isGeminiCompatibleImageModel(mapped) && !isGrokImageGenerationModel(mapped) && !IsMuseImageModel(mapped)) {
+			ambiguous = true
+			continue
 		}
 		if canonical != "" && canonical != mapped {
-			return ""
+			ambiguous = true
 		}
 		canonical = mapped
 	}
-	return canonical
+	if ambiguous {
+		return "", !hasMuse
+	}
+	return canonical, true
 }
 
 // ImageStudioPricing uses the same image/token decision and image cost resolver
@@ -203,6 +224,9 @@ func (s *GatewayService) ImageStudioPricing(ctx context.Context, userID int64, g
 	}
 	tokenRate, imageRate, _ := s.recordUsageMultipliers(ctx, key, user, time.Time{})
 	quote := ImageStudioPricing{Currency: "USD", Mode: "image", RateMultiplier: imageRate, Estimated: true}
+	if IsMuseImageModel(canonical) && ValidateMuseImagePricing(group) != nil {
+		return quote
+	}
 	resolved := s.resolveChannelPricing(ctx, model, key)
 	if !imageCountBillingApplies(key, true) && resolved != nil && resolved.Mode == BillingModeToken {
 		quote.Mode = "token"

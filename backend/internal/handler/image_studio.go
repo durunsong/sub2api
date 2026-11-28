@@ -66,6 +66,9 @@ func studioModelID(groupID int64, model string) string {
 }
 func imageStudioProtocol(platform, model string) string {
 	m := strings.ToLower(model)
+	if service.IsMuseImageModel(m) && (platform == service.PlatformOpenAI || platform == service.PlatformComposite) {
+		return "images"
+	}
 	switch platform {
 	case service.PlatformGemini, service.PlatformAntigravity:
 		if strings.HasPrefix(m, "gemini-") && (strings.Contains(m, "-image") || strings.Contains(m, "nano-banana")) {
@@ -91,6 +94,10 @@ func imageStudioProtocol(platform, model string) string {
 }
 func studioModel(group service.Group, model, protocol string) imageStudioModel {
 	m := imageStudioModel{ID: studioModelID(group.ID, model), GroupID: group.ID, GroupName: group.Name, Model: model, Label: model, Protocol: protocol, MaxImages: 1, MaxReferences: 3, Sizes: []string{"1024x1024", "1536x1024", "1024x1536"}, Qualities: []string{}, platform: group.Platform}
+	if service.IsMuseImageModel(model) {
+		m.Sizes = []string{"auto", "1024x1024", "1280x720", "720x1280"}
+		return m
+	}
 
 	if protocol == "gemini" {
 		// Older Nano Banana and Flash Lite do not support 2K/4K output.
@@ -161,8 +168,12 @@ func (h *ImageStudioHandler) catalog(ctx context.Context, userID int64, admin bo
 			}
 			canonical := name
 			protocol := imageStudioProtocol(g.Platform, name)
-			if protocol == "" {
-				if mapped := h.gateway.gatewayService.ImageStudioMappedModel(ctx, g.ID, g.Platform, name); mapped != "" {
+			mapped, safe := h.gateway.gatewayService.ImageStudioMappedModel(ctx, g.ID, g.Platform, name)
+			if !safe {
+				continue
+			}
+			if mapped != "" {
+				if protocol == "" || service.IsMuseImageModel(mapped) {
 					canonical = mapped
 					protocol = imageStudioProtocol(g.Platform, mapped)
 				}

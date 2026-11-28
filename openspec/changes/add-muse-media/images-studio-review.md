@@ -1,0 +1,21 @@
+# Muse images and studio review
+
+## Final disposition
+
+All three initial findings below were fixed and re-reviewed on 2026-11-29. Multipart text references and duplicate fields are rejected; uploaded image MIME is derived from bytes so generic binary uploads enter moderation. Muse image dimensions are verified from actual image bytes before billing. GPT-shaped Muse aliases use Muse capabilities, and aliases mixed across Muse/GPT or unmapped accounts are hidden. URL download/verification failures do not settle or retry the create; the operator bears upstream costs, as documented in the design. Shared reference validation also rejects raw base64 and non-image data URLs for both media APIs. The original findings below are retained as review history; final integrated verification is recorded in verification.md.
+
+Scope: current working-tree changes in Muse image validation, OpenAI Images forwarding, image/video studio handlers, frontend video controls, pricing UI, and fixtures. Video adapter implementation in `grok_media`, `muse_video`, account, and routes was excluded because it is under concurrent edit. This review did not run tests.
+
+## Must fix
+
+1. **P1 - Multipart reference can bypass moderation** (`backend/internal/service/muse_images.go:38-56`; `backend/internal/service/openai_images.go:424-459`; `backend/internal/handler/openai_images.go:108`). Send `/v1/images/edits` with one valid `image[]` file and a second `image[]` plain form field containing a reference URL. The shared parser requires the file but ignores the plain field when building `Uploads`/`InputImageURLs`; the Muse validator accepts both because it checks only the field name. The original multipart body is forwarded, and the reference provider accepts string `image[]` values (`/tmp/sub2api-muse-contract-20261129/app.py:1622-1644`). Thus the second image reaches Muse without entering `ModerationBody()`. Reject non-file `image`/`image[]` parts, or parse and moderate every accepted reference before forwarding. This violates the spec's "moderate all image inputs" requirement.
+
+2. **P1 - Muse image price can use requested size instead of actual output size** (`backend/internal/service/openai_images.go:910-925`; `backend/internal/service/image_output_accounting.go:97-124`; `backend/internal/service/image_billing_size.go:71-112`). Muse's response item reports `size: req.size or "auto"`, not measured output dimensions (`/tmp/sub2api-muse-contract-20261129/app.py:1460-1467`). A request for `1024x1024` that yields a 4K image is settled as 1K; `auto` falls back to 2K even if output is 4K. Configuring all three prices avoids an absent price but does not ensure the correct tier is charged. Determine the actual output dimensions from the returned image bytes through the existing bounded response path before settlement, and add a fixture where reported size and image dimensions differ. This violates the spec's billing preservation and the setup contract that the actual returned dimensions can differ from the request.
+
+## Should fix
+
+3. **P2 - GPT-shaped aliases advertise unsupported Muse controls** (`backend/internal/handler/image_studio.go:169-175`, `:193-198`; `backend/internal/service/image_studio.go:164-171`). Configure an OpenAI API-key account mapping `gpt-image-2 -> muse-image`. Because the public name already matches `imageStudioProtocol`, the catalog does not call `ImageStudioMappedModel`; `studioModel` receives `gpt-image-2` as canonical and advertises GPT mask, quality, custom sizes, and an estimated GPT price. At submission, account mapping reaches Muse and `validateMuseImagesRequest` rejects those advertised controls. Resolve the account mapping for recognized public names too, then derive capabilities and price from the effective model. Preserve ambiguity protection when different accounts map the same alias differently. This is partial compliance with the spec's supported-request and unsupported-parameter requirements.
+
+## Checked
+
+The direct Muse model path uses the API-key-only capability and does not join the native GPT Responses image-tool predicate. The video workbench still persists records before creation and resumes only an existing task after refresh. Existing Grok controls remain selected when its protocol is used. These observations are from static source review, not a new test run.

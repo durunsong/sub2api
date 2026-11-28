@@ -11,6 +11,6 @@ export default { videoStudio: {
         invalidResponse: '视频接口返回的数据无法识别，请重新获取任务状态。', invalidVideo: '未获取到有效的视频文件，请稍后继续获取。', generationFailed: '上游视频任务失败或未通过审核。', pollTimeout: '本轮查询已结束，任务尚未完成；可继续获取结果。', lookupFailed: '获取结果失败。任务已保留，可继续获取，无需重新生成。', submitUncertain: '提交未确认。请先检查用量记录；重新生成可能再次计费。', loadFailed: '无法加载视频工作台，请检查网络后刷新。',
         storageFailed: '无法读写本地数据，请检查浏览器存储权限和剩余空间。', storageBlocked: '本地数据库升级被其他标签页阻塞，请关闭旧标签页后重试。', storageQuota: '浏览器空间不足，请先下载并清理不需要的素材。', unsaved: '结果尚未保存到本地，请及时下载或重新保存。', unsavedTask: '任务已提交，但任务编号尚未保存；请重新保存，避免刷新后无法恢复。', saveAgain: '重新保存', imageLibraryFailed: '暂时无法读取图片素材库，视频素材仍可使用。',
         confirmRegenerate: '将按当前记录的模型和参数重新提交视频生成，并可能再次计费。是否继续？', confirmDelete: '删除此对话及全部本地生成记录？删除后无法恢复，也不会取消上游已提交任务或退还费用。', confirmDeleteItem: '删除这条本地记录？此操作无法撤销。',
-        adminDescription: '管理视频工作台的可用模型和显示名称。授权、配额与计费沿用现有分组；不会修改图片工作台配置。', adminEnabled: '启用视频工作台', adminPricing: '视频使用现有分组的视频计费规则。模型必须先在对应渠道与分组中可用；这里仅管理工作台展示。', adminProtocol: 'Grok 视频协议', adminHint: '仅列出 Grok 或聚合分组中的视频模型。已配置别名仍须出现在分组实际模型列表中。', adminAdd: '添加视频模型别名',
+        adminDescription: '管理视频工作台的可用模型和显示名称。授权、配额与计费沿用现有分组；不会修改图片工作台配置。', adminEnabled: '启用视频工作台', adminPricing: '视频沿用分组计费；Muse 必须先配置对应分辨率的每秒价格。模型须在渠道与分组中可用。', adminProtocol: 'Grok 视频协议', adminHint: '支持 Grok、OpenAI 兼容 Muse 和聚合分组。已配置别名仍须出现在分组实际模型列表中。', adminAdd: '添加视频模型别名',
         fullscreen: '全屏工作台', exitFullscreen: '退出全屏', retryLoad: '重新加载'
     } };

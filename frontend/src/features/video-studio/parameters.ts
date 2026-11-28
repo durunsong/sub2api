@@ -35,6 +35,13 @@ export function normalizeParameters(input: {
     const size = dimensions && dimensions.slice(1).every(v => Number(v) > 0 && Number(v) <= 8192) ? input.size! : 'auto';
     return { seconds: Math.max(4, Math.min(30, Math.floor(input.seconds || 6))), resolution, size, mode: input.mode === 'reference' ? 'reference' : 'frames' };
 }
+export function normalizeModelParameters(input: VideoParameters, protocol?: string): VideoParameters {
+    if (protocol !== 'muse') return input;
+    const resolution = ['480', '720', '1080'].includes(input.resolution) ? input.resolution : '720';
+    const ratio = inferVideoRatio(input.size);
+    const size = ratio === 'auto' ? 'auto' : computeVideoSize(resolution, ratio === '9:16' ? '9:16' : '16:9');
+    return { ...input, seconds: Math.min(15, input.seconds), mode: 'reference', resolution, size };
+}
 export function groupSessions(records: {
     id: string;
     sessionId: string;

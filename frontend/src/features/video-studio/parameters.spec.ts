@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { computeVideoSize, inferVideoRatio, normalizeParameters, groupSessions } from './parameters';
+import { computeVideoSize, inferVideoRatio, normalizeParameters, normalizeModelParameters, groupSessions } from './parameters';
 describe('video parameters and sessions', () => {
+    it('uses references and priced resolutions for Muse without changing Grok', () => {
+        const input = normalizeParameters({ mode: 'frames', resolution: '1440', seconds: 8 });
+        expect(normalizeModelParameters(input, 'muse')).toEqual({ ...input, mode: 'reference', resolution: '720' });
+        expect(normalizeModelParameters(input, 'grok')).toEqual(input);
+        expect(normalizeModelParameters({ ...input, seconds: 30 }, 'muse').seconds).toBe(15);
+    });
     it('matches upstream short-edge sizing and automatic ratio', () => {
         expect(computeVideoSize('720', '16:9')).toBe('1280x720');
         expect(computeVideoSize('1080', '9:16')).toBe('1080x1920');

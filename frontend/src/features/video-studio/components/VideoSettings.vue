@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { computeVideoSize, inferVideoRatio, normalizeParameters, videoRatios } from '../parameters';
+import { computeVideoSize, inferVideoRatio, normalizeParameters, normalizeModelParameters, videoRatios } from '../parameters';
 import type { VideoParameters } from '../types';
 const props = defineProps<{
     modelValue: VideoParameters;
+    protocol?: string;
 }>();
 const emit = defineEmits<{
     'update:modelValue': [
@@ -14,7 +15,7 @@ const emit = defineEmits<{
 const { t } = useI18n();
 const ratio = computed(() => inferVideoRatio(props.modelValue.size));
 const dimensions = computed(() => props.modelValue.size.split('x'));
-function update(patch: Partial<VideoParameters>) { emit('update:modelValue', normalizeParameters({ ...props.modelValue, ...patch })); }
+function update(patch: Partial<VideoParameters>) { emit('update:modelValue', normalizeModelParameters(normalizeParameters({ ...props.modelValue, ...patch }), props.protocol)); }
 function resolution(value: string) { update({ resolution: value, size: computeVideoSize(value, ratio.value) }); }
 function dimension(index: number, event: Event) { const values = [...dimensions.value]; values[index] = String(Math.max(1, Math.min(8192, Number((event.target as HTMLInputElement).value) || 720))); update({ size: values.join('x') }); }
 </script>
@@ -24,13 +25,13 @@ function dimension(index: number, event: Event) { const values = [...dimensions.
 <legend>{{t('videoStudio.resolution')}}</legend>
 <div class="grid grid-cols-4 gap-2">
 <button v-for="p in ['480','720','1080']" :key="p" type="button" class="video-pill" :aria-pressed="modelValue.resolution===p" @click="resolution(p)">{{p}}p</button>
-<label class="video-resolution">
+<label v-if="protocol!=='muse'" class="video-resolution">
 <input :value="modelValue.resolution" type="number" min="1" max="4320" :aria-label="t('videoStudio.customResolution')" @change="resolution(($event.target as HTMLInputElement).value)" />
 <span>p</span>
 </label>
 </div>
 </fieldset>
-  <fieldset>
+  <fieldset v-if="protocol!=='muse'">
 <legend>{{t('videoStudio.size')}}</legend>
 <div class="grid grid-cols-2 gap-3">
 <label v-for="(name,index) in ['W','H']" :key="name" class="video-dimension">
@@ -42,7 +43,7 @@ function dimension(index: number, event: Event) { const values = [...dimensions.
   <fieldset>
 <legend>{{t('videoStudio.ratio')}}</legend>
 <div class="grid grid-cols-4 gap-2">
-<button v-for="r in videoRatios" :key="r" type="button" class="video-ratio" :aria-pressed="ratio===r" @click="update({size:computeVideoSize(modelValue.resolution,r)})">
+<button v-for="r in (protocol==='muse'?['16:9','9:16','auto']:videoRatios)" :key="r" type="button" class="video-ratio" :aria-pressed="ratio===r" @click="update({size:computeVideoSize(modelValue.resolution,r)})">
 <span v-if="r!=='auto'" class="ratio-shape" :style="{aspectRatio:r.replace(':','/'),width:Number(r.split(':')[0])>=Number(r.split(':')[1])?'26px':'18px'}">
 </span>
 <span>{{r==='auto'?t('videoStudio.auto'):r}}</span>
@@ -52,15 +53,15 @@ function dimension(index: number, event: Event) { const values = [...dimensions.
   <fieldset>
 <legend>{{t('videoStudio.seconds')}}</legend>
 <div class="flex items-center gap-3">
-<input class="min-w-0 flex-1 accent-primary-600" type="range" min="4" max="30" :value="modelValue.seconds" :aria-label="t('videoStudio.seconds')" @input="update({seconds:Number(($event.target as HTMLInputElement).value)})" />
-<input class="input w-16" type="number" min="4" max="30" :value="modelValue.seconds" :aria-label="t('videoStudio.secondsInput')" @change="update({seconds:Number(($event.target as HTMLInputElement).value)})" />
+<input class="min-w-0 flex-1 accent-primary-600" type="range" min="4" :max="protocol==='muse'?15:30" :value="modelValue.seconds" :aria-label="t('videoStudio.seconds')" @input="update({seconds:Number(($event.target as HTMLInputElement).value)})" />
+<input class="input w-16" type="number" min="4" :max="protocol==='muse'?15:30" :value="modelValue.seconds" :aria-label="t('videoStudio.secondsInput')" @change="update({seconds:Number(($event.target as HTMLInputElement).value)})" />
 <span>s</span>
 </div>
 </fieldset>
   <fieldset>
 <legend>{{t('videoStudio.mode')}}</legend>
 <div class="grid grid-cols-2 gap-2">
-<button v-for="mode in (['frames','reference'] as const)" :key="mode" type="button" class="video-pill" :aria-pressed="modelValue.mode===mode" @click="update({mode})">{{t(`videoStudio.${mode}`)}}</button>
+<button v-for="mode in (protocol==='muse' ? ['reference'] as const : ['frames','reference'] as const)" :key="mode" type="button" class="video-pill" :aria-pressed="modelValue.mode===mode" @click="update({mode})">{{t(`videoStudio.${mode}`)}}</button>
 </div>
 </fieldset>
   <p class="text-xs leading-5 text-gray-600 dark:text-gray-400">{{t('videoStudio.providerParameters')}}</p>

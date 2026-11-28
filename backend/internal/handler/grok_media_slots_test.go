@@ -207,9 +207,15 @@ func newGrokMediaSlotHandler(t *testing.T, oauth, mismatch bool, platforms ...st
 			Status: service.StatusActive, Schedulable: true, Concurrency: 50, Priority: i,
 			GroupIDs: []int64{24}, Credentials: map[string]any{"api_key": "test-key", "access_token": "test-token"}}
 		if len(platforms) > 0 {
-			accounts[i].Platform = platforms[0]
-			accounts[i].Credentials["base_url"] = "https://ark.cn-beijing.volces.com/api/v3"
-			accounts[i].Credentials["openai_capabilities"] = []string{"seedance"}
+			if platforms[0] == "muse" {
+				accounts[i].Platform = service.PlatformOpenAI
+				accounts[i].Credentials["base_url"] = "https://muse.example/v1"
+				accounts[i].Credentials["model_mapping"] = map[string]any{"public-muse-video": "muse-video"}
+			} else {
+				accounts[i].Platform = platforms[0]
+				accounts[i].Credentials["base_url"] = "https://ark.cn-beijing.volces.com/api/v3"
+				accounts[i].Credentials["openai_capabilities"] = []string{"seedance"}
+			}
 		}
 		if oauth {
 			accounts[i].Type = service.AccountTypeOAuth

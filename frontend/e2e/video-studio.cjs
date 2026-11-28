@@ -7,7 +7,8 @@ const base=process.env.STUDIO_TEST_URL||'http://127.0.0.1:5179'
 const output=process.env.STUDIO_SCREENSHOT_DIR||'/tmp/sub2api-video-studio-ui'
 const video=fs.readFileSync(process.env.STUDIO_VIDEO_FIXTURE||'/tmp/sub2api-video-fixture.mp4')
 const user={id:900021,email:'video@example.invalid',username:'Video',role:'admin',status:'active',balance:100,concurrency:5,allowed_groups:[7]}
-const videoModel={id:'7:grok-imagine-video',group_id:7,group_name:'Video Group',model:'grok-imagine-video',label:'Grok Video',protocol:'grok'}
+const muse=process.env.STUDIO_PROTOCOL==='muse'
+const videoModel={id:muse?'7:muse-video':'7:grok-imagine-video',group_id:7,group_name:'Video Group',model:muse?'muse-video':'grok-imagine-video',label:muse?'Muse Video':'Grok Video',protocol:muse?'muse':'grok'}
 const imageModel={id:'7:gpt-image-2',group_id:7,group_name:'Images',model:'gpt-image-2',label:'GPT Image 2',protocol:'images',sizes:['1024x1024'],qualities:['auto'],max_images:1,max_references:3,supports_mask:true,pricing:{currency:'USD',mode:'image',rate_multiplier:1,image_price_1k:0.03,image_price_2k:0.06,image_price_4k:0.12}}
 ;(async()=>{
  const browser=await chromium.launch({headless:true,channel:'chrome'})
@@ -32,7 +33,7 @@ const imageModel={id:'7:gpt-image-2',group_id:7,group_name:'Images',model:'gpt-i
    else if(url.pathname.endsWith('/image-studio/catalog'))data={enabled:true,models:[imageModel]}
    else if(url.pathname.endsWith('/image-studio/config'))data={enabled:true,models:[]}
    else if(url.pathname.endsWith('/image-studio/workflow-models'))data={enabled:true,models:[]}
-   else if(url.pathname.endsWith('/admin/groups/all'))data=[{id:7,name:'Video Group',platform:'grok',status:'active'}]
+   else if(url.pathname.endsWith('/admin/groups/all'))data=[{id:7,name:'Video Group',platform:muse?'openai':'grok',status:'active'}]
    else if(url.pathname.includes('/subscriptions/summary'))data={subscriptions:[],total:0}
    else if(url.pathname.includes('/version'))data={version:'test'}
    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({code:0,data})})
@@ -52,6 +53,7 @@ const imageModel={id:'7:gpt-image-2',group_id:7,group_name:'Images',model:'gpt-i
   await page.getByRole('button',{name:'全屏工作台',exact:true}).waitFor()
   assert.equal(await page.getByRole('button',{name:'生成视频',exact:true}).isEnabled(),true)
   await page.getByRole('button',{name:'生成参数',exact:true}).click()
+  if(muse){assert.equal(await page.getByRole('button',{name:'首尾帧',exact:true}).count(),0);assert.equal(await page.getByRole('spinbutton',{name:'自定义分辨率',exact:true}).count(),0)}
   await page.getByRole('button',{name:'16:9',exact:true}).click()
   await page.keyboard.press('Escape')
   await page.getByRole('tab',{name:'图片创作',exact:true}).click()
@@ -62,7 +64,7 @@ const imageModel={id:'7:gpt-image-2',group_id:7,group_name:'Images',model:'gpt-i
   await page.getByRole('button',{name:'生成视频',exact:true}).click()
   await page.waitForFunction(()=>document.querySelector('[data-video-record]'))
   await page.waitForTimeout(600)
-  assert.equal(generates,1);assert.equal(bodies[0].size,'1280x720');assert.equal(bodies[0].references.length,2);assert.equal(bodies[0].mode,'frames')
+  assert.equal(generates,1);assert.equal(bodies[0].size,'1280x720');assert.equal(bodies[0].references.length,2);assert.equal(bodies[0].mode,muse?'reference':'frames')
   assert.equal((await records())[0].taskID,'task-1')
   const before=polls;completed=true
   await page.reload()
@@ -72,6 +74,7 @@ const imageModel={id:'7:gpt-image-2',group_id:7,group_name:'Images',model:'gpt-i
   const rows=await records();assert.equal(rows[0].status,'success');assert.equal(rows[0].video.type,'video/mp4');assert(rows[0].video.size>0);assert.equal(rows[0].width,320);assert.equal(rows[0].height,180);assert.equal(rows[0].videoDurationMs,1000)
   await page.getByRole('button',{name:'加入资产',exact:true}).click()
   await page.getByRole('button',{name:'我的资产',exact:true}).click();await page.getByRole('dialog').waitFor();await page.keyboard.press('Escape')
+  await page.getByRole('dialog').waitFor({state:'hidden'})
   await page.screenshot({path:`${output}/desktop-result.png`,fullPage:true})
   await page.evaluate(()=>document.documentElement.classList.add('dark'));assert((await page.locator('.video-workspace').evaluate(el=>getComputedStyle(el).backgroundImage)).includes('0.16'));await page.screenshot({path:`${output}/desktop-dark.png`,fullPage:true})
   await page.setViewportSize({width:390,height:844});await page.waitForTimeout(500);await page.screenshot({path:`${output}/mobile.png`,fullPage:true})
@@ -81,7 +84,7 @@ const imageModel={id:'7:gpt-image-2',group_id:7,group_name:'Images',model:'gpt-i
   await page.waitForTimeout(200);assert.equal((await records()).length,0)
   await page.goto(`${base}/admin/image-studio?tab=video`)
   await page.getByRole('heading',{name:'视频创作',exact:true}).waitFor()
-  await page.getByRole('textbox',{name:'显示名称 grok-imagine-video'}).fill('Video Custom').catch(async()=>{await page.locator('#studio-panel-video table input[type=text]').fill('Video Custom')})
+  await page.getByRole('textbox',{name:`显示名称 ${videoModel.model}`}).fill('Video Custom').catch(async()=>{await page.locator('#studio-panel-video table input[type=text]').fill('Video Custom')})
   await page.locator('#studio-panel-video').getByRole('button',{name:'保存',exact:true}).click()
   await page.waitForTimeout(200);assert.equal(savedConfig.models[0]?.label,'Video Custom')
   assert(!writes.includes('/api/v1/admin/image-studio/config'),'video settings must not save image settings')

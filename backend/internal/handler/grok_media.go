@@ -51,12 +51,28 @@ func (h *OpenAIGatewayHandler) GrokVideoContent(c *gin.Context) {
 	h.handleGrokMedia(c, service.GrokMediaEndpointVideoContent, c.Param("request_id"))
 }
 
+func (h *OpenAIGatewayHandler) MuseVideoGeneration(c *gin.Context) {
+	h.handleGrokMedia(c, service.MuseVideoEndpointCreate, "")
+}
+
+func (h *OpenAIGatewayHandler) MuseVideoStatus(c *gin.Context) {
+	h.handleGrokMedia(c, service.MuseVideoEndpointStatus, c.Param("request_id"))
+}
+
+func (h *OpenAIGatewayHandler) MuseVideoContent(c *gin.Context) {
+	h.handleGrokMedia(c, service.MuseVideoEndpointContent, c.Param("request_id"))
+}
+
 func (h *OpenAIGatewayHandler) handleGrokMedia(c *gin.Context, endpoint service.GrokMediaEndpoint, requestID string) {
 	platform := service.PlatformGrok
 	noAccountCode, noAccountMessage := "grok_media_no_eligible_account", "No eligible Grok media accounts"
 	if endpoint.IsSeedance() {
 		platform = service.PlatformOpenAI
 		noAccountCode, noAccountMessage = "seedance_no_eligible_account", "No eligible Seedance accounts"
+	}
+	if endpoint.IsMuseVideo() {
+		platform = service.PlatformOpenAI
+		noAccountCode, noAccountMessage = "muse_video_no_eligible_account", "No eligible Muse video accounts"
 	}
 	streamStarted := false
 	defer h.recoverResponsesPanic(c, &streamStarted)
@@ -112,6 +128,21 @@ func (h *OpenAIGatewayHandler) handleGrokMedia(c *gin.Context, endpoint service.
 		requestInfo, err = service.ParseSeedanceRequest(body)
 		if err != nil {
 			h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", err.Error())
+			return
+		}
+	}
+	if endpoint == service.MuseVideoEndpointCreate {
+		requestInfo, err = service.ParseMuseVideoRequest(body)
+		if err != nil {
+			h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", err.Error())
+			return
+		}
+		if !compositeTargetPlatformAllowed(c, apiKey, requestInfo.Model, service.PlatformOpenAI) {
+			h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "Model is not supported by this OpenAI-compatible endpoint for composite groups")
+			return
+		}
+		if apiKey.Group == nil || service.LookupVideoModelPrice(apiKey.Group.VideoModelPrices, "muse-video", requestInfo.Resolution) == nil {
+			h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "Muse video price is not configured for this model and resolution")
 			return
 		}
 	}
@@ -337,7 +368,7 @@ func (h *OpenAIGatewayHandler) handleGrokMedia(c *gin.Context, endpoint service.
 		)
 
 		account := selection.Account
-		if endpoint.IsGenerationRequest() && !endpoint.IsSeedance() {
+		if endpoint.IsGenerationRequest() && !endpoint.IsSeedance() && !endpoint.IsMuseVideo() {
 			eligible, eligibilityReason, eligibilityErr := h.ensureGrokMediaAccountEligibility(requestCtx, account)
 			if !eligible {
 				releaseAccount()
@@ -391,6 +422,9 @@ func (h *OpenAIGatewayHandler) handleGrokMedia(c *gin.Context, endpoint service.
 			if endpoint.IsSeedance() {
 				return h.gatewayService.ForwardSeedance(requestCtx, c, account, endpoint, requestID, body)
 			}
+			if endpoint.IsMuseVideo() {
+				return h.gatewayService.ForwardMuseVideo(requestCtx, c, account, endpoint, requestID, body)
+			}
 			return h.gatewayService.ForwardGrokMedia(requestCtx, c, account, endpoint, requestID, body, contentType)
 		}()
 
@@ -403,6 +437,17 @@ func (h *OpenAIGatewayHandler) handleGrokMedia(c *gin.Context, endpoint service.
 		service.SetOpsLatencyMs(c, service.OpsResponseLatencyMsKey, responseLatencyMs)
 
 		if err != nil {
+			if endpoint.IsMuseVideo() {
+				var validationErr *service.GrokMediaInputValidationError
+				if errors.As(err, &validationErr) {
+					h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", validationErr.Error())
+					return
+				}
+				if !service.IsResponseCommitted(c) && c.Writer.Size() == writerSizeBeforeForward {
+					h.errorResponse(c, http.StatusBadGateway, "upstream_error", "Muse video request failed")
+				}
+				return
+			}
 			var validationErr *service.GrokMediaInputValidationError
 			if errors.As(err, &validationErr) {
 				h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", validationErr.Error())
@@ -530,7 +575,7 @@ func (h *OpenAIGatewayHandler) handleGrokMedia(c *gin.Context, endpoint service.
 			if billResult := prepareSeedanceCompletionBilling(requestCtx, h, apiKey, subject, requestID, result); billResult != nil {
 				recordGrokMediaUsage(c, h, reqLog, apiKey, subject, subscription, account, billResult, billResult.Model, body, requestID)
 			}
-		} else if endpoint == service.GrokMediaEndpointVideoStatus || endpoint == service.GrokMediaEndpointVideoContent {
+		} else if endpoint == service.GrokMediaEndpointVideoStatus || endpoint == service.GrokMediaEndpointVideoContent || endpoint == service.MuseVideoEndpointStatus || endpoint == service.MuseVideoEndpointContent {
 			taskID := strings.TrimSpace(requestID)
 			if billResult := prepareGrokVideoCompletionBilling(requestCtx, h, reqLog, apiKey, subject, taskID, result); billResult != nil {
 				recordGrokMediaUsage(c, h, reqLog, apiKey, subject, subscription, account, billResult, billResult.Model, body, taskID)
@@ -561,6 +606,9 @@ func (h *OpenAIGatewayHandler) ensureGrokMediaAccountEligibility(ctx context.Con
 }
 
 func grokMediaRequiredCapability(endpoint service.GrokMediaEndpoint) service.OpenAIEndpointCapability {
+	if endpoint.IsMuseVideo() {
+		return service.OpenAIEndpointCapabilityMuseVideo
+	}
 	if endpoint.IsSeedance() {
 		return service.OpenAIEndpointCapabilitySeedance
 	}
@@ -582,7 +630,7 @@ func grokMediaScheduleModel(account *service.Account, routingModel string, resul
 
 func isGrokVideoCreateEndpoint(endpoint service.GrokMediaEndpoint) bool {
 	switch endpoint {
-	case service.SeedanceEndpointCreate, service.GrokMediaEndpointVideosGenerations,
+	case service.MuseVideoEndpointCreate, service.SeedanceEndpointCreate, service.GrokMediaEndpointVideosGenerations,
 		service.GrokMediaEndpointVideosEdits,
 		service.GrokMediaEndpointVideosExtensions:
 		return true

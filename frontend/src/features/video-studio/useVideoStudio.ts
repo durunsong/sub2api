@@ -3,7 +3,7 @@ import { useAuthStore } from '@/stores/auth';
 import { imageToDataURL } from '@/features/image-studio/api';
 import { videoStudioAPI } from './api';
 import { createVideoStudioDB, type VideoStudioDB } from './storage';
-import { groupSessions, normalizeParameters } from './parameters';
+import { groupSessions, normalizeParameters, normalizeModelParameters } from './parameters';
 import { followVideo } from './tasks';
 import type { VideoAsset, VideoDraft, VideoModel, VideoParameters, VideoPrompt, VideoRecord, VideoReference } from './types';
 export function useVideoStudio() {
@@ -18,6 +18,10 @@ export function useVideoStudio() {
     let saveQueue: Promise<unknown> = Promise.resolve();
     const controllers = new Map<string, AbortController>();
     const selectedModel = computed(() => models.value.find(m => m.id === modelID.value));
+    watch([selectedModel, parameters], () => {
+        const next = normalizeModelParameters(parameters.value, selectedModel.value?.protocol);
+        if (next.mode !== parameters.value.mode || next.resolution !== parameters.value.resolution || next.seconds !== parameters.value.seconds || next.size !== parameters.value.size) parameters.value = next;
+    });
     const entries = computed(() => records.value.filter(row => row.sessionId === sessionID.value).sort((a, b) => a.createdAt - b.createdAt));
     const sessions = computed(() => groupSessions(records.value));
     const currentRunning = computed(() => records.value.some(r => r.sessionId === sessionID.value && active.value.includes(r.id)));
